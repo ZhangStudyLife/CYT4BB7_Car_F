@@ -1,0 +1,67 @@
+# IAR Embedded Workbench build output
+**/Debug/
+**/Debug_*/
+**/Release/
+**/Release_*/
+*.dep
+*.o
+*.obj
+*.d
+*.lst
+*.map
+*.pbi
+*.pbd
+*.pbw
+*.browse
+*.xcl
+*.cout
+*.out
+*.hex
+*.HEX
+*.bin
+*.srec
+*.s19
+*.s37
+*.mot
+*.dni
+*.wsdt
+*.dbgdt
+*.sim
+*.SIM
+**/settings/
+
+# Python cache and analysis output
+__pycache__/
+*.py[cod]
+project/code/Estimation/Beacon_Detection/analysis/output*/
+project/code/Estimation/Beacon_Detection/第一次算法的标定数据/analysis/output/
+project/code/Estimation/Position/analysis/output/
+
+# Local tools and editor settings
+.vscode/
+*.code-workspace
+.idea/
+.claude/
+.spec_workflow/
+.spec-workflow/
+node_modules/
+
+# Local logs, backups, and temporary files
+*.log
+logs/
+*.bak
+*.backup
+*.tmp
+*.temp
+*~
+~$*
+*.swp
+*.swo
+
+# Operating system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
