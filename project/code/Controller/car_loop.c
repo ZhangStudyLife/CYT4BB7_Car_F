@@ -12,7 +12,7 @@ volatile uint16 g_tick_1000HZ = 0U;
 volatile uint32 tick_1000us_cnt = 0U;
 
 float car_forward_target = 0.0f;
-float car_strafe_target = 0.0f;
+float car_yaw_rate_target = 0.0f;
 uint8 car_control_enabled = 0U;
 uint8 car_emergency_stop_active = 1U;
 float g_car_plan_strafe_mps = 0.0f;
@@ -105,6 +105,7 @@ volatile float g_air_beacon_lost_flag = 0.0f;
 #define AIR_RUN_DATA_CRSF_STD_CH8 (24U)
 
 #define AIR_YAW_TARGET_DEG_TO_RAD (-0.017453292519943295f)
+#define CAR_DEBUG_DEG_TO_RAD       (0.017453292519943295f)
 #define AIR_MENU_STATE_INIT (0.0f)
 #define AIR_MENU_STATE_STANDBY (1.0f)
 #define AIR_MENU_STATE_TAKEOFF (2.0f)
@@ -252,7 +253,7 @@ static void car_loop_runtime_reset(void)
     tick_1000us_cnt = 0U;
 
     car_forward_target = 0.0f;
-    car_strafe_target = 0.0f;
+    car_yaw_rate_target = 0.0f;
     car_control_enabled = 0U;
     car_emergency_stop_active = 1U;
     g_air_state = 0.0f;
@@ -278,6 +279,13 @@ static void car_loop_runtime_reset(void)
 
 uint8 car_menu_is_runtime_locked(void)
 {
+#if (CAR_CONTROL_SOURCE == CAR_CONTROL_SOURCE_DEBUG_MENU)
+    /*
+     * 菜单调试模式需要在电机运行期间实时修改目标与PID参数，
+     * Run Stop同时作为菜单内的停车入口，因此禁止锁定菜单。
+     */
+    return 0U;
+#else
     if(beacon_position_recorder_is_active() != 0U)
     {
         if((air_comm_car_is_run_data_fresh() == 0U) ||
@@ -315,6 +323,7 @@ uint8 car_menu_is_runtime_locked(void)
     }
 
     return 0U;
+#endif
 }
 
 void car_loop_init(void)
@@ -324,7 +333,8 @@ void car_loop_init(void)
     menu_init();
     beacon_config_init();
     menu_config_init();
-    mecanum_motor_init();
+    /* 两轮差速底盘只初始化 M1 左轮和 M2 右轮。 */
+    two_wheel_motor_init();
     encoder_control_init();
     beacon_position_recorder_init();
     odometer_init();
@@ -342,7 +352,7 @@ void car_loop_init(void)
     air_comm_car_init();
     air_comm_set_run_data_callback(on_air_data);
     Beep_Init();
-    Beep_Play(100, 1.0f, 1);
+    //Beep_Play(100, 1.0f, 1);
     pit_init(PIT_CH0, 1000);
 }
 
@@ -405,12 +415,12 @@ static void car_loop_100HZ(void)
                          tick_1000us_cnt);
     LightSequence_GetResult(&light_sequence_result);
 
-    if ((g_beacon_detection.enter_event != 0U) &&
-        (g_beacon_detection.enter_count != s_beacon_beep_enter_count))
-    {
-        s_beacon_beep_enter_count = g_beacon_detection.enter_count;
-        Beep_Play(100U, 0.10f, 1U);
-    }
+    // if ((g_beacon_detection.enter_event != 0U) &&
+    //     (g_beacon_detection.enter_count != s_beacon_beep_enter_count))
+    // {
+    //     s_beacon_beep_enter_count = g_beacon_detection.enter_count;
+    //     Beep_Play(100U, 0.10f, 1U);
+    // }
 
     menu_runtime_locked = car_menu_is_runtime_locked();
 
@@ -461,48 +471,116 @@ static void car_loop_100HZ(void)
     car_mode_update_100HZ(s_system_time_ms);
 
 
-    // 如果车机串口通信离线,车端的蜂鸣器报警,为1s的鸣叫,1s的停止
-    if (air_comm_car_is_online() == 0U)
-    {
-        if (s_air_comm_beep_tick >= 200U)
-        {
-            s_air_comm_beep_tick = 0U;
-            Beep_Enable();
-        }
-        else if (s_air_comm_beep_tick == 100U)
-        {
-            Beep_Disable();
-        }
-        s_air_comm_beep_tick++;
-    }
-    else if (s_air_comm_beep_tick != 200U)
-    {
-        s_air_comm_beep_tick = 200U;
-        Beep_Disable();
-    }
+    // // 如果车机串口通信离线,车端的蜂鸣器报警,为1s的鸣叫,1s的停止
+    // if (air_comm_car_is_online() == 0U)
+    // {
+    //     if (s_air_comm_beep_tick >= 200U)
+    //     {
+    //         s_air_comm_beep_tick = 0U;
+    //         Beep_Enable();
+    //     }
+    //     else if (s_air_comm_beep_tick == 100U)
+    //     {
+    //         Beep_Disable();
+    //     }
+    //     s_air_comm_beep_tick++;
+    // }
+    // else if (s_air_comm_beep_tick != 200U)
+    // {
+    //     s_air_comm_beep_tick = 200U;
+    //     Beep_Disable();
+    // }
 
     Beep_Update_100HZ();
 
-    if ((car_control_enabled != 0U) &&
-        (car_emergency_stop_active == 0U) &&
-        (air_comm_car_is_run_data_fresh() != 0U))
     {
-        float yaw_target_rad = 0.0f;
+        car_control_command_t command = {0};
 
-        if((CAR_MODE_2 == car_mode_get()) ||
-           (CAR_MODE_3 == car_mode_get()) ||
-           (CAR_MODE_4 == car_mode_get()) ||
-           (CAR_MODE_5 == car_mode_get()) ||
-           (CAR_MODE_8 == car_mode_get()))
+        command.mode = CAR_CONTROL_COMMAND_STOP;
+#if (CAR_CONTROL_SOURCE == CAR_CONTROL_SOURCE_DEBUG_MENU)
+        command.enabled = car_debug_run_enabled;
+
+        if(command.enabled != 0U)
         {
-            yaw_target_rad = g_air_yaw_angle_target_deg * AIR_YAW_TARGET_DEG_TO_RAD;
-        }
+            uint8 debug_mode = (uint8)(car_debug_mode + 0.5f);
 
-        Control_100Hz(car_forward_target, car_strafe_target, yaw_target_rad);
-    }
-    else
-    {
-        Control_Stop();
+            switch(debug_mode)
+            {
+            case CAR_DEBUG_MODE_PWM:
+                command.mode = CAR_CONTROL_COMMAND_PWM;
+                command.left_pwm = motor_test_pwm;
+                command.right_pwm = car_debug_right_pwm;
+                break;
+
+            case CAR_DEBUG_MODE_WHEEL_SPEED:
+                command.mode = CAR_CONTROL_COMMAND_WHEEL_SPEED;
+                command.left_target_count = car_debug_left_target_count;
+                command.right_target_count = car_debug_right_target_count;
+                break;
+
+            case CAR_DEBUG_MODE_YAW_RATE:
+                command.mode = CAR_CONTROL_COMMAND_YAW_RATE;
+                command.linear_mps = car_debug_linear_mps;
+                command.yaw_rate_rad_s = car_debug_yaw_rate_rad_s;
+                break;
+
+            case CAR_DEBUG_MODE_HEADING:
+                command.mode = CAR_CONTROL_COMMAND_HEADING;
+                command.linear_mps = car_debug_linear_mps;
+                command.heading_target_rad =
+                    car_debug_heading_deg * CAR_DEBUG_DEG_TO_RAD;
+                break;
+
+            default:
+                command.mode = CAR_CONTROL_COMMAND_STOP;
+                command.enabled = 0U;
+                break;
+            }
+        }
+#else
+        car_mode_e active_mode = car_mode_get();
+
+        command.enabled =
+            ((car_control_enabled != 0U) &&
+             (car_emergency_stop_active == 0U) &&
+             (air_comm_car_is_run_data_fresh() != 0U)) ? 1U : 0U;
+
+        if(command.enabled != 0U)
+        {
+            command.linear_mps = car_forward_target;
+
+            if((active_mode == CAR_MODE_6) ||
+               (active_mode == CAR_MODE_7))
+            {
+                /*
+                 * 手动遥控模式：摇杆直接给目标角速度，只经过角速度内环，
+                 * 不启用航向角外环，保证松杆和转向手感符合车辆驾驶习惯。
+                 */
+                command.mode = CAR_CONTROL_COMMAND_YAW_RATE;
+                command.yaw_rate_rad_s = car_yaw_rate_target;
+            }
+            else if((active_mode == CAR_MODE_2) ||
+                    (active_mode == CAR_MODE_3) ||
+                    (active_mode == CAR_MODE_4) ||
+                    (active_mode == CAR_MODE_5) ||
+                    (active_mode == CAR_MODE_8))
+            {
+                /*
+                 * 自动任务模式：沿用Air下发的目标航向，执行
+                 * 航向角外环 -> 角速度内环 -> 左右轮速度环。
+                 */
+                command.mode = CAR_CONTROL_COMMAND_HEADING;
+                command.heading_target_rad =
+                    g_air_yaw_angle_target_deg * AIR_YAW_TARGET_DEG_TO_RAD;
+            }
+        }
+#endif
+
+        /*
+         * 遥控、任务和后续菜单调试统一从此执行器到达电机。
+         * 禁止在输入层直接调用motor_set，避免出现多处输出互相覆盖。
+         */
+        Control_ExecuteCommand100Hz(&command);
     }
 
     car_data[0] = g_odometer.body_vel[x]; /* 实际横向速度，右正，m/s */
@@ -573,32 +651,22 @@ static void car_loop_100HZ(void)
     //                    g_air_car_plan_forward_mps,                     /* I24: Air target velocity Y */
     //                    g_air_beacon_lost_flag,
     //                    beacon_detected_flag);
-    wifi_justfloat(g_air_beacon_lost_flag,                         /* I1: Air熄灯标志 */
-                   g_odometer.position[x],                         /* I2: 修正后X坐标，m */
-                   g_odometer.position[y],                         /* I3: 修正后Y坐标，m */
-                   (float)light_sequence_result.status,            /* I4: 识别状态 */
-                   (float)light_sequence_result.last_beacon_id,    /* I5: 最近匹配灯号 */
-                   (float)light_sequence_result.candidate_count,   /* I6: 剩余候选数量 */
-                   (float)light_sequence_result.candidate_mask,    /* I7: 候选位掩码 */
-                   (light_sequence_result.candidate_mask & 0x01U) != 0U ? 1.0f : 0.0f, /* I8: 序列1候选 */
-                   (light_sequence_result.candidate_mask & 0x02U) != 0U ? 1.0f : 0.0f, /* I9: 序列2候选 */
-                   (light_sequence_result.candidate_mask & 0x04U) != 0U ? 1.0f : 0.0f, /* I10: 序列3候选 */
-                   (light_sequence_result.candidate_mask & 0x08U) != 0U ? 1.0f : 0.0f, /* I11: 序列4候选 */
-                   (float)light_sequence_result.sequence_id,       /* I12: 最终灯序，0为未确定 */
-                   (float)light_sequence_result.accepted_event_count, /* I13: 正式灭灯事件数 */
-                   (float)g_carplanfix_state.status,               /* I14: 路径状态 */
-                   (float)g_carplanfix_state.disable_reason,       /* I15: 失效原因 */
-                   (g_carplanfix_state.mode3_beacon1_pending != 0U)
-                       ? 1.0f
-                       : (float)g_carplanfix_state.target_beacon_id, /* I16: 当前实际目标灯 */
-                   (float)g_carplanfix_state.route_index,          /* I17: 当前路径下标 */
-                   (float)g_carplanfix_state.near_beacon,          /* I18: 位于目标灯0.5m内 */
-                   (float)g_carplanfix_state.correction_valid,     /* I19: 本周期修正有效 */
-                   g_car_plan_forward_mps,                         /* I20: 车端前向规划速度 */
-                   g_car_plan_strafe_mps,                          /* I21: 车端横向规划速度 */
-                   (float)g_carplanfix_state.target_zone_entered,  /* I22: 已进入当前目标区域 */
-                   (g_carplanfix_state.status == CARPLANFIX_STATUS_DISABLED)
-                       ? 1.0f : 0.0f);                             /* I23: carplanfix已永久禁用 */
+    wifi_justfloat(control_left_wheel_target_count,       /* I1: 左轮目标，脉冲/10ms */
+                   control_left_wheel_feedback_count,     /* I2: 左轮反馈，脉冲/10ms */
+                   control_left_wheel_feedforward_pwm,    /* I3: 左轮前馈PWM */
+                   wheel_left_pid.p_term,                 /* I4: 左轮P项 */
+                   wheel_left_pid.i_term,                 /* I5: 左轮I项 */
+                   wheel_left_pid.d_term,                 /* I6: 左轮D项 */
+                   wheel_left_pid.output,                 /* I7: 左轮PID总输出 */
+                   control_left_wheel_output_pwm,         /* I8: 左轮最终PWM */
+                   control_right_wheel_target_count,      /* I9: 右轮目标，脉冲/10ms */
+                   control_right_wheel_feedback_count,    /* I10: 右轮反馈，脉冲/10ms */
+                   control_right_wheel_feedforward_pwm,   /* I11: 右轮前馈PWM */
+                   wheel_right_pid.p_term,                /* I12: 右轮P项 */
+                   wheel_right_pid.i_term,                /* I13: 右轮I项 */
+                   wheel_right_pid.d_term,                /* I14: 右轮D项 */
+                   wheel_right_pid.output,                /* I15: 右轮PID总输出 */
+                   control_right_wheel_output_pwm);       /* I16: 右轮最终PWM */
 
 }
 

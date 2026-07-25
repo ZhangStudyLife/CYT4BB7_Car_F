@@ -1,13 +1,13 @@
 /*********************************************************************************************************************
 * CYT4BB 编码器控制模块 - 头文件
 *
-* 文件功能：封装四路正交编码器的初始化、周期读取、一阶低通滤波
+* 文件功能：封装正交编码器的初始化、周期读取、一阶低通滤波
 * 模块说明：
-*   1. 支持最多 4 个正交编码器，对应四轮麦轮
+*   1. 两轮底盘主映射：左轮使用原左前编码器 M3，右轮使用原右前编码器 M4
 *   2. encoder_update_100HZ() 在 10ms 定时中断中调用，读取并清零硬件计数
 *   3. count_raw = 速度（单周期脉冲数），count_total = 里程（累计脉冲数）
 *   4. 一阶低通滤波器对 count_raw 做平滑，减少脉冲噪声
-*   5. 轮子到编码器映射：左前->M3, 右前->M4, 左后->M2, 右后->M1
+*   5. 原后轮 M1/M2 编码器暂时保留，供旧信标检测等四轮模块兼容
 ********************************************************************************************************************/
 
 #include "zf_common_headfile.h"
@@ -80,6 +80,15 @@ void encoder_control_init(void);
  * 调用者：10ms 定时中断（100Hz）
  */
 void encoder_update_100HZ(void);
+
+/*
+ * 两轮底盘主接口。
+ * 逻辑约定：车辆前进时左右轮计数均为正；内部复用已验证的 left_front/right_front 数据。
+ */
+int16_t encoder_get_left_count(void);
+int16_t encoder_get_right_count(void);
+float encoder_get_left_filtered_count(void);
+float encoder_get_right_filtered_count(void);
 
 /* 以下是四轮原始计数读取（脉冲/周期），给 PID 速度环用 */
 int16_t encoder_get_left_front_count(void);

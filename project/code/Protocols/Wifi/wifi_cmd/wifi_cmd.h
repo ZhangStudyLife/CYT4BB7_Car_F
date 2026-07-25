@@ -10,11 +10,11 @@
 #include "zf_common_headfile.h"
 
 #ifndef WIFI_SSID_TEST
-#define WIFI_SSID_TEST      "HDUASC_saidao"      /* WiFi 路由器 SSID */
+#define WIFI_SSID_TEST      "Xiaomi_14"      /* WiFi 路由器 SSID */
 #endif
 
 #ifndef WIFI_PASSWORD_TEST
-#define WIFI_PASSWORD_TEST  "zyz520520"          /* WiFi 路由器密码 */
+#define WIFI_PASSWORD_TEST  "chen1234"          /* WiFi 路由器密码 */
 #endif
 
 #ifndef WIFI_IMAGE_ENABLE
@@ -30,11 +30,11 @@
 #endif
 
 #ifndef UDP_REMOTE_IP
-#define UDP_REMOTE_IP       "192.168.110.22"    /* 上位机 IP 地址 */
+#define UDP_REMOTE_IP       "10.185.110.104"    /* 上位机 IP 地址 */
 #endif
 
 #ifndef UDP_REMOTE_PORT
-#define UDP_REMOTE_PORT     "1349"               /* 上位机 UDP 端口 */
+#define UDP_REMOTE_PORT     "1347"               /* 上位机 UDP 端口 */
 #endif
 
 #ifndef UDP_LOCAL_PORT

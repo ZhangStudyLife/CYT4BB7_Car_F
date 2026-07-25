@@ -1,21 +1,33 @@
 #include "motor.h"
 
-/* 初始化四轮电机 GPIO + PWM，频率 17kHz */
-void mecanum_motor_init(void)
+/*
+ * 初始化两轮差速底盘的驱动电机，频率 17kHz。
+ * M1 固定对应物理左轮，M2 固定对应物理右轮；初始化占空比均为 0。
+ */
+void two_wheel_motor_init(void)
 {
-    // 左前
+    // 电机1：左轮
     gpio_init(MOTOR_M1_DIR, GPO, GPIO_LOW, GPO_PUSH_PULL);
     pwm_init(MOTOR_M1_PWM, 17000, 0);
 
-    // 右前
+    // 电机2：右轮
     gpio_init(MOTOR_M2_DIR, GPO, GPIO_LOW, GPO_PUSH_PULL);
     pwm_init(MOTOR_M2_PWM, 17000, 0);
+}
 
-    // 左后
+/*
+ * 旧四轮麦轮初始化接口。
+ * 先初始化两轮底盘使用的 M1/M2，再初始化仅供旧麦轮代码兼容的 M3/M4。
+ */
+void mecanum_motor_init(void)
+{
+    two_wheel_motor_init();
+
+    // 旧麦轮电机3：右后轮
     gpio_init(MOTOR_M3_DIR, GPO, GPIO_LOW, GPO_PUSH_PULL);
     pwm_init(MOTOR_M3_PWM, 17000, 0);
 
-    // 右后
+    // 旧麦轮电机4：左后轮
     gpio_init(MOTOR_M4_DIR, GPO, GPIO_LOW, GPO_PUSH_PULL);
     pwm_init(MOTOR_M4_PWM, 17000, 0);
 }
@@ -61,7 +73,7 @@ void motor_set_single(gpio_pin_enum dir_pin, pwm_channel_enum pwm_ch, int16_t sp
 }
 
 /**
- * @brief  设置电机1（左前）速度
+ * @brief  设置电机1（物理左轮）速度
  */
 void motor_m1_set_speed(int16_t speed)
 {
@@ -69,7 +81,7 @@ void motor_m1_set_speed(int16_t speed)
 }
 
 /**
- * @brief  设置电机2（右前）速度
+ * @brief  设置电机2（物理右轮）速度
  */
 void motor_m2_set_speed(int16_t speed)
 {
@@ -77,7 +89,7 @@ void motor_m2_set_speed(int16_t speed)
 }
 
 /**
- * @brief  设置电机3（左后）速度
+ * @brief  设置旧麦轮电机3（物理右后轮）速度
  */
 void motor_m3_set_speed(int16_t speed)
 {
@@ -85,11 +97,30 @@ void motor_m3_set_speed(int16_t speed)
 }
 
 /**
- * @brief  设置电机4（右后）速度
+ * @brief  设置旧麦轮电机4（物理左后轮）速度
  */
 void motor_m4_set_speed(int16_t speed)
 {
     motor_set_single(MOTOR_M4_DIR, MOTOR_M4_PWM, speed, MOTOR_M4_INVERT);
+}
+
+/**
+ * @brief  设置两轮差速底盘左右轮速度
+ * @param  left_speed  左轮PWM指令，正值表示车辆前进
+ * @param  right_speed 右轮PWM指令，正值表示车辆前进
+ */
+void two_wheel_motor_set(int16_t left_speed, int16_t right_speed)
+{
+    motor_m1_set_speed(left_speed);
+    motor_m2_set_speed(right_speed);
+}
+
+/**
+ * @brief  停止两轮差速底盘的左右驱动轮
+ */
+void two_wheel_motor_stop(void)
+{
+    two_wheel_motor_set(0, 0);
 }
 
 /**

@@ -100,6 +100,31 @@ void encoder_update_100HZ(void)
     encoder_update_single(&encoder_left_rear);
     encoder_update_single(&encoder_right_rear);
 }
+
+/*
+ * 两轮底盘逻辑接口。
+ * 不复制编码器状态：左轮直接复用原 left_front(M3)，右轮直接复用原 right_front(M4)。
+ */
+int16_t encoder_get_left_count(void)
+{
+    return encoder_left_front.count_raw;
+}
+
+int16_t encoder_get_right_count(void)
+{
+    return encoder_right_front.count_raw;
+}
+
+float encoder_get_left_filtered_count(void)
+{
+    return encoder_left_front.count_filtered;
+}
+
+float encoder_get_right_filtered_count(void)
+{
+    return encoder_right_front.count_filtered;
+}
+
 /* 各轮原始速度读取（脉冲/周期） */
 int16_t encoder_get_left_front_count(void)
 {

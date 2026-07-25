@@ -242,6 +242,8 @@ void wifi_cmd_Init(void)
     ret = wifi_spi_init((char *)WIFI_SSID_TEST, (char *)WIFI_PASSWORD_TEST);
     if (0U == ret)
     {
+        //printf("wifi,ip,%s\r\n", wifi_spi_ip_addr_port);
+
 #if (0U == WIFI_IMAGE_ENABLE)
         ret = wifi_spi_socket_connect("UDP", (char *)UDP_REMOTE_IP, (char *)UDP_REMOTE_PORT, (char *)UDP_LOCAL_PORT);
 #else

@@ -1,7 +1,7 @@
 /*********************************************************************************************************************
 * 菜单用户配置头文件 - 参数集中管理
 *
-* 功能：集中管理四电机速度环参数，参数支持菜单调节和Flash存档
+* 功能：集中管理两轮差速底盘控制参数，参数支持菜单调节和Flash存档
 ********************************************************************************************************************/
 
 #include "zf_common_headfile.h"
@@ -114,5 +114,24 @@ extern float s_curve_conv_tol;
 extern float s_curve_min_dist;
 extern float carplanfix_enable;
 extern float carplanfix_mode3_beacon1_enable;
+extern float motor_test_pwm;            /* C_Debug左轮PWM */
+extern float wheel_left_count_per_meter;
+extern float wheel_right_count_per_meter;
+extern float wheel_track_m;
+
+/* 两轮菜单调试命令。发车状态不写入Flash，上电固定为停止。 */
+#define CAR_DEBUG_MODE_PWM          (0U)
+#define CAR_DEBUG_MODE_WHEEL_SPEED  (1U)
+#define CAR_DEBUG_MODE_YAW_RATE     (2U)
+#define CAR_DEBUG_MODE_HEADING      (3U)
+
+extern uint8 car_debug_run_enabled;
+extern float car_debug_mode;
+extern float car_debug_right_pwm;
+extern float car_debug_left_target_count;
+extern float car_debug_right_target_count;
+extern float car_debug_linear_mps;
+extern float car_debug_yaw_rate_rad_s;
+extern float car_debug_heading_deg;
 
 #endif

@@ -7,7 +7,7 @@
 
 /**
  * ============================================================================
- *  里程计模块 (Odometer) —— 麦克纳姆轮正运动学 + 机体→水平坐标变换
+ *  里程计模块 (Odometer) —— 两轮差速正运动学 + 机体→水平坐标变换
  * ============================================================================
  *
  *  坐标系约定（水平面输出）：
@@ -31,11 +31,13 @@
  *    1. 编码器层（encoder_control.c）：各轮按实际编码器极性配置 invert，确保
  *       编码器 count_raw > 0 等价于轮子物理正转（车体前进方向）。
  *    2. 正运动学（odometer.c）：
- *         body_vel[x] = ( LF - RF - LR + RR) / 4   ← 右移为正
- *         body_vel[y] = ( LF + RF + LR + RR) / 4   ← 前进为正
- *    3. 控制层（control.c）逆运动学与正运动学自洽：
- *         LF = forward - strafe - rot
- *       底层 strafe 命令沿用既有轮速解算符号，Mode1 会把右正 m/s 目标转换成对应命令。
+ *         left_mps      = left_count  / left_count_per_meter  / dt
+ *         right_mps     = right_count / right_count_per_meter / dt
+ *         body_vel[x]   = 0
+ *         body_vel[y]   = (left_mps + right_mps) / 2
+ *    3. 控制层（control.c）两轮逆运动学：
+ *         left_mps  = linear_mps - yaw_rate_rad_s * wheel_track_m / 2
+ *         right_mps = linear_mps + yaw_rate_rad_s * wheel_track_m / 2
  *    4. 机体→水平旋转（odometer_body_to_horizontal）：
  *         水平[x] =  cos(yaw)*body[x] - sin(yaw)*body[y]
  *         水平[y] =  sin(yaw)*body[x] + cos(yaw)*body[y]
@@ -56,9 +58,12 @@
 
 #define ODOMETER_UPDATE_DT_S                (0.01f)     /* 更新周期 10ms（100Hz 调用） */
 #define ODOMETER_IMU_UPDATE_DT_S            (0.001f)
-#define ODOMETER_FORWARD_COUNT_PER_METER    (14000.0f)  /* 惯导日志标定：前向稳健拟合 */
-#define ODOMETER_STRAFE_COUNT_PER_METER_ABS (15000.0f)  /* 惯导日志标定：横向左右合并保守拟合 */
-                                                        /* 前向与横向分轴标定，避免用单一比例覆盖麦轮滑移差异 */
+/*
+ * 以下两个宏仅供尚未迁移的旧任务模式编译使用，不再参与两轮里程计。
+ * 两轮控制与里程计统一使用菜单参数wheel_left/right_count_per_meter。
+ */
+#define ODOMETER_FORWARD_COUNT_PER_METER    (14000.0f)
+#define ODOMETER_STRAFE_COUNT_PER_METER_ABS (15000.0f)
 
 /* ---- 鲁棒滤波与静态门限 ---- */
 
@@ -70,9 +75,6 @@
 #define ODOMETER_SLIP_INNOVATION_THRESH     (0.50f)
 #define ODOMETER_SLIP_ACCEL_DIFF_THRESH     (3.00f)
 #define ODOMETER_SLIP_HOLD_TICKS            (8U)
-#define ODOMETER_CROSSTALK_Y_FROM_X_GAIN    (0.25f)
-#define ODOMETER_CROSSTALK_Y_CORR_MIN_MPS   (0.08f)
-#define ODOMETER_CROSSTALK_Y_CORR_RATIO_MIN (0.30f)
 
 /* ---- 轴索引 ---- */
 
@@ -124,7 +126,7 @@ void odometer_init(void);
 /* 重置里程计：清零速度/位置/偏航基准，当前朝向变为 Y 轴正方向 */
 void odometer_reset(void);
 
-/* 100Hz 周期更新：读取四轮编码器 → 正运动学 → 坐标变换 → 积分 */
+/* 100Hz周期更新：读取左右驱动轮编码器 → 两轮正运动学 → 坐标变换 → 积分 */
 void odometer_update_100HZ(void);
 void odometer_update_1000HZ(void);
 

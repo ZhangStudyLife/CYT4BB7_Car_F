@@ -40,7 +40,7 @@ static void car_mode_reset_all(void)
     car_mode8_reset();
     Control_Reset();
     car_forward_target = 0.0f;
-    car_strafe_target = 0.0f;
+    car_yaw_rate_target = 0.0f;
 }
 
 static void car_mode_handle_transition_25HZ(car_mode_e mode, uint8 control_enabled)
@@ -88,7 +88,7 @@ void car_mode_reset(void)
     car_control_enabled = 0U;
     car_emergency_stop_active = 1U;
     car_forward_target = 0.0f;
-    car_strafe_target = 0.0f;
+    car_yaw_rate_target = 0.0f;
     car_mode_reset_all();
 }
 
@@ -106,7 +106,7 @@ void car_mode_update_25HZ(uint32 now_ms)
         car_emergency_stop_active = 1U;
         car_mode_handle_transition_25HZ(s_car_mode, car_control_enabled);
         car_forward_target = 0.0f;
-        car_strafe_target = 0.0f;
+        car_yaw_rate_target = 0.0f;
         return;
     }
 
@@ -122,7 +122,7 @@ void car_mode_update_25HZ(uint32 now_ms)
         if(car_control_enabled == 0U)
         {
             car_forward_target = 0.0f;
-            car_strafe_target = 0.0f;
+            car_yaw_rate_target = 0.0f;
             return;
         }
 
@@ -137,7 +137,7 @@ void car_mode_update_25HZ(uint32 now_ms)
         car_emergency_stop_active = 1U;
         car_mode_handle_transition_25HZ(s_car_mode, car_control_enabled);
         car_forward_target = 0.0f;
-        car_strafe_target = 0.0f;
+        car_yaw_rate_target = 0.0f;
         return;
     }
 
@@ -148,7 +148,7 @@ void car_mode_update_25HZ(uint32 now_ms)
     if(0U != car_emergency_stop_active)
     {
         car_forward_target = 0.0f;
-        car_strafe_target = 0.0f;
+        car_yaw_rate_target = 0.0f;
         return;
     }
 
@@ -188,7 +188,7 @@ void car_mode_update_100HZ(uint32 now_ms)
     if((0U == car_control_enabled) || (0U != car_emergency_stop_active))
     {
         car_forward_target = 0.0f;
-        car_strafe_target = 0.0f;
+        car_yaw_rate_target = 0.0f;
         return;
     }
 

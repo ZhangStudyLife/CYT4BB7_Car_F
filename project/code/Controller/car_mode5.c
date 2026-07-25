@@ -1,7 +1,6 @@
-/* Mode5: remote body velocity closed loop.
- * Remote gives body forward/right velocity targets in m/s.
- * Odometer gives body velocity feedback in m/s, X positive means right, Y positive means forward.
- * Output converts right-positive velocity to the wheel-space strafe command.
+/* Mode5：Air规划车体系速度目标模式。
+ * 两轮底盘保持Air目标航向，只执行速度向量在车头方向上的前向分量；
+ * 原横向PID结果仅保留作旧诊断，不再进入电机输出。
  */
 #include "car_mode.h"
 #include "car_loop.h"
@@ -162,6 +161,7 @@ void car_mode5_update_100HZ(uint32 now_ms)
     g_car_mode5_state.strafe_pid_d_term = s_mode5_strafe_pid.d_term;
     g_car_mode5_state.output_valid = 1U;
 
-    car_forward_target = g_car_mode5_state.forward_target;
-    car_strafe_target = g_car_mode5_state.strafe_target;
+    /* 两轮任务模式输出物理线速度，方向由统一航向串级环控制。 */
+    car_forward_target = g_car_mode5_state.velocity_forward_target_mps;
+    car_yaw_rate_target = 0.0f;
 }

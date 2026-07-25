@@ -794,7 +794,7 @@ void beacon_position_recorder_enter(void)
     car_control_enabled = 0U;
     car_emergency_stop_active = 1U;
     car_forward_target = 0.0f;
-    car_strafe_target = 0.0f;
+    car_yaw_rate_target = 0.0f;
 
     if(air_comm_car_is_run_data_fresh() != 0U)
     {

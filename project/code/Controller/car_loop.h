@@ -16,6 +16,26 @@
 
 #include "zf_common_headfile.h"
 
+/*
+ * 控制输入源编译开关。
+ *
+ * REMOTE：使用Air转发的CH4/遥控与任务目标。
+ * DEBUG_MENU：忽略遥控发车门控，使用Car -> C_Debug菜单生成同一种控制命令。
+ *
+ * 调试完成后只需把CAR_CONTROL_SOURCE改回REMOTE；PID、底盘参数和后续控制链路
+ * 完全共用，不需要复制调试参数。
+ */
+#define CAR_CONTROL_SOURCE_REMOTE      (0U)
+#define CAR_CONTROL_SOURCE_DEBUG_MENU  (1U)
+#ifndef CAR_CONTROL_SOURCE
+#define CAR_CONTROL_SOURCE             CAR_CONTROL_SOURCE_DEBUG_MENU
+#endif
+
+#if ((CAR_CONTROL_SOURCE != CAR_CONTROL_SOURCE_REMOTE) && \
+     (CAR_CONTROL_SOURCE != CAR_CONTROL_SOURCE_DEBUG_MENU))
+#error "Invalid CAR_CONTROL_SOURCE"
+#endif
+
 /* 100Hz 周期任务标志，PIT 中断置 1，poll 中清 0 */
 extern volatile uint8_t timer_100HZ_flag;
 /* 25Hz 周期任务标志 */
@@ -27,15 +47,15 @@ extern volatile uint32 tick_1000us_cnt;
 
 /* 前进速度目标，单位 m/s，正方向为车头朝向 */
 extern float car_forward_target;
-/* 横移速度目标，单位 m/s，正方向为车身右侧 */
-extern float car_strafe_target;
+/* 两轮目标角速度，单位 rad/s，俯视逆时针为正 */
+extern float car_yaw_rate_target;
 /* 控制使能标志：1=允许电机输出，0=停止输出 */
 extern uint8 car_control_enabled;
 /* 急停激活标志：1=急停生效，电机强制停止 */
 extern uint8 car_emergency_stop_active;
 
-/* 遥控通道标准化值（来自无人机 CRSF 转发） */
-/* 范围 -1.0 ~ +1.0，ch0=油门/前后，ch1=横移，ch2=航向，ch3=辅助等 */
+/* 遥控通道标准化值（来自无人机CRSF转发，摇杆通道通常为-1000~+1000）。 */
+/* 两轮手动模式：ch0=Roll转向，ch1=Pitch前后，ch4=发车开关，ch5/ch6=模式。 */
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;
 extern volatile float g_air_euler_pitch;

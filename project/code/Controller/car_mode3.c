@@ -1,7 +1,6 @@
-/* Mode3: remote body velocity closed loop.
- * Remote gives body forward/right velocity targets in m/s.
- * Odometer gives body velocity feedback in m/s, X positive means right, Y positive means forward.
- * Output converts right-positive velocity to the wheel-space strafe command.
+/* Mode3：车端规划修正后的车体系速度模式。
+ * 两轮底盘保持Air目标航向，只执行前向速度分量；
+ * carplanfix产生的横移分量暂不进入电机输出。
  */
 #include "car_mode.h"
 #include "car_loop.h"
@@ -153,6 +152,7 @@ void car_mode3_update_100HZ(uint32 now_ms)
     g_car_mode3_state.strafe_pid_d_term = s_mode3_strafe_pid.d_term;
     g_car_mode3_state.output_valid = 1U;
 
-    car_forward_target = g_car_mode3_state.forward_target;
-    car_strafe_target = g_car_mode3_state.strafe_target;
+    /* 两轮任务模式输出物理线速度，方向由统一航向串级环控制。 */
+    car_forward_target = g_car_mode3_state.velocity_forward_target_mps;
+    car_yaw_rate_target = 0.0f;
 }

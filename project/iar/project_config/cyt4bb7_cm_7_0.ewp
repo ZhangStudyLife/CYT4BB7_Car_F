@@ -1115,182 +1115,32 @@
     </configuration>
     <group>
         <name>code</name>
-        <file>
-            <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>
-        </file>
         <group>
             <name>Common</name>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Common\car_math.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Common\car_math.h</name>
-            </file>
             <file>
                 <name>$PROJ_DIR$\..\..\code\Common\car_filter.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\..\code\Common\car_filter.h</name>
             </file>
-        </group>
-        <group>
-            <name>HW_Drivers</name>
-            <group>
-                <name>Motor</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Motor\motor.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Motor\motor.h</name>
-                </file>
-            </group>
-            <group>
-                <name>Encoder</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Encoder\encoder_control.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Encoder\encoder_control.h</name>
-                </file>
-            </group>
-            <group>
-                <name>IMU</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\IMU\ICM42688.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\IMU\ICM42688.h</name>
-                </file>
-            </group>
-            <group>
-                <name>UWB</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\UWB\ALX_AOA.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\UWB\ALX_AOA.h</name>
-                </file>
-            </group>
-            <group>
-                <name>Beep</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Beep\Beep.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Beep\Beep.h</name>
-                </file>
-            </group>
-            <group>
-                <name>WS2812</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\WS2812\WS2812.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\WS2812\WS2812.h</name>
-                </file>
-            </group>
-        </group>
-        <group>
-            <name>Estimation</name>
-            <group>
-                <name>Attitude</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\Accel_Calibration.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\Accel_Calibration.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_Filtter.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_Filtter.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_TOP.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_TOP.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\MahonyAhrs.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\MahonyAhrs.h</name>
-                </file>
-            </group>
-            <group>
-                <name>Position</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_config.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_config.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_position_recorder.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_position_recorder.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\fixator.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\fixator.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\odometer.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\odometer.h</name>
-                </file>
-            </group>
-            <group>
-                <name>lightsequence</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence_config.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence_config.h</name>
-                </file>
-            </group>
-            <group>
-                <name>Beacon_Detection</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Beacon_Detection\beacon_detection.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Beacon_Detection\beacon_detection.h</name>
-                </file>
-            </group>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Common\car_math.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Common\car_math.h</name>
+            </file>
         </group>
         <group>
             <name>Controller</name>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\pid.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\pid.h</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\control.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\control.h</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\carplanfix.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\carplanfix.h</name>
-            </file>
+            <group>
+                <name>Planner</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Controller\Planner\s_curve_planner.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Controller\Planner\s_curve_planner.h</name>
+                </file>
+            </group>
             <file>
                 <name>$PROJ_DIR$\..\..\code\Controller\car_loop.c</name>
             </file>
@@ -1336,18 +1186,171 @@
             <file>
                 <name>$PROJ_DIR$\..\..\code\Controller\car_start_sbus.h</name>
             </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\carplanfix.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\carplanfix.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\control.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\control.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\pid.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\pid.h</name>
+            </file>
+        </group>
+        <group>
+            <name>Estimation</name>
             <group>
-                <name>Planner</name>
+                <name>Attitude</name>
                 <file>
-                    <name>$PROJ_DIR$\..\..\code\Controller\Planner\s_curve_planner.c</name>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\Accel_Calibration.c</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\..\..\code\Controller\Planner\s_curve_planner.h</name>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\Accel_Calibration.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_Filtter.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_Filtter.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_TOP.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\IMU_TOP.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\MahonyAhrs.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\MahonyAhrs.h</name>
+                </file>
+            </group>
+            <group>
+                <name>Beacon_Detection</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Beacon_Detection\beacon_detection.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Beacon_Detection\beacon_detection.h</name>
+                </file>
+            </group>
+            <group>
+                <name>lightsequence</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence_config.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence_config.h</name>
+                </file>
+            </group>
+            <group>
+                <name>Position</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_config.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_config.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_position_recorder.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_position_recorder.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\fixator.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\fixator.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\odometer.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\odometer.h</name>
+                </file>
+            </group>
+        </group>
+        <group>
+            <name>HW_Drivers</name>
+            <group>
+                <name>Beep</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Beep\Beep.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Beep\Beep.h</name>
+                </file>
+            </group>
+            <group>
+                <name>Encoder</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Encoder\encoder_control.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Encoder\encoder_control.h</name>
+                </file>
+            </group>
+            <group>
+                <name>IMU</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\IMU\ICM42688.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\IMU\ICM42688.h</name>
+                </file>
+            </group>
+            <group>
+                <name>Motor</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Motor\motor.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\Motor\motor.h</name>
+                </file>
+            </group>
+            <group>
+                <name>UWB</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\UWB\ALX_AOA.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\UWB\ALX_AOA.h</name>
+                </file>
+            </group>
+            <group>
+                <name>WS2812</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\WS2812\WS2812.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\HW_Drivers\WS2812\WS2812.h</name>
                 </file>
             </group>
         </group>
         <group>
             <name>Menu</name>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Menu\menu_air_support.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Menu\menu_air_support.h</name>
+            </file>
             <file>
                 <name>$PROJ_DIR$\..\..\code\Menu\menu_config.c</name>
             </file>
@@ -1360,23 +1363,38 @@
             <file>
                 <name>$PROJ_DIR$\..\..\code\Menu\menu_core.h</name>
             </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Menu\menu_air_support.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Menu\menu_air_support.h</name>
-            </file>
         </group>
         <group>
             <name>Protocols</name>
             <group>
+                <name>AirComm</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Protocols\AirComm\air_comm_car.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Protocols\AirComm\air_comm_car.h</name>
+                </file>
+            </group>
+            <group>
+                <name>SBUS</name>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Protocols\SBUS\sbus.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Protocols\SBUS\sbus.h</name>
+                </file>
+            </group>
+            <group>
                 <name>Wifi</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_core.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_core.h</name>
-                </file>
+                <group>
+                    <name>wifi_cal_imu</name>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_cal_imu\wifi_cal_imu.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_cal_imu\wifi_cal_imu.h</name>
+                    </file>
+                </group>
                 <group>
                     <name>wifi_cmd</name>
                     <file>
@@ -1396,15 +1414,6 @@
                     </file>
                 </group>
                 <group>
-                    <name>wifi_cal_imu</name>
-                    <file>
-                        <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_cal_imu\wifi_cal_imu.c</name>
-                    </file>
-                    <file>
-                        <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_cal_imu\wifi_cal_imu.h</name>
-                    </file>
-                </group>
-                <group>
                     <name>wifi_params</name>
                     <file>
                         <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_params\wifi_params.c</name>
@@ -1413,6 +1422,12 @@
                         <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_params\wifi_params.h</name>
                     </file>
                 </group>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_core.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\..\..\code\Protocols\Wifi\wifi_core.h</name>
+                </file>
             </group>
             <group>
                 <name>WirelessControl</name>
@@ -1423,25 +1438,13 @@
                     <name>$PROJ_DIR$\..\..\code\Protocols\WirelessControl\wireless_control.h</name>
                 </file>
             </group>
-            <group>
-                <name>SBUS</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\SBUS\sbus.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\SBUS\sbus.h</name>
-                </file>
-            </group>
-            <group>
-                <name>AirComm</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\AirComm\air_comm_car.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\AirComm\air_comm_car.h</name>
-                </file>
-            </group>
         </group>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\修改记录.txt</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>
+        </file>
     </group>
     <group>
         <name>doc</name>

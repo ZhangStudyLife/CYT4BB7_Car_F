@@ -1726,7 +1726,7 @@
                         <name>$PROJ_DIR$\..\..\..\libraries\sdk\common\src\drivers\flash\cy_flash.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\..\..\..\libraries\sdk\tviibh4m\src\drivers\flash\cy_flash.h</name>
+                        <name>$PROJ_DIR$\..\..\..\libraries\sdk\common\src\drivers\flash\cy_flash.h</name>
                     </file>
                 </group>
                 <group>
@@ -2305,12 +2305,6 @@
             <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_key.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_lora3a22.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_lora3a22.h</name>
-        </file>
-        <file>
             <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_menc15a.c</name>
         </file>
         <file>
@@ -2357,12 +2351,6 @@
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_uart_receiver.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_upflow302.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_upflow302.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_wifi_spi.c</name>

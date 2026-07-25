@@ -1,74 +1,28 @@
-/* Mode7: remote horizontal velocity closed loop.
- * Remote gives horizontal forward/right velocity targets in m/s.
- * Odometer gives horizontal velocity feedback in m/s, X positive means right, Y positive means forward.
- * Output converts right-positive velocity to the wheel-space strafe command.
+/*
+ * Mode7：两轮差速遥控速度模式。
+ *
+ * 与Mode6使用相同的物理量控制链路，区别是Mode7在100Hz对遥控目标做一阶
+ * 低通，适合调试“遥控目标平滑 -> 角速度环 -> 轮速环”的完整闭环。
+ *
+ * ch1(Pitch)：前后线速度，单位m/s。
+ * ch0(Roll)：转向角速度，右转为负，单位rad/s。
  */
 #include "car_mode.h"
 #include "car_loop.h"
 
-#define MODE7_MAX_VELOCITY_MPS       (2.0f)
-#define MODE7_STICK_DEADBAND         (50.0f)
-#define MODE7_STICK_MAX              (1000.0f)
-#define MODE7_STICK_ACTIVE_RANGE     (MODE7_STICK_MAX - MODE7_STICK_DEADBAND)
-#define MODE7_MIN_OUTPUT_LIMIT       (0.0f)
+#define MODE7_MAX_LINEAR_MPS       (2.0f)
+#define MODE7_MAX_YAW_RATE_RAD_S   (3.0f)
+#define MODE7_STICK_DEADBAND       (50.0f)
+#define MODE7_STICK_MAX            (1000.0f)
+#define MODE7_STICK_ACTIVE_RANGE   (MODE7_STICK_MAX - MODE7_STICK_DEADBAND)
 
 car_mode7_state_t g_car_mode7_state = {0};
 
-static PositionalPID s_mode7_forward_pid;
-static PositionalPID s_mode7_strafe_pid;
-
-static void car_mode7_pid_init(void)
-{
-    PositionalPID_Init(&s_mode7_forward_pid,
-                       0.0f,
-                       mode7_velocity_forward_kp,
-                       mode7_velocity_forward_ki,
-                       mode7_velocity_forward_kd,
-                       mode7_velocity_i_limit,
-                       mode7_velocity_pid_output_limit);
-    PositionalPID_Init(&s_mode7_strafe_pid,
-                       0.0f,
-                       mode7_velocity_strafe_kp,
-                       mode7_velocity_strafe_ki,
-                       mode7_velocity_strafe_kd,
-                       mode7_velocity_i_limit,
-                       mode7_velocity_pid_output_limit);
-}
-
-static void car_mode7_pid_apply_params(void)
-{
-    s_mode7_forward_pid.kp_2 = 0.0f;
-    s_mode7_forward_pid.kp_1 = mode7_velocity_forward_kp;
-    s_mode7_forward_pid.ki = mode7_velocity_forward_ki;
-    s_mode7_forward_pid.kd = mode7_velocity_forward_kd;
-    s_mode7_forward_pid.i_limit = mode7_velocity_i_limit;
-    s_mode7_forward_pid.output_limit = mode7_velocity_pid_output_limit;
-
-    s_mode7_strafe_pid.kp_2 = 0.0f;
-    s_mode7_strafe_pid.kp_1 = mode7_velocity_strafe_kp;
-    s_mode7_strafe_pid.ki = mode7_velocity_strafe_ki;
-    s_mode7_strafe_pid.kd = mode7_velocity_strafe_kd;
-    s_mode7_strafe_pid.i_limit = mode7_velocity_i_limit;
-    s_mode7_strafe_pid.output_limit = mode7_velocity_pid_output_limit;
-}
-
-static float car_mode7_stick_to_velocity(float stick)
+static float car_mode7_stick_to_target(float stick, float max_target)
 {
     stick = car_math_limit_absf(stick, MODE7_STICK_MAX);
     stick = car_math_soft_deadband(stick, MODE7_STICK_DEADBAND);
-    return stick * (MODE7_MAX_VELOCITY_MPS / MODE7_STICK_ACTIVE_RANGE);
-}
-
-static float car_mode7_limit_output(float value)
-{
-    float limit = mode7_velocity_output_limit;
-
-    if(limit < MODE7_MIN_OUTPUT_LIMIT)
-    {
-        limit = MODE7_MIN_OUTPUT_LIMIT;
-    }
-
-    return car_math_limit_absf(value, limit);
+    return stick * (max_target / MODE7_STICK_ACTIVE_RANGE);
 }
 
 void car_mode7_init(void)
@@ -78,37 +32,23 @@ void car_mode7_init(void)
 
 void car_mode7_reset(void)
 {
-    car_mode7_pid_init();
-
-    g_car_mode7_state.raw_forward_mps = 0.0f;
-    g_car_mode7_state.raw_strafe_mps = 0.0f;
-    g_car_mode7_state.velocity_forward_target_mps = 0.0f;
-    g_car_mode7_state.velocity_strafe_target_mps = 0.0f;
-    g_car_mode7_state.velocity_forward_feedback_mps = 0.0f;
-    g_car_mode7_state.velocity_strafe_feedback_mps = 0.0f;
-    g_car_mode7_state.forward_feedforward = 0.0f;
-    g_car_mode7_state.strafe_feedforward = 0.0f;
-    g_car_mode7_state.forward_pid_output = 0.0f;
-    g_car_mode7_state.strafe_pid_output = 0.0f;
-    g_car_mode7_state.forward_target = 0.0f;
-    g_car_mode7_state.strafe_target = 0.0f;
-    g_car_mode7_state.forward_pid_p_term = 0.0f;
-    g_car_mode7_state.forward_pid_i_term = 0.0f;
-    g_car_mode7_state.forward_pid_d_term = 0.0f;
-    g_car_mode7_state.strafe_pid_p_term = 0.0f;
-    g_car_mode7_state.strafe_pid_i_term = 0.0f;
-    g_car_mode7_state.strafe_pid_d_term = 0.0f;
-    g_car_mode7_state.output_valid = 0U;
+    g_car_mode7_state = (car_mode7_state_t){0};
 }
 
 void car_mode7_update_100HZ(uint32 now_ms)
 {
     (void)now_ms;
 
-    car_mode7_pid_apply_params();
-
-    g_car_mode7_state.raw_forward_mps = car_mode7_stick_to_velocity(g_air_crsf_std_ch1);
-    g_car_mode7_state.raw_strafe_mps = car_mode7_stick_to_velocity(g_air_crsf_std_ch0);
+    g_car_mode7_state.raw_forward_mps =
+        car_mode7_stick_to_target(g_air_crsf_std_ch1,
+                                  MODE7_MAX_LINEAR_MPS);
+    /*
+     * 状态结构中的strafe字段为兼容现有菜单诊断而保留；在两轮模式下，
+     * 这些字段存放角速度目标，单位由原m/s改为rad/s。
+     */
+    g_car_mode7_state.raw_strafe_mps =
+        -car_mode7_stick_to_target(g_air_crsf_std_ch0,
+                                   MODE7_MAX_YAW_RATE_RAD_S);
 
     g_car_mode7_state.velocity_forward_target_mps =
         car_filter_lpf1_apply(g_car_mode7_state.velocity_forward_target_mps,
@@ -121,42 +61,17 @@ void car_mode7_update_100HZ(uint32 now_ms)
                               ODOMETER_UPDATE_DT_S,
                               mode7_velocity_smooth_tau_s);
 
-    g_car_mode7_state.velocity_forward_feedback_mps = g_odometer.vel[y];
-    g_car_mode7_state.velocity_strafe_feedback_mps = g_odometer.vel[x];
-
-    g_car_mode7_state.forward_feedforward =
-        g_car_mode7_state.velocity_forward_target_mps *
-        ODOMETER_FORWARD_COUNT_PER_METER *
-        ODOMETER_UPDATE_DT_S;
-    g_car_mode7_state.strafe_feedforward =
-        -g_car_mode7_state.velocity_strafe_target_mps *
-        ODOMETER_STRAFE_COUNT_PER_METER_ABS *
-        ODOMETER_UPDATE_DT_S;
-
-    g_car_mode7_state.forward_pid_output =
-        PositionalPID_Update(&s_mode7_forward_pid,
-                             g_car_mode7_state.velocity_forward_target_mps,
-                             g_car_mode7_state.velocity_forward_feedback_mps);
-    g_car_mode7_state.strafe_pid_output =
-        PositionalPID_Update(&s_mode7_strafe_pid,
-                             g_car_mode7_state.velocity_strafe_target_mps,
-                             g_car_mode7_state.velocity_strafe_feedback_mps);
+    g_car_mode7_state.velocity_forward_feedback_mps =
+        g_odometer.body_vel[y];
+    g_car_mode7_state.velocity_strafe_feedback_mps =
+        -g_imufilter_1000hz.gyroz * 0.017453292519943295f;
 
     g_car_mode7_state.forward_target =
-        car_mode7_limit_output(g_car_mode7_state.forward_feedforward +
-                               g_car_mode7_state.forward_pid_output);
+        g_car_mode7_state.velocity_forward_target_mps;
     g_car_mode7_state.strafe_target =
-        car_mode7_limit_output(g_car_mode7_state.strafe_feedforward -
-                               g_car_mode7_state.strafe_pid_output);
-
-    g_car_mode7_state.forward_pid_p_term = s_mode7_forward_pid.p_term;
-    g_car_mode7_state.forward_pid_i_term = s_mode7_forward_pid.i_term;
-    g_car_mode7_state.forward_pid_d_term = s_mode7_forward_pid.d_term;
-    g_car_mode7_state.strafe_pid_p_term = s_mode7_strafe_pid.p_term;
-    g_car_mode7_state.strafe_pid_i_term = s_mode7_strafe_pid.i_term;
-    g_car_mode7_state.strafe_pid_d_term = s_mode7_strafe_pid.d_term;
+        g_car_mode7_state.velocity_strafe_target_mps;
     g_car_mode7_state.output_valid = 1U;
 
     car_forward_target = g_car_mode7_state.forward_target;
-    car_strafe_target = g_car_mode7_state.strafe_target;
+    car_yaw_rate_target = g_car_mode7_state.strafe_target;
 }

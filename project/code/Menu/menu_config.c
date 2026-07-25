@@ -1,7 +1,7 @@
 /*********************************************************************************************************************
 * 菜单用户配置实现文件 - 参数集中管理
 *
-* 功能：注册四电机速度环参数，并保留Flash存档读取/保存入口
+* 功能：注册两轮差速底盘控制参数，并保留Flash存档读取/保存入口
 ********************************************************************************************************************/
 
 #include "menu_config.h"
@@ -11,7 +11,18 @@
 #define MENU_CAR_S_CURVE_MIN_DIST_INDEX  (57U)
 #define MENU_CAR_CARPLANFIX_ENABLE_INDEX  (78U)
 #define MENU_CAR_CARPLANFIX_START_B1_ENABLE_INDEX (79U)
-#define MENU_CAR_EXPECTED_PARAM_COUNT     (80U)
+#define MENU_CAR_MOTOR_TEST_PWM_INDEX     (80U)
+#define MENU_CAR_LEFT_COUNT_PER_METER_INDEX  (81U)
+#define MENU_CAR_RIGHT_COUNT_PER_METER_INDEX (82U)
+#define MENU_CAR_WHEEL_TRACK_M_INDEX         (83U)
+#define MENU_CAR_DEBUG_MODE_INDEX             (84U)
+#define MENU_CAR_DEBUG_RIGHT_PWM_INDEX        (85U)
+#define MENU_CAR_DEBUG_LEFT_COUNT_INDEX       (86U)
+#define MENU_CAR_DEBUG_RIGHT_COUNT_INDEX      (87U)
+#define MENU_CAR_DEBUG_LINEAR_MPS_INDEX       (88U)
+#define MENU_CAR_DEBUG_YAW_RATE_INDEX         (89U)
+#define MENU_CAR_DEBUG_HEADING_DEG_INDEX      (90U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT         (91U)
 
 #if (MENU_CAR_EXPECTED_PARAM_COUNT > MENU_MAX_PARAMS)
 #error "Car menu parameter count exceeds MENU_MAX_PARAMS"
@@ -26,25 +37,43 @@
 #endif
 
 //====================================================参数变量区====================================================
-// 轮速PID参数（四个电机共用）
+// 左右驱动轮共用的轮速PID参数
 float wheel_kp = 2.3f;                  // 比例系数
 float wheel_ki = 0.08f;                  // 积分系数
 float wheel_kd = 0.0f;                  // 微分系数
 float wheel_output_limit = 5000.0f;     // 输出限幅 (PWM)
 float wheel_i_limit = 2500.0f;          // 积分限幅
+float motor_test_pwm = 0.0f;            // C_Debug中的左轮开环测试PWM
+
+/*
+ * 两轮差速底盘标定参数。
+ * wheel_track_m 默认值仅用于初始联调，必须按左右驱动轮接地点中心距实测校准。
+ */
+float wheel_left_count_per_meter = 14000.0f;
+float wheel_right_count_per_meter = 14000.0f;
+float wheel_track_m = 0.20f;
+
+uint8 car_debug_run_enabled = 0U;
+float car_debug_mode = (float)CAR_DEBUG_MODE_PWM;
+float car_debug_right_pwm = 0.0f;
+float car_debug_left_target_count = 0.0f;
+float car_debug_right_target_count = 0.0f;
+float car_debug_linear_mps = 0.0f;
+float car_debug_yaw_rate_rad_s = 0.0f;
+float car_debug_heading_deg = 0.0f;
 
 //====================================================用户函数声明====================================================
-float yaw_angle_kp = 3.8f;
+float yaw_angle_kp = 2.0f;
 float yaw_angle_ki = 0.0f;
-float yaw_angle_kd = 1.0f;
-float yaw_angle_i_limit = 4.0f;
-float yaw_angle_output_limit = 100.0f;
+float yaw_angle_kd = 0.0f;
+float yaw_angle_i_limit = 50.0f;
+float yaw_angle_output_limit = 3.0f;
 
-float yaw_rate_kp = 125.0f;
-float yaw_rate_ki = 0.03f;
+float yaw_rate_kp = 1.0f;
+float yaw_rate_ki = 0.02f;
 float yaw_rate_kd = 0.0f;
-float yaw_rate_i_limit = 50.0f;
-float yaw_rate_output_limit = 3000.0f;
+float yaw_rate_i_limit = 100.0f;
+float yaw_rate_output_limit = 3.0f;
 
 float mode7_velocity_smooth_tau_s = 0.12f;
 float mode7_velocity_output_limit = 650.0f;
@@ -131,8 +160,10 @@ static void save_air_slot_1_function(void);
 static void save_air_slot_2_function(void);
 static void save_air_slot_3_function(void);
 static void sync_air_function(void);
+static void car_debug_run_toggle_function(void);
 static void diag_imu_function(void);
 static void diag_encoder_function(void);
+static void diag_direction_function(void);
 static void diag_position_function(void);
 static void diag_air_state_function(void);
 static void diag_air_tof_function(void);
@@ -150,6 +181,14 @@ static menu_item_t wheel_pid_menu[] = {
     {"Kd", MENU_TYPE_PARAMETER, .param_index = 2},
     {"OutLimit", MENU_TYPE_PARAMETER, .param_index = 3},
     {"ILimit", MENU_TYPE_PARAMETER, .param_index = 4},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+/* 两轮差速底盘几何与编码器标定参数。 */
+static menu_item_t two_wheel_drive_menu[] = {
+    {"Left CPM", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_LEFT_COUNT_PER_METER_INDEX},
+    {"Right CPM", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_RIGHT_COUNT_PER_METER_INDEX},
+    {"Track m", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_WHEEL_TRACK_M_INDEX},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -394,6 +433,7 @@ static menu_item_t save_air_slot_menu[] = {
 
 static menu_item_t car_param_menu[] = {
     {"Wheel PID", MENU_TYPE_SUBMENU, .submenu = wheel_pid_menu},
+    {"2W Drive", MENU_TYPE_SUBMENU, .submenu = two_wheel_drive_menu},
     {"YawRate PID", MENU_TYPE_SUBMENU, .submenu = yaw_rate_pid_menu},
     {"YawAng PID", MENU_TYPE_SUBMENU, .submenu = yaw_angle_pid_menu},
     {"Mode2 Vel", MENU_TYPE_SUBMENU, .submenu = mode2_velocity_pid_menu},
@@ -409,6 +449,7 @@ static menu_item_t car_param_menu[] = {
 static menu_item_t car_diag_menu[] = {
     {"IMU", MENU_TYPE_DIAG_VIEW, .function = diag_imu_function},
     {"Encoder", MENU_TYPE_DIAG_VIEW, .function = diag_encoder_function},
+    {"Direction", MENU_TYPE_DIAG_VIEW, .function = diag_direction_function},
     {"Position", MENU_TYPE_DIAG_VIEW, .function = diag_position_function},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
@@ -430,9 +471,28 @@ static menu_item_t carplanfix_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
+/*
+ * 两轮控制调试页。
+ * Mode取值：0=PWM，1=左右轮速度，2=线速度+角速度，3=线速度+目标航向。
+ * Run/Stop只切换运行态，运行态不保存，上电和重新初始化时固定为停止。
+ */
+static menu_item_t car_debug_menu[] = {
+    {"Run Stop", MENU_TYPE_FUNCTION, .function = car_debug_run_toggle_function},
+    {"Mode 0P1W2Y3H", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_DEBUG_MODE_INDEX},
+    {"Left PWM", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_MOTOR_TEST_PWM_INDEX},
+    {"Right PWM", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_DEBUG_RIGHT_PWM_INDEX},
+    {"Left Count", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_DEBUG_LEFT_COUNT_INDEX},
+    {"Right Count", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_DEBUG_RIGHT_COUNT_INDEX},
+    {"Linear mps", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_DEBUG_LINEAR_MPS_INDEX},
+    {"Yaw rad s", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_DEBUG_YAW_RATE_INDEX},
+    {"Heading deg", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_DEBUG_HEADING_DEG_INDEX},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
 static menu_item_t car_menu[] = {
     {"C_params", MENU_TYPE_SUBMENU, .submenu = car_param_menu},
     {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
+    {"C_Debug", MENU_TYPE_SUBMENU, .submenu = car_debug_menu},
     {"C_Load", MENU_TYPE_SUBMENU, .submenu = load_slot_menu},
     {"C_Save", MENU_TYPE_SUBMENU, .submenu = save_slot_menu},
     {"C_Beacon", MENU_TYPE_SUBMENU, .submenu = NULL},
@@ -662,24 +722,24 @@ static uint8 menu_build_air_param_menus(void)
 //====================================================用户配置初始化====================================================
 void menu_config_init(void)
 {
-    // 注册轮速PID参数（四个电机共用）
+    // 注册左右驱动轮共用的轮速PID参数
     menu_register_param(&wheel_kp, 0.1f, 0.0f, 100.0f);                    // 参数0
     menu_register_param(&wheel_ki, 0.1f, 0.0f, 100.0f);                    // 参数1
     menu_register_param(&wheel_kd, 0.1f, 0.0f, 100.0f);                    // 参数2
     menu_register_param(&wheel_output_limit, 100.0f, 1000.0f, 10000.0f);   // 参数3
     menu_register_param(&wheel_i_limit, 100.0f, 0.0f, 10000.0f);           // 参数4 积分限幅
 
-    menu_register_param(&yaw_rate_kp, 0.1f, 0.0f, 500.0f);
-    menu_register_param(&yaw_rate_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&yaw_rate_kd, 0.1f, 0.0f, 500.0f);
-    menu_register_param(&yaw_rate_i_limit, 0.1f, 0.0f, 1000.0f);
-    menu_register_param(&yaw_rate_output_limit, 1.0f, 0.0f, 5000.0f);
+    menu_register_param(&yaw_rate_kp, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&yaw_rate_ki, 0.01f, 0.0f, 5.0f);
+    menu_register_param(&yaw_rate_kd, 0.01f, 0.0f, 5.0f);
+    menu_register_param(&yaw_rate_i_limit, 1.0f, 0.0f, 500.0f);
+    menu_register_param(&yaw_rate_output_limit, 0.1f, 0.0f, 3.0f);
 
-    menu_register_param(&yaw_angle_kp, 0.1f, 0.0f, 50.0f);
-    menu_register_param(&yaw_angle_ki, 0.01f, 0.0f, 50.0f);
-    menu_register_param(&yaw_angle_kd, 0.01f, 0.0f, 50.0f);
-    menu_register_param(&yaw_angle_i_limit, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&yaw_angle_output_limit, 0.1f, 0.0f, 100.0f);
+    menu_register_param(&yaw_angle_kp, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&yaw_angle_ki, 0.01f, 0.0f, 5.0f);
+    menu_register_param(&yaw_angle_kd, 0.01f, 0.0f, 5.0f);
+    menu_register_param(&yaw_angle_i_limit, 1.0f, 0.0f, 500.0f);
+    menu_register_param(&yaw_angle_output_limit, 0.1f, 0.0f, 3.0f);
 
     menu_register_param(&mode7_velocity_smooth_tau_s, 0.01f, 0.0f, 1.0f);
     menu_register_param(&mode7_velocity_output_limit, 10.0f, 0.0f, 1500.0f);
@@ -752,6 +812,17 @@ void menu_config_init(void)
     menu_register_param(&mode3_velocity_forward_kd, 1.0f, 0.0f, 500.0f);
     menu_register_param(&carplanfix_enable, 1.0f, 0.0f, 1.0f);
     menu_register_param(&carplanfix_mode3_beacon1_enable, 1.0f, 0.0f, 1.0f);
+    menu_register_param(&motor_test_pwm, 100.0f, -3000.0f, 3000.0f);
+    menu_register_param(&wheel_left_count_per_meter, 100.0f, 1000.0f, 50000.0f);
+    menu_register_param(&wheel_right_count_per_meter, 100.0f, 1000.0f, 50000.0f);
+    menu_register_param(&wheel_track_m, 0.005f, 0.05f, 1.00f);
+    menu_register_param(&car_debug_mode, 1.0f, 0.0f, 3.0f);
+    menu_register_param(&car_debug_right_pwm, 100.0f, -3000.0f, 3000.0f);
+    menu_register_param(&car_debug_left_target_count, 1.0f, -300.0f, 300.0f);
+    menu_register_param(&car_debug_right_target_count, 1.0f, -300.0f, 300.0f);
+    menu_register_param(&car_debug_linear_mps, 0.05f, -3.0f, 3.0f);
+    menu_register_param(&car_debug_yaw_rate_rad_s, 0.1f, -3.0f, 3.0f);
+    menu_register_param(&car_debug_heading_deg, 5.0f, -180.0f, 180.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {
@@ -771,8 +842,9 @@ void menu_config_init(void)
         menu_show_error("Air Menu Error");
         return;
     }
-    car_menu[4].submenu = beacon_position_recorder_get_menu();
-    if(car_menu[4].submenu == NULL)
+    car_debug_run_enabled = 0U;
+    car_menu[5].submenu = beacon_position_recorder_get_menu();
+    if(car_menu[5].submenu == NULL)
     {
         menu_show_error("Beacon Menu Error");
         return;
@@ -799,6 +871,30 @@ static void save_slot_0_function(void)
 static void save_slot_1_function(void)
 {
     menu_save_slot(1);
+}
+
+static void car_debug_run_toggle_function(void)
+{
+#if (CAR_CONTROL_SOURCE == CAR_CONTROL_SOURCE_DEBUG_MENU)
+    if(car_debug_run_enabled != 0U)
+    {
+        car_debug_run_enabled = 0U;
+        Control_Stop();
+        menu_show_success("Debug Stopped");
+    }
+    else
+    {
+        car_debug_run_enabled = 1U;
+    }
+#else
+    /*
+     * 当前固件选择遥控输入源时，菜单调试参数仍可编辑，但发车键不允许
+     * 绕过CH4和通信新鲜度门控。切换宏并重新编译后才能菜单发车。
+     */
+    car_debug_run_enabled = 0U;
+    Control_Stop();
+    menu_show_error("Source Remote");
+#endif
 }
 
 static void load_air_slot_0_function(void)
@@ -924,24 +1020,57 @@ static void diag_imu_function(void)
     diag_show_line(7U, "Back/Enter Exit");
 }
 
-/* 诊断页：四轮编码器（滤波值 + 原始值） */
+/* 诊断页：左右驱动轮编码器与速度闭环输出。 */
 static void diag_encoder_function(void)
 {
     char text[32];
 
     diag_begin();
-    diag_show_line(0U, "Encoder filt");
-    sprintf(text, "LF:%7.1f", (double)encoder_get_left_front_filtered_count());
+    diag_show_line(0U, "2W Encoder");
+    sprintf(text, "L Filt:%7.1f", (double)encoder_get_left_filtered_count());
     diag_show_line(1U, text);
-    sprintf(text, "RF:%7.1f", (double)encoder_get_right_front_filtered_count());
+    sprintf(text, "R Filt:%7.1f", (double)encoder_get_right_filtered_count());
     diag_show_line(2U, text);
-    sprintf(text, "LR:%7.1f", (double)encoder_get_left_rear_filtered_count());
+    sprintf(text, "Raw L/R:%d %d",
+            (int)encoder_get_left_count(),
+            (int)encoder_get_right_count());
     diag_show_line(3U, text);
-    sprintf(text, "RR:%7.1f", (double)encoder_get_right_rear_filtered_count());
+    sprintf(text, "PWM L/R:%d %d",
+            (int)control_left_wheel_output_pwm,
+            (int)control_right_wheel_output_pwm);
     diag_show_line(4U, text);
-    sprintf(text, "Raw %d %d", (int)encoder_get_left_front_count(), (int)encoder_get_right_front_count());
+    sprintf(text, "Tgt L/R:%d %d",
+            (int)control_left_wheel_target_count,
+            (int)control_right_wheel_target_count);
     diag_show_line(5U, text);
-    sprintf(text, "Raw %d %d", (int)encoder_get_left_rear_count(), (int)encoder_get_right_rear_count());
+    diag_clear_lines(6U, 6U);
+    diag_show_line(7U, "Back/Enter Exit");
+}
+
+/* 诊断页：两轮航向角外环与角速度内环。 */
+static void diag_direction_function(void)
+{
+    char text[32];
+
+    diag_begin();
+    diag_show_line(0U, "2W Direction");
+    sprintf(text, "Head T/C:%5.2f %5.2f",
+            (double)control_heading_target,
+            (double)control_yaw_angle_current);
+    diag_show_line(1U, text);
+    sprintf(text, "Head Err:%7.3f", (double)control_heading_error);
+    diag_show_line(2U, text);
+    sprintf(text, "Ang Out:%7.3f", (double)control_yaw_angle_output);
+    diag_show_line(3U, text);
+    sprintf(text, "Rate T/C:%5.2f %5.2f",
+            (double)control_yaw_rate_target,
+            (double)control_yaw_rate_current);
+    diag_show_line(4U, text);
+    sprintf(text, "Rate Out:%6.3f", (double)control_yaw_rate_output);
+    diag_show_line(5U, text);
+    sprintf(text, "Src:%u Run:%u",
+            (unsigned int)CAR_CONTROL_SOURCE,
+            (unsigned int)car_debug_run_enabled);
     diag_show_line(6U, text);
     diag_show_line(7U, "Back/Enter Exit");
 }

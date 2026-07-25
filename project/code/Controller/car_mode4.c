@@ -1,8 +1,6 @@
-/* Mode4: remote horizontal velocity closed loop.
- * Remote gives horizontal forward/right velocity targets in m/s.
- * Targets are rotated into the body frame before velocity control.
- * Odometer gives body velocity feedback in m/s, X positive means right, Y positive means forward.
- * Output converts right-positive velocity to the wheel-space strafe command.
+/* Mode4：遥控水平速度目标模式。
+ * 水平速度向量先转换到车体系；两轮底盘保持Air目标航向，只执行转换后的
+ * 前向分量，无法实现的横移分量不进入电机输出。
  */
 #include "car_mode.h"
 #include "car_loop.h"
@@ -195,6 +193,7 @@ void car_mode4_update_100HZ(uint32 now_ms)
     g_car_mode4_state.strafe_pid_d_term = s_mode4_strafe_pid.d_term;
     g_car_mode4_state.output_valid = 1U;
 
-    car_forward_target = g_car_mode4_state.forward_target;
-    car_strafe_target = g_car_mode4_state.strafe_target;
+    /* 两轮任务模式不再执行横移，输出车体前向物理速度。 */
+    car_forward_target = g_car_mode4_state.velocity_forward_target_mps;
+    car_yaw_rate_target = 0.0f;
 }

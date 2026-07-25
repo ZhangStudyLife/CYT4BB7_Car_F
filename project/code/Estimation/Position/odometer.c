@@ -72,27 +72,6 @@ static void odometer_body_to_horizontal(const float body[ODOMETER_AXIS_NUM],
     horizontal[y] = (sin_yaw * body[x]) + (cos_yaw * body[y]);
 }
 
-static void odometer_compensate_xy_crosstalk(float body_vel[ODOMETER_AXIS_NUM])
-{
-    float correction_y = ODOMETER_CROSSTALK_Y_FROM_X_GAIN * body_vel[x];
-    float abs_correction_y = fabsf(correction_y);
-    float abs_body_y = fabsf(body_vel[y]);
-
-    if ((correction_y * body_vel[y] > 0.0f) &&
-        (abs_correction_y >= ODOMETER_CROSSTALK_Y_CORR_MIN_MPS) &&
-        (abs_correction_y >= (ODOMETER_CROSSTALK_Y_CORR_RATIO_MIN * abs_body_y)))
-    {
-        if (abs_correction_y > abs_body_y)
-        {
-            body_vel[y] = 0.0f;
-        }
-        else
-        {
-            body_vel[y] -= correction_y;
-        }
-    }
-}
-
 static void odometer_update_accel(void)
 {
     float body_acc[ODOMETER_AXIS_NUM];
@@ -168,19 +147,31 @@ void odometer_apply_pending_fix(void)
 void odometer_update_100HZ(void)
 {
     float body_vel[ODOMETER_AXIS_NUM];
-    float left_front = encoder_get_left_front_filtered_count();
-    float right_front = encoder_get_right_front_filtered_count();
-    float left_rear = encoder_get_left_rear_filtered_count();
-    float right_rear = encoder_get_right_rear_filtered_count();
+    float left_count = encoder_get_left_filtered_count();
+    float right_count = encoder_get_right_filtered_count();
+    float left_mps = 0.0f;
+    float right_mps = 0.0f;
 
-    body_vel[x] =
-        (left_front - right_front - left_rear + right_rear) *
-        (0.25f / ODOMETER_STRAFE_COUNT_PER_METER_ABS / ODOMETER_UPDATE_DT_S);
-    body_vel[y] =
-        (left_front + right_front + left_rear + right_rear) *
-        (0.25f / ODOMETER_FORWARD_COUNT_PER_METER / ODOMETER_UPDATE_DT_S);
+    /*
+     * 两轮差速底盘没有车体横移自由度。
+     * 左右编码器正值均表示车体前进，各自使用独立的每米脉冲标定值换算，
+     * 再取平均值得到车体前向速度。航向变化由IMU yaw负责坐标变换。
+     */
+    if((isfinite(wheel_left_count_per_meter)) &&
+       (wheel_left_count_per_meter > 0.0f))
+    {
+        left_mps =
+            left_count / wheel_left_count_per_meter / ODOMETER_UPDATE_DT_S;
+    }
+    if((isfinite(wheel_right_count_per_meter)) &&
+       (wheel_right_count_per_meter > 0.0f))
+    {
+        right_mps =
+            right_count / wheel_right_count_per_meter / ODOMETER_UPDATE_DT_S;
+    }
 
-    odometer_compensate_xy_crosstalk(body_vel);
+    body_vel[x] = 0.0f;
+    body_vel[y] = (left_mps + right_mps) * 0.5f;
 
     g_odometer.body_vel[x] = body_vel[x];
     g_odometer.body_vel[y] = body_vel[y];

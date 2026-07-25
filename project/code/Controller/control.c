@@ -5,28 +5,23 @@
 #define CONTROL_DEG_TO_RAD (0.017453292519943295f)
 #define CONTROL_PI         (3.14159265358979323846f)
 #define CONTROL_TWO_PI     (6.28318530717958647692f)
-#define CONTROL_WHEEL_FF_KS_LF         (270.0f)
-#define CONTROL_WHEEL_FF_KS_RF         (390.0f)
-#define CONTROL_WHEEL_FF_KS_LR         (430.0f)
-#define CONTROL_WHEEL_FF_KS_RR         (370.0f)
-#define CONTROL_WHEEL_FF_KV_LF         (8.20f)
-#define CONTROL_WHEEL_FF_KV_RF         (6.25f)
-#define CONTROL_WHEEL_FF_KV_LR         (7.05f)
-#define CONTROL_WHEEL_FF_KV_RR         (8.55f)
-#define CONTROL_WHEEL_FF_KSTART_LF     (240.0f)
-#define CONTROL_WHEEL_FF_KSTART_RF     (300.0f)
-#define CONTROL_WHEEL_FF_KSTART_LR     (325.0f)
-#define CONTROL_WHEEL_FF_KSTART_RR     (300.0f)
+#define CONTROL_UPDATE_DT_S            (0.01f)
+#define CONTROL_WHEEL_FF_KS_LEFT       (280.0f)
+#define CONTROL_WHEEL_FF_KS_RIGHT      (260.0f)
+#define CONTROL_WHEEL_FF_KV_LEFT       (4.20f)
+#define CONTROL_WHEEL_FF_KV_RIGHT      (4.20f)
+#define CONTROL_WHEEL_FF_KSTART_LEFT   (450.0f)
+#define CONTROL_WHEEL_FF_KSTART_RIGHT  (380.0f)
 #define CONTROL_WHEEL_FF_KS_FULL_SPEED (100.0f)
 #define CONTROL_WHEEL_FF_START_FULL_SPEED (15.0f)
 #define CONTROL_WHEEL_FF_START_TARGET_MIN (3.0f)
 #define CONTROL_WHEEL_FF_START_FEEDBACK_MAX (2.0f)
+#define CONTROL_GEOMETRY_MIN_VALUE     (0.0001f)
+#define CONTROL_YAW_RATE_ABS_MAX_RAD_S (3.0f)
 
 /* PID 实例 */
-PositionalPID wheel_left_front_pid;
-PositionalPID wheel_right_front_pid;
-PositionalPID wheel_left_rear_pid;
-PositionalPID wheel_right_rear_pid;
+PositionalPID wheel_left_pid;
+PositionalPID wheel_right_pid;
 PositionalPID yaw_angle_pid;
 PositionalPID yaw_rate_pid;
 
@@ -36,6 +31,19 @@ float control_yaw_angle_output = 0.0f;
 float control_yaw_rate_target = 0.0f;
 float control_yaw_rate_current = 0.0f;
 float control_yaw_rate_output = 0.0f;
+float control_heading_target = 0.0f;
+float control_heading_error = 0.0f;
+
+float control_left_wheel_target_count = 0.0f;
+float control_right_wheel_target_count = 0.0f;
+float control_left_wheel_feedback_count = 0.0f;
+float control_right_wheel_feedback_count = 0.0f;
+float control_left_wheel_feedforward_pwm = 0.0f;
+float control_right_wheel_feedforward_pwm = 0.0f;
+float control_left_wheel_output_pwm = 0.0f;
+float control_right_wheel_output_pwm = 0.0f;
+
+static car_control_command_mode_t s_last_command_mode = CAR_CONTROL_COMMAND_STOP;
 
 static float control_wheel_ff(float target, float feedback, float ks, float kv, float kstart)
 {
@@ -91,12 +99,49 @@ static float control_wrap_pi(float angle)
     return angle;
 }
 
+/* 将PID与前馈叠加后的浮点输出限制到电机驱动允许范围。 */
+static float control_limit_motor_pwm(float pwm)
+{
+    if(!isfinite(pwm))
+    {
+        return 0.0f;
+    }
+
+    if(pwm > (float)MOTOR_PWM_MAX)
+    {
+        return (float)MOTOR_PWM_MAX;
+    }
+    if(pwm < -(float)MOTOR_PWM_MAX)
+    {
+        return -(float)MOTOR_PWM_MAX;
+    }
+
+    return pwm;
+}
+
+static float control_limit_yaw_rate(float yaw_rate_rad_s)
+{
+    if(!isfinite(yaw_rate_rad_s))
+    {
+        return 0.0f;
+    }
+
+    if(yaw_rate_rad_s > CONTROL_YAW_RATE_ABS_MAX_RAD_S)
+    {
+        return CONTROL_YAW_RATE_ABS_MAX_RAD_S;
+    }
+    if(yaw_rate_rad_s < -CONTROL_YAW_RATE_ABS_MAX_RAD_S)
+    {
+        return -CONTROL_YAW_RATE_ABS_MAX_RAD_S;
+    }
+
+    return yaw_rate_rad_s;
+}
+
 static void control_pid_init_all(void)
 {
-    PositionalPID_Init(&wheel_left_front_pid, 0.0f, wheel_kp, wheel_ki, wheel_kd, wheel_i_limit, wheel_output_limit);
-    PositionalPID_Init(&wheel_right_front_pid, 0.0f, wheel_kp, wheel_ki, wheel_kd, wheel_i_limit, wheel_output_limit);
-    PositionalPID_Init(&wheel_left_rear_pid, 0.0f, wheel_kp, wheel_ki, wheel_kd, wheel_i_limit, wheel_output_limit);
-    PositionalPID_Init(&wheel_right_rear_pid, 0.0f, wheel_kp, wheel_ki, wheel_kd, wheel_i_limit, wheel_output_limit);
+    PositionalPID_Init(&wheel_left_pid, 0.0f, wheel_kp, wheel_ki, wheel_kd, wheel_i_limit, wheel_output_limit);
+    PositionalPID_Init(&wheel_right_pid, 0.0f, wheel_kp, wheel_ki, wheel_kd, wheel_i_limit, wheel_output_limit);
     PositionalPID_Init(&yaw_angle_pid, 0.0f, yaw_angle_kp, yaw_angle_ki, yaw_angle_kd, yaw_angle_i_limit, yaw_angle_output_limit);
     PositionalPID_Init(&yaw_rate_pid, 0.0f, yaw_rate_kp, yaw_rate_ki, yaw_rate_kd, yaw_rate_i_limit, yaw_rate_output_limit);
 }
@@ -113,10 +158,8 @@ static void control_wheel_pid_apply_params(PositionalPID *pid)
 
 static void control_pid_apply_all(void)
 {
-    control_wheel_pid_apply_params(&wheel_left_front_pid);
-    control_wheel_pid_apply_params(&wheel_right_front_pid);
-    control_wheel_pid_apply_params(&wheel_left_rear_pid);
-    control_wheel_pid_apply_params(&wheel_right_rear_pid);
+    control_wheel_pid_apply_params(&wheel_left_pid);
+    control_wheel_pid_apply_params(&wheel_right_pid);
 
     yaw_angle_pid.kp_1 = yaw_angle_kp;     yaw_angle_pid.ki = yaw_angle_ki;
     yaw_angle_pid.kd = yaw_angle_kd;       yaw_angle_pid.i_limit = yaw_angle_i_limit;
@@ -139,12 +182,18 @@ void Control_Reset(void)
     control_pid_init_all();
     control_yaw_angle_current = control_yaw_angle_output = 0.0f;
     control_yaw_rate_target = control_yaw_rate_current = control_yaw_rate_output = 0.0f;
+    control_heading_target = control_heading_error = 0.0f;
+    control_left_wheel_target_count = control_right_wheel_target_count = 0.0f;
+    control_left_wheel_feedback_count = control_right_wheel_feedback_count = 0.0f;
+    control_left_wheel_feedforward_pwm = control_right_wheel_feedforward_pwm = 0.0f;
+    control_left_wheel_output_pwm = control_right_wheel_output_pwm = 0.0f;
 }
 
 void Control_Stop(void)
 {
     Control_Reset();
-    mecanum_motor_stop();
+    /* 当前底盘仅使用 M1 左轮和 M2 右轮，停车时不访问未初始化的旧麦轮通道。 */
+    two_wheel_motor_stop();
 }
 
 float Control_GetYawAngle(void)
@@ -154,52 +203,233 @@ float Control_GetYawAngle(void)
     return control_wrap_pi(yaw);
 }
 
-/* 100Hz：yaw目标 + 麦克纳姆解算 + 四轮速度环 + 电机输出 */
-void Control_100Hz(float forward, float strafe, float yaw_target_rad)
+/*
+ * 100Hz左右轮速度闭环。
+ * 目标与反馈统一使用“脉冲/10ms”，避免在PID内部混用m/s和编码器计数。
+ */
+void Control_WheelSpeed100Hz(float left_target_count, float right_target_count)
 {
-    float rot, lf, rf, lr, rr;
-    float lf_feedback, rf_feedback, lr_feedback, rr_feedback;
-    float lf_ff, rf_ff, lr_ff, rr_ff;
-    float yaw_error;
+    if((!isfinite(left_target_count)) || (!isfinite(right_target_count)))
+    {
+        Control_Stop();
+        return;
+    }
 
     control_pid_apply_all();
 
+    control_left_wheel_target_count = left_target_count;
+    control_right_wheel_target_count = right_target_count;
+    control_left_wheel_feedback_count = encoder_get_left_filtered_count();
+    control_right_wheel_feedback_count = encoder_get_right_filtered_count();
+
+    control_left_wheel_feedforward_pwm =
+        control_wheel_ff(control_left_wheel_target_count,
+                         control_left_wheel_feedback_count,
+                         CONTROL_WHEEL_FF_KS_LEFT,
+                         CONTROL_WHEEL_FF_KV_LEFT,
+                         CONTROL_WHEEL_FF_KSTART_LEFT);
+    control_right_wheel_feedforward_pwm =
+        control_wheel_ff(control_right_wheel_target_count,
+                         control_right_wheel_feedback_count,
+                         CONTROL_WHEEL_FF_KS_RIGHT,
+                         CONTROL_WHEEL_FF_KV_RIGHT,
+                         CONTROL_WHEEL_FF_KSTART_RIGHT);
+
+    control_left_wheel_output_pwm = control_limit_motor_pwm(
+        control_left_wheel_feedforward_pwm +
+        PositionalPID_Update(&wheel_left_pid,
+                             control_left_wheel_target_count,
+                             control_left_wheel_feedback_count));
+    control_right_wheel_output_pwm = control_limit_motor_pwm(
+        control_right_wheel_feedforward_pwm +
+        PositionalPID_Update(&wheel_right_pid,
+                             control_right_wheel_target_count,
+                             control_right_wheel_feedback_count));
+
+    two_wheel_motor_set((int16_t)control_left_wheel_output_pwm,
+                        (int16_t)control_right_wheel_output_pwm);
+}
+
+/*
+ * 两轮差速逆运动学：
+ *   v_left  = v - omega * track / 2
+ *   v_right = v + omega * track / 2
+ * 再按左右轮各自的每米脉冲数换算为100Hz轮速闭环目标。
+ */
+static void control_apply_twist_100hz(float linear_mps, float yaw_rate_rad_s)
+{
+    float half_track_m;
+    float left_mps;
+    float right_mps;
+    float left_target_count;
+    float right_target_count;
+
+    if((!isfinite(linear_mps)) ||
+       (!isfinite(yaw_rate_rad_s)) ||
+       (!isfinite(wheel_left_count_per_meter)) ||
+       (!isfinite(wheel_right_count_per_meter)) ||
+       (!isfinite(wheel_track_m)) ||
+       (wheel_left_count_per_meter <= CONTROL_GEOMETRY_MIN_VALUE) ||
+       (wheel_right_count_per_meter <= CONTROL_GEOMETRY_MIN_VALUE) ||
+       (wheel_track_m <= CONTROL_GEOMETRY_MIN_VALUE))
+    {
+        Control_Stop();
+        return;
+    }
+
+    yaw_rate_rad_s = control_limit_yaw_rate(yaw_rate_rad_s);
+    half_track_m = wheel_track_m * 0.5f;
+    left_mps = linear_mps - yaw_rate_rad_s * half_track_m;
+    right_mps = linear_mps + yaw_rate_rad_s * half_track_m;
+
+    left_target_count =
+        left_mps * wheel_left_count_per_meter * CONTROL_UPDATE_DT_S;
+    right_target_count =
+        right_mps * wheel_right_count_per_meter * CONTROL_UPDATE_DT_S;
+
+    Control_WheelSpeed100Hz(left_target_count, right_target_count);
+}
+
+void Control_Twist100Hz(float linear_mps, float yaw_rate_rad_s)
+{
+    if((!isfinite(linear_mps)) || (!isfinite(yaw_rate_rad_s)))
+    {
+        Control_Stop();
+        return;
+    }
+
+    control_yaw_rate_target = control_limit_yaw_rate(yaw_rate_rad_s);
+    control_yaw_rate_current =
+        -g_imufilter_1000hz.gyroz * CONTROL_DEG_TO_RAD;
+    control_yaw_rate_output = control_yaw_rate_target;
+
+    control_apply_twist_100hz(linear_mps, control_yaw_rate_target);
+}
+
+/*
+ * 100Hz角速度内环。
+ *
+ * yaw_rate_pid输出统一定义为rad/s，并直接作为两轮差速解算的角速度命令。
+ * 该结构与原麦轮串级方向环一致：PID输出完整旋转命令，不额外叠加目标角速度
+ * 前馈。待标准串级实车调通后，再根据响应情况决定是否增加前馈。
+ */
+void Control_YawRate100Hz(float linear_mps, float yaw_rate_target_rad_s)
+{
+    if((!isfinite(linear_mps)) || (!isfinite(yaw_rate_target_rad_s)))
+    {
+        Control_Stop();
+        return;
+    }
+
+    control_pid_apply_all();
+
+    control_yaw_rate_target = control_limit_yaw_rate(yaw_rate_target_rad_s);
+    control_yaw_rate_current =
+        -g_imufilter_1000hz.gyroz * CONTROL_DEG_TO_RAD;
+    control_yaw_rate_output =
+        PositionalPID_Update(&yaw_rate_pid,
+                             control_yaw_rate_target,
+                             control_yaw_rate_current);
+    control_yaw_rate_output =
+        control_limit_yaw_rate(control_yaw_rate_output);
+
+    control_apply_twist_100hz(linear_mps, control_yaw_rate_output);
+}
+
+/*
+ * 100Hz航向角外环 + 角速度内环。
+ *
+ * PositionalPID_Update()内部直接计算target-current，因此这里先将误差归一化到
+ * [-pi, pi]，再构造当前角度附近的等效目标，避免跨越+/-pi时选择错误长路径。
+ */
+void Control_Heading100Hz(float linear_mps, float heading_target_rad)
+{
+    float equivalent_target_rad;
+
+    if((!isfinite(linear_mps)) || (!isfinite(heading_target_rad)))
+    {
+        Control_Stop();
+        return;
+    }
+
+    control_pid_apply_all();
+
+    control_heading_target = control_wrap_pi(heading_target_rad);
     control_yaw_angle_current = Control_GetYawAngle();
-    yaw_error = control_wrap_pi(yaw_target_rad - control_yaw_angle_current);
-    control_yaw_angle_output = PositionalPID_Update(&yaw_angle_pid, yaw_error, 0.0f);
-    control_yaw_rate_target = control_yaw_angle_output;
+    control_heading_error =
+        control_wrap_pi(control_heading_target - control_yaw_angle_current);
+    equivalent_target_rad =
+        control_yaw_angle_current + control_heading_error;
 
-    control_yaw_rate_current = -g_imufilter_1000hz.gyroz * CONTROL_DEG_TO_RAD;
-    control_yaw_rate_output = PositionalPID_Update(&yaw_rate_pid, control_yaw_rate_target, control_yaw_rate_current);
+    control_yaw_angle_output =
+        PositionalPID_Update(&yaw_angle_pid,
+                             equivalent_target_rad,
+                             control_yaw_angle_current);
+    control_yaw_angle_output =
+        control_limit_yaw_rate(control_yaw_angle_output);
 
-    rot = control_yaw_rate_output;
-    lf = forward - strafe - rot;
-    rf = forward + strafe + rot;
-    lr = forward + strafe - rot;
-    rr = forward - strafe + rot;
-    lf_feedback = encoder_get_left_front_filtered_count();
-    rf_feedback = encoder_get_right_front_filtered_count();
-    lr_feedback = encoder_get_left_rear_filtered_count();
-    rr_feedback = encoder_get_right_rear_filtered_count();
-    lf_ff = control_wheel_ff(lf, lf_feedback, CONTROL_WHEEL_FF_KS_LF, CONTROL_WHEEL_FF_KV_LF, CONTROL_WHEEL_FF_KSTART_LF);
-    rf_ff = control_wheel_ff(rf, rf_feedback, CONTROL_WHEEL_FF_KS_RF, CONTROL_WHEEL_FF_KV_RF, CONTROL_WHEEL_FF_KSTART_RF);
-    lr_ff = control_wheel_ff(lr, lr_feedback, CONTROL_WHEEL_FF_KS_LR, CONTROL_WHEEL_FF_KV_LR, CONTROL_WHEEL_FF_KSTART_LR);
-    rr_ff = control_wheel_ff(rr, rr_feedback, CONTROL_WHEEL_FF_KS_RR, CONTROL_WHEEL_FF_KV_RR, CONTROL_WHEEL_FF_KSTART_RR);
+    Control_YawRate100Hz(linear_mps, control_yaw_angle_output);
+}
 
-    mecanum_motor_set_all(
-        (int16_t)(lf_ff + PositionalPID_Update(&wheel_left_front_pid, lf, lf_feedback)),
-        (int16_t)(rf_ff + PositionalPID_Update(&wheel_right_front_pid, rf, rf_feedback)),
-        (int16_t)(lr_ff + PositionalPID_Update(&wheel_left_rear_pid, lr, lr_feedback)),
-        (int16_t)(rr_ff + PositionalPID_Update(&wheel_right_rear_pid, rr, rr_feedback)));
+void Control_ExecuteCommand100Hz(const car_control_command_t *command)
+{
+    if((command == NULL) ||
+       (command->enabled == 0U) ||
+       (command->mode == CAR_CONTROL_COMMAND_STOP))
+    {
+        Control_Stop();
+        s_last_command_mode = CAR_CONTROL_COMMAND_STOP;
+        return;
+    }
 
-    // wifi_justfloat(lf, lf_feedback, lf_ff, wheel_left_front_pid.p_term, wheel_left_front_pid.i_term,
-    //                rf, rf_feedback, rf_ff, wheel_right_front_pid.p_term, wheel_right_front_pid.i_term,
-    //                lr, lr_feedback, lr_ff, wheel_left_rear_pid.p_term, wheel_left_rear_pid.i_term,
-    //                rr, rr_feedback, rr_ff, wheel_right_rear_pid.p_term, wheel_right_rear_pid.i_term,
-    //                g_euler.roll, g_euler.pitch, g_euler.yaw,
-    //                g_imufilter_1000hz.gyrox, g_imufilter_1000hz.gyroy, g_imufilter_1000hz.gyroz,
-    //                g_imufilter_1000hz.accx, g_imufilter_1000hz.accy);
+    if(command->mode != s_last_command_mode)
+    {
+        /*
+         * 切换PWM/轮速/角速度/航向模式时清除上一个模式的积分与微分状态，
+         * 防止调试模式或遥控模式切换后继承旧控制器输出。
+         */
+        Control_Reset();
+        s_last_command_mode = command->mode;
+    }
 
+    switch(command->mode)
+    {
+    case CAR_CONTROL_COMMAND_PWM:
+        if((!isfinite(command->left_pwm)) ||
+           (!isfinite(command->right_pwm)))
+        {
+            Control_Stop();
+            s_last_command_mode = CAR_CONTROL_COMMAND_STOP;
+            return;
+        }
+        two_wheel_motor_set(
+            (int16_t)control_limit_motor_pwm(command->left_pwm),
+            (int16_t)control_limit_motor_pwm(command->right_pwm));
+        break;
 
+    case CAR_CONTROL_COMMAND_WHEEL_SPEED:
+        Control_WheelSpeed100Hz(command->left_target_count,
+                                command->right_target_count);
+        break;
 
+    case CAR_CONTROL_COMMAND_TWIST:
+        Control_Twist100Hz(command->linear_mps,
+                           command->yaw_rate_rad_s);
+        break;
+
+    case CAR_CONTROL_COMMAND_YAW_RATE:
+        Control_YawRate100Hz(command->linear_mps,
+                             command->yaw_rate_rad_s);
+        break;
+
+    case CAR_CONTROL_COMMAND_HEADING:
+        Control_Heading100Hz(command->linear_mps,
+                             command->heading_target_rad);
+        break;
+
+    default:
+        Control_Stop();
+        s_last_command_mode = CAR_CONTROL_COMMAND_STOP;
+        break;
+    }
 }
