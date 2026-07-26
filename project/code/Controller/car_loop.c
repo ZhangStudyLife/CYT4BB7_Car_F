@@ -1,4 +1,5 @@
 #include "car_loop.h"
+#include "../Protocols/crsf/crsf.h"
 
 volatile uint8_t timer_100HZ_flag = 0U;
 volatile uint16 g_tick_1000HZ = 0U;
@@ -188,6 +189,7 @@ void car_loop_init(void)
     wifi_core_Init();
     air_comm_car_init();
     air_comm_set_run_data_callback(on_air_data);
+    crsf_init();
     Beep_Init();
     Beep_Play(100U, 1.0f, 1U);
     pit_init(PIT_CH0, 1000U);
@@ -236,6 +238,7 @@ static void car_loop_100HZ(void)
     motor_stop();
     car_speed_control_100HZ();
     air_comm_car_update_100HZ();
+    CRSF_Update_100HZ();
 
     menu_runtime_locked = car_menu_is_runtime_locked();
     if(menu_runtime_locked != 0U)
