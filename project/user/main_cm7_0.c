@@ -7,7 +7,11 @@ static void car_platform_init(void)
     debug_init();                       // 调试串口信息初始化
 }
 
- int main(void)
+int16_t l_speed = 1000;
+int16_t r_speed = 1000;
+
+
+int main(void)
 {
     car_platform_init();
     car_loop_init();
@@ -15,7 +19,9 @@ static void car_platform_init(void)
     while(true)
     {
         car_loop_poll();
+        wifi_justfloat(g_euler.roll, g_euler.pitch, g_euler.yaw,
+                       encoder_get_left_count(), encoder_get_right_count());
+        motor_left_set_speed(l_speed);
+        motor_right_set_speed(r_speed);
     }
 }
-
-// **************************** 代码区域 ****************************

@@ -54,7 +54,7 @@
 
 #define IMU_CALIB_GYRO_TARGET_VALID_SAMPLES      (60000U) /* �����Ǿ�ֹ�궨Ŀ����Ч��������Լ60�� */
 #define IMU_CALIB_GYRO_TIMEOUT_SAMPLES           (300000U) /* �����Ǿ�ֹ�궨��ʱ������ */
-#define IMU_CALIB_GYRO_STATIC_MAX_DPS            (1.5f)
+#define IMU_CALIB_GYRO_STATIC_MAX_DPS            (10.0f)
 #define IMU_CALIB_GYRO_STATIC_ACC_ERR_G          (0.06f)
 #define IMU_CALIB_GYRO_STD_MAX_DPS               (0.20f)
 #define IMU_CALIB_GYRO_BIAS_MAX_DPS              (3.0f)

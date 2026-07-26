@@ -1,127 +1,7 @@
-/*********************************************************************************************************************
-* 菜单用户配置实现文件 - 参数集中管理
-*
-* 功能：注册四电机速度环参数，并保留Flash存档读取/保存入口
-********************************************************************************************************************/
-
 #include "menu_config.h"
 
-#define MENU_CAR_S_CURVE_MAX_ITER_INDEX  (55U)
-#define MENU_CAR_S_CURVE_CONV_TOL_INDEX  (56U)
-#define MENU_CAR_S_CURVE_MIN_DIST_INDEX  (57U)
-#define MENU_CAR_CARPLANFIX_ENABLE_INDEX  (78U)
-#define MENU_CAR_CARPLANFIX_START_B1_ENABLE_INDEX (79U)
-#define MENU_CAR_EXPECTED_PARAM_COUNT     (80U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (0U)
 
-#if (MENU_CAR_EXPECTED_PARAM_COUNT > MENU_MAX_PARAMS)
-#error "Car menu parameter count exceeds MENU_MAX_PARAMS"
-#endif
-
-#if ((MENU_CAR_BOOT_FLASH_LOAD_ENABLE != 0U) && (MENU_CAR_BOOT_FLASH_LOAD_ENABLE != 1U))
-#error "Car boot Flash load enable must be 0 or 1"
-#endif
-
-#if (MENU_CAR_BOOT_FLASH_LOAD_SLOT >= MENU_SLOT_COUNT)
-#error "Car boot Flash load slot exceeds menu slot count"
-#endif
-
-//====================================================参数变量区====================================================
-// 轮速PID参数（四个电机共用）
-float wheel_kp = 2.3f;                  // 比例系数
-float wheel_ki = 0.08f;                  // 积分系数
-float wheel_kd = 0.0f;                  // 微分系数
-float wheel_output_limit = 5000.0f;     // 输出限幅 (PWM)
-float wheel_i_limit = 2500.0f;          // 积分限幅
-
-//====================================================用户函数声明====================================================
-float yaw_angle_kp = 3.8f;
-float yaw_angle_ki = 0.0f;
-float yaw_angle_kd = 1.0f;
-float yaw_angle_i_limit = 4.0f;
-float yaw_angle_output_limit = 100.0f;
-
-float yaw_rate_kp = 125.0f;
-float yaw_rate_ki = 0.03f;
-float yaw_rate_kd = 0.0f;
-float yaw_rate_i_limit = 50.0f;
-float yaw_rate_output_limit = 3000.0f;
-
-float mode7_velocity_smooth_tau_s = 0.12f;
-float mode7_velocity_output_limit = 650.0f;
-float mode7_velocity_pid_output_limit = 250.0f;
-float mode7_velocity_i_limit = 0.0f;
-float mode7_velocity_strafe_kp = 80.0f;
-float mode7_velocity_strafe_ki = 0.0f;
-float mode7_velocity_strafe_kd = 20.0f;
-float mode7_velocity_forward_kp = 80.0f;
-float mode7_velocity_forward_ki = 0.0f;
-float mode7_velocity_forward_kd = 20.0f;
-
-float mode5_velocity_smooth_tau_s = 0.162f;
-float mode5_velocity_output_limit = 650.0f;
-float mode5_velocity_pid_output_limit = 250.0f;
-float mode5_velocity_i_limit = 0.0f;
-float mode5_velocity_strafe_kp = 80.0f;
-float mode5_velocity_strafe_ki = 0.0f;
-float mode5_velocity_strafe_kd = 20.0f;
-float mode5_velocity_forward_kp = 80.0f;
-float mode5_velocity_forward_ki = 0.0f;
-float mode5_velocity_forward_kd = 20.0f;
-
-float mode2_velocity_smooth_tau_s = 0.162f;
-float mode2_velocity_output_limit = 650.0f;
-float mode2_velocity_pid_output_limit = 250.0f;
-float mode2_velocity_i_limit = 0.0f;
-float mode2_velocity_strafe_kp = 80.0f;
-float mode2_velocity_strafe_ki = 0.0f;
-float mode2_velocity_strafe_kd = 20.0f;
-float mode2_velocity_forward_kp = 80.0f;
-float mode2_velocity_forward_ki = 0.0f;
-float mode2_velocity_forward_kd = 20.0f;
-
-float mode8_velocity_smooth_tau_s = 0.162f;
-float mode8_velocity_output_limit = 650.0f;
-float mode8_velocity_pid_output_limit = 250.0f;
-float mode8_velocity_i_limit = 0.0f;
-float mode8_velocity_strafe_kp = 80.0f;
-float mode8_velocity_strafe_ki = 0.0f;
-float mode8_velocity_strafe_kd = 20.0f;
-float mode8_velocity_forward_kp = 80.0f;
-float mode8_velocity_forward_ki = 0.0f;
-float mode8_velocity_forward_kd = 20.0f;
-
-float mode4_velocity_smooth_tau_s = 0.162f;
-float mode4_velocity_output_limit = 650.0f;
-float mode4_velocity_pid_output_limit = 250.0f;
-float mode4_velocity_i_limit = 0.0f;
-float mode4_velocity_strafe_kp = 80.0f;
-float mode4_velocity_strafe_ki = 0.0f;
-float mode4_velocity_strafe_kd = 20.0f;
-float mode4_velocity_forward_kp = 80.0f;
-float mode4_velocity_forward_ki = 0.0f;
-float mode4_velocity_forward_kd = 20.0f;
-
-float mode3_velocity_smooth_tau_s = 0.162f;
-float mode3_velocity_output_limit = 650.0f;
-float mode3_velocity_pid_output_limit = 250.0f;
-float mode3_velocity_i_limit = 0.0f;
-float mode3_velocity_strafe_kp = 80.0f;
-float mode3_velocity_strafe_ki = 0.0f;
-float mode3_velocity_strafe_kd = 20.0f;
-float mode3_velocity_forward_kp = 80.0f;
-float mode3_velocity_forward_ki = 0.0f;
-float mode3_velocity_forward_kd = 20.0f;
-
-float s_curve_max_iter = 50.0f;
-float s_curve_conv_tol = 0.001f;
-float s_curve_min_dist = 5.0f;
-float carplanfix_enable = 0.0f;
-float carplanfix_mode3_beacon1_enable = 1.0f;
-
-static void load_slot_0_function(void);
-static void load_slot_1_function(void);
-static void save_slot_0_function(void);
-static void save_slot_1_function(void);
 static void load_air_slot_0_function(void);
 static void load_air_slot_1_function(void);
 static void load_air_slot_2_function(void);
@@ -133,7 +13,6 @@ static void save_air_slot_3_function(void);
 static void sync_air_function(void);
 static void diag_imu_function(void);
 static void diag_encoder_function(void);
-static void diag_position_function(void);
 static void diag_air_state_function(void);
 static void diag_air_tof_function(void);
 static void diag_air_flow_function(void);
@@ -142,138 +21,14 @@ static void diag_air_attitude_function(void);
 static void diag_air_rc_function(void);
 static void diag_2bl3_status_function(void);
 
-//====================================================菜单树定义====================================================
-// 轮速PID子菜单（增量式）
-static menu_item_t wheel_pid_menu[] = {
-    {"Kp", MENU_TYPE_PARAMETER, .param_index = 0},
-    {"Ki", MENU_TYPE_PARAMETER, .param_index = 1},
-    {"Kd", MENU_TYPE_PARAMETER, .param_index = 2},
-    {"OutLimit", MENU_TYPE_PARAMETER, .param_index = 3},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 4},
+static menu_item_t car_diag_menu[] = {
+    {"IMU", MENU_TYPE_DIAG_VIEW, .function = diag_imu_function},
+    {"Encoder", MENU_TYPE_DIAG_VIEW, .function = diag_encoder_function},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-static menu_item_t yaw_rate_pid_menu[] = {
-    {"Kp", MENU_TYPE_PARAMETER, .param_index = 5},
-    {"Ki", MENU_TYPE_PARAMETER, .param_index = 6},
-    {"Kd", MENU_TYPE_PARAMETER, .param_index = 7},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 8},
-    {"OutLimit", MENU_TYPE_PARAMETER, .param_index = 9},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-// 加载存档子菜单
-static menu_item_t load_slot_menu[] = {
-    {"Load Car0", MENU_TYPE_FUNCTION, .function = load_slot_0_function},
-    {"Load Car1", MENU_TYPE_FUNCTION, .function = load_slot_1_function},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-// 保存存档子菜单
-static menu_item_t save_slot_menu[] = {
-    {"Save Car0", MENU_TYPE_FUNCTION, .function = save_slot_0_function},
-    {"Save Car1", MENU_TYPE_FUNCTION, .function = save_slot_1_function},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-// 主菜单
-static menu_item_t yaw_angle_pid_menu[] = {
-    {"Kp", MENU_TYPE_PARAMETER, .param_index = 10},
-    {"Ki", MENU_TYPE_PARAMETER, .param_index = 11},
-    {"Kd", MENU_TYPE_PARAMETER, .param_index = 12},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 13},
-    {"OutLimit", MENU_TYPE_PARAMETER, .param_index = 14},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t mode7_velocity_pid_menu[] = {
-    {"Smooth", MENU_TYPE_PARAMETER, .param_index = 15},
-    {"CmdLimit", MENU_TYPE_PARAMETER, .param_index = 16},
-    {"PidLimit", MENU_TYPE_PARAMETER, .param_index = 17},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 18},
-    {"SKp", MENU_TYPE_PARAMETER, .param_index = 19},
-    {"SKi", MENU_TYPE_PARAMETER, .param_index = 20},
-    {"SKd", MENU_TYPE_PARAMETER, .param_index = 21},
-    {"FKp", MENU_TYPE_PARAMETER, .param_index = 22},
-    {"FKi", MENU_TYPE_PARAMETER, .param_index = 23},
-    {"FKd", MENU_TYPE_PARAMETER, .param_index = 24},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t mode5_velocity_pid_menu[] = {
-    {"Smooth", MENU_TYPE_PARAMETER, .param_index = 35},
-    {"CmdLimit", MENU_TYPE_PARAMETER, .param_index = 36},
-    {"PidLimit", MENU_TYPE_PARAMETER, .param_index = 37},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 38},
-    {"SKp", MENU_TYPE_PARAMETER, .param_index = 39},
-    {"SKi", MENU_TYPE_PARAMETER, .param_index = 40},
-    {"SKd", MENU_TYPE_PARAMETER, .param_index = 41},
-    {"FKp", MENU_TYPE_PARAMETER, .param_index = 42},
-    {"FKi", MENU_TYPE_PARAMETER, .param_index = 43},
-    {"FKd", MENU_TYPE_PARAMETER, .param_index = 44},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t mode2_velocity_pid_menu[] = {
-    {"Smooth", MENU_TYPE_PARAMETER, .param_index = 45},
-    {"CmdLimit", MENU_TYPE_PARAMETER, .param_index = 46},
-    {"PidLimit", MENU_TYPE_PARAMETER, .param_index = 47},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 48},
-    {"SKp", MENU_TYPE_PARAMETER, .param_index = 49},
-    {"SKi", MENU_TYPE_PARAMETER, .param_index = 50},
-    {"SKd", MENU_TYPE_PARAMETER, .param_index = 51},
-    {"FKp", MENU_TYPE_PARAMETER, .param_index = 52},
-    {"FKi", MENU_TYPE_PARAMETER, .param_index = 53},
-    {"FKd", MENU_TYPE_PARAMETER, .param_index = 54},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t mode8_velocity_pid_menu[] = {
-    {"Smooth", MENU_TYPE_PARAMETER, .param_index = 25},
-    {"CmdLimit", MENU_TYPE_PARAMETER, .param_index = 26},
-    {"PidLimit", MENU_TYPE_PARAMETER, .param_index = 27},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 28},
-    {"SKp", MENU_TYPE_PARAMETER, .param_index = 29},
-    {"SKi", MENU_TYPE_PARAMETER, .param_index = 30},
-    {"SKd", MENU_TYPE_PARAMETER, .param_index = 31},
-    {"FKp", MENU_TYPE_PARAMETER, .param_index = 32},
-    {"FKi", MENU_TYPE_PARAMETER, .param_index = 33},
-    {"FKd", MENU_TYPE_PARAMETER, .param_index = 34},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t mode4_velocity_pid_menu[] = {
-    {"Smooth", MENU_TYPE_PARAMETER, .param_index = 58},
-    {"CmdLimit", MENU_TYPE_PARAMETER, .param_index = 59},
-    {"PidLimit", MENU_TYPE_PARAMETER, .param_index = 60},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 61},
-    {"SKp", MENU_TYPE_PARAMETER, .param_index = 62},
-    {"SKi", MENU_TYPE_PARAMETER, .param_index = 63},
-    {"SKd", MENU_TYPE_PARAMETER, .param_index = 64},
-    {"FKp", MENU_TYPE_PARAMETER, .param_index = 65},
-    {"FKi", MENU_TYPE_PARAMETER, .param_index = 66},
-    {"FKd", MENU_TYPE_PARAMETER, .param_index = 67},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t mode3_velocity_pid_menu[] = {
-    {"Smooth", MENU_TYPE_PARAMETER, .param_index = 68},
-    {"CmdLimit", MENU_TYPE_PARAMETER, .param_index = 69},
-    {"PidLimit", MENU_TYPE_PARAMETER, .param_index = 70},
-    {"ILimit", MENU_TYPE_PARAMETER, .param_index = 71},
-    {"SKp", MENU_TYPE_PARAMETER, .param_index = 72},
-    {"SKi", MENU_TYPE_PARAMETER, .param_index = 73},
-    {"SKd", MENU_TYPE_PARAMETER, .param_index = 74},
-    {"FKp", MENU_TYPE_PARAMETER, .param_index = 75},
-    {"FKi", MENU_TYPE_PARAMETER, .param_index = 76},
-    {"FKd", MENU_TYPE_PARAMETER, .param_index = 77},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t s_curve_menu[] = {
-    {"MaxIter", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_S_CURVE_MAX_ITER_INDEX},
-    {"ConvTol", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_S_CURVE_CONV_TOL_INDEX},
-    {"MinDist", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_S_CURVE_MIN_DIST_INDEX},
+static menu_item_t car_menu[] = {
+    {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -298,7 +53,6 @@ typedef char core1_param_group_count_must_match[
     ((sizeof(s_core1_param_group_names) /
       sizeof(s_core1_param_group_names[0])) == 5U) ? 1 : -1];
 
-/* 2BL3图像参数二级分类菜单。 */
 static menu_item_t bl3_image_param_menu[] = {
     {"Stream", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Threshold", MENU_TYPE_SUBMENU, .submenu = NULL},
@@ -316,7 +70,6 @@ static menu_item_t bl3_image_param_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-/* 二级菜单显示名与Air参数定义中的分组名映射。 */
 static const char * const s_bl3_param_group_names[] = {
     "2BL3 Stream",
     "2BL3 Threshold",
@@ -373,7 +126,6 @@ enum
 static menu_item_t s_air_param_menu_storage[AIR_PARAM_MENU_STORAGE_COUNT];
 static menu_item_t *s_air_group_menus[AIR_PARAM_MENU_COUNT];
 static menu_item_t *s_core1_group_menus[CORE1_PARAM_MENU_COUNT];
-/* 2BL3二级分组菜单在统一存储区中的起始指针。 */
 static menu_item_t *s_bl3_group_menus[BL3_PARAM_MENU_COUNT];
 
 static menu_item_t load_air_slot_menu[] = {
@@ -392,27 +144,6 @@ static menu_item_t save_air_slot_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-static menu_item_t car_param_menu[] = {
-    {"Wheel PID", MENU_TYPE_SUBMENU, .submenu = wheel_pid_menu},
-    {"YawRate PID", MENU_TYPE_SUBMENU, .submenu = yaw_rate_pid_menu},
-    {"YawAng PID", MENU_TYPE_SUBMENU, .submenu = yaw_angle_pid_menu},
-    {"Mode2 Vel", MENU_TYPE_SUBMENU, .submenu = mode2_velocity_pid_menu},
-    {"Mode5 Vel", MENU_TYPE_SUBMENU, .submenu = mode5_velocity_pid_menu},
-    {"Mode7 Vel", MENU_TYPE_SUBMENU, .submenu = mode7_velocity_pid_menu},
-    {"Mode3 Vel", MENU_TYPE_SUBMENU, .submenu = mode3_velocity_pid_menu},
-    {"Mode4 Vel", MENU_TYPE_SUBMENU, .submenu = mode4_velocity_pid_menu},
-    {"Mode8 Vel", MENU_TYPE_SUBMENU, .submenu = mode8_velocity_pid_menu},
-    {"S Curve", MENU_TYPE_SUBMENU, .submenu = s_curve_menu},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t car_diag_menu[] = {
-    {"IMU", MENU_TYPE_DIAG_VIEW, .function = diag_imu_function},
-    {"Encoder", MENU_TYPE_DIAG_VIEW, .function = diag_encoder_function},
-    {"Position", MENU_TYPE_DIAG_VIEW, .function = diag_position_function},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
 static menu_item_t air_diag_menu[] = {
     {"A_State", MENU_TYPE_DIAG_VIEW, .function = diag_air_state_function},
     {"2BL3 Status", MENU_TYPE_DIAG_VIEW, .function = diag_2bl3_status_function},
@@ -421,22 +152,6 @@ static menu_item_t air_diag_menu[] = {
     {"A_IMU", MENU_TYPE_DIAG_VIEW, .function = diag_air_imu_function},
     {"A_Attitude", MENU_TYPE_DIAG_VIEW, .function = diag_air_attitude_function},
     {"A_RC", MENU_TYPE_DIAG_VIEW, .function = diag_air_rc_function},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t carplanfix_menu[] = {
-    {"Enable", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_CARPLANFIX_ENABLE_INDEX},
-    {"Start B1", MENU_TYPE_PARAMETER, .param_index = MENU_CAR_CARPLANFIX_START_B1_ENABLE_INDEX},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t car_menu[] = {
-    {"C_params", MENU_TYPE_SUBMENU, .submenu = car_param_menu},
-    {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
-    {"C_Load", MENU_TYPE_SUBMENU, .submenu = load_slot_menu},
-    {"C_Save", MENU_TYPE_SUBMENU, .submenu = save_slot_menu},
-    {"C_Beacon", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"PlanFix", MENU_TYPE_SUBMENU, .submenu = carplanfix_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -525,7 +240,6 @@ static uint8 menu_build_air_param_menus(void)
 
         s_air_group_menus[group] = &s_air_param_menu_storage[cursor];
         group_count = 0U;
-
         for(index = 0U; index < menu_get_air_param_count(); index++)
         {
             config = menu_get_air_param_config(index);
@@ -569,14 +283,12 @@ static uint8 menu_build_air_param_menus(void)
     {
         s_core1_group_menus[group] = &s_air_param_menu_storage[cursor];
         group_count = 0U;
-
         for(index = 0U; index < menu_get_air_param_count(); index++)
         {
             config = menu_get_air_param_config(index);
             if((config == NULL) || (config->menu_name == NULL) ||
                (config->visible == 0U) ||
-               (strcmp(config->menu_name,
-                       s_core1_param_group_names[group]) != 0))
+               (strcmp(config->menu_name, s_core1_param_group_names[group]) != 0))
             {
                 continue;
             }
@@ -610,7 +322,6 @@ static uint8 menu_build_air_param_menus(void)
     {
         s_bl3_group_menus[group] = &s_air_param_menu_storage[cursor];
         group_count = 0U;
-
         for(index = 0U; index < menu_get_air_param_count(); index++)
         {
             config = menu_get_air_param_config(index);
@@ -659,110 +370,12 @@ static uint8 menu_build_air_param_menus(void)
     return 0U;
 }
 
-//====================================================用户配置初始化====================================================
 void menu_config_init(void)
 {
-    // 注册轮速PID参数（四个电机共用）
-    menu_register_param(&wheel_kp, 0.1f, 0.0f, 100.0f);                    // 参数0
-    menu_register_param(&wheel_ki, 0.1f, 0.0f, 100.0f);                    // 参数1
-    menu_register_param(&wheel_kd, 0.1f, 0.0f, 100.0f);                    // 参数2
-    menu_register_param(&wheel_output_limit, 100.0f, 1000.0f, 10000.0f);   // 参数3
-    menu_register_param(&wheel_i_limit, 100.0f, 0.0f, 10000.0f);           // 参数4 积分限幅
-
-    menu_register_param(&yaw_rate_kp, 0.1f, 0.0f, 500.0f);
-    menu_register_param(&yaw_rate_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&yaw_rate_kd, 0.1f, 0.0f, 500.0f);
-    menu_register_param(&yaw_rate_i_limit, 0.1f, 0.0f, 1000.0f);
-    menu_register_param(&yaw_rate_output_limit, 1.0f, 0.0f, 5000.0f);
-
-    menu_register_param(&yaw_angle_kp, 0.1f, 0.0f, 50.0f);
-    menu_register_param(&yaw_angle_ki, 0.01f, 0.0f, 50.0f);
-    menu_register_param(&yaw_angle_kd, 0.01f, 0.0f, 50.0f);
-    menu_register_param(&yaw_angle_i_limit, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&yaw_angle_output_limit, 0.1f, 0.0f, 100.0f);
-
-    menu_register_param(&mode7_velocity_smooth_tau_s, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&mode7_velocity_output_limit, 10.0f, 0.0f, 1500.0f);
-    menu_register_param(&mode7_velocity_pid_output_limit, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode7_velocity_i_limit, 1.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode7_velocity_strafe_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode7_velocity_strafe_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode7_velocity_strafe_kd, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode7_velocity_forward_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode7_velocity_forward_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode7_velocity_forward_kd, 1.0f, 0.0f, 500.0f);
-
-    menu_register_param(&mode8_velocity_smooth_tau_s, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&mode8_velocity_output_limit, 10.0f, 0.0f, 1500.0f);
-    menu_register_param(&mode8_velocity_pid_output_limit, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode8_velocity_i_limit, 1.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode8_velocity_strafe_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode8_velocity_strafe_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode8_velocity_strafe_kd, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode8_velocity_forward_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode8_velocity_forward_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode8_velocity_forward_kd, 1.0f, 0.0f, 500.0f);
-
-    menu_register_param(&mode5_velocity_smooth_tau_s, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&mode5_velocity_output_limit, 10.0f, 0.0f, 1500.0f);
-    menu_register_param(&mode5_velocity_pid_output_limit, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode5_velocity_i_limit, 1.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode5_velocity_strafe_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode5_velocity_strafe_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode5_velocity_strafe_kd, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode5_velocity_forward_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode5_velocity_forward_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode5_velocity_forward_kd, 1.0f, 0.0f, 500.0f);
-
-    menu_register_param(&mode2_velocity_smooth_tau_s, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&mode2_velocity_output_limit, 10.0f, 0.0f, 1500.0f);
-    menu_register_param(&mode2_velocity_pid_output_limit, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode2_velocity_i_limit, 1.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode2_velocity_strafe_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode2_velocity_strafe_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode2_velocity_strafe_kd, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode2_velocity_forward_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode2_velocity_forward_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode2_velocity_forward_kd, 1.0f, 0.0f, 500.0f);
-
-    menu_register_param(&s_curve_max_iter, 1.0f, 5.0f, 200.0f);
-    menu_register_param(&s_curve_conv_tol, 0.001f, 0.001f, 1000.0f);
-    menu_register_param(&s_curve_min_dist, 0.1f, 1.0f, 1000.0f);
-
-    menu_register_param(&mode4_velocity_smooth_tau_s, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&mode4_velocity_output_limit, 10.0f, 0.0f, 1500.0f);
-    menu_register_param(&mode4_velocity_pid_output_limit, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode4_velocity_i_limit, 1.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode4_velocity_strafe_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode4_velocity_strafe_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode4_velocity_strafe_kd, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode4_velocity_forward_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode4_velocity_forward_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode4_velocity_forward_kd, 1.0f, 0.0f, 500.0f);
-
-    menu_register_param(&mode3_velocity_smooth_tau_s, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&mode3_velocity_output_limit, 10.0f, 0.0f, 1500.0f);
-    menu_register_param(&mode3_velocity_pid_output_limit, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode3_velocity_i_limit, 1.0f, 0.0f, 1000.0f);
-    menu_register_param(&mode3_velocity_strafe_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode3_velocity_strafe_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode3_velocity_strafe_kd, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode3_velocity_forward_kp, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&mode3_velocity_forward_ki, 0.01f, 0.0f, 500.0f);
-    menu_register_param(&mode3_velocity_forward_kd, 1.0f, 0.0f, 500.0f);
-    menu_register_param(&carplanfix_enable, 1.0f, 0.0f, 1.0f);
-    menu_register_param(&carplanfix_mode3_beacon1_enable, 1.0f, 0.0f, 1.0f);
-
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {
         menu_show_error("Car Menu Error");
         return;
-    }
-
-    if((MENU_CAR_BOOT_FLASH_LOAD_ENABLE != 0U) &&
-       (menu_flash_check_slot(MENU_CAR_BOOT_FLASH_LOAD_SLOT) != 0U))
-    {
-        menu_flash_load_params(MENU_CAR_BOOT_FLASH_LOAD_SLOT);
     }
 
     menu_air_support_init();
@@ -771,34 +384,8 @@ void menu_config_init(void)
         menu_show_error("Air Menu Error");
         return;
     }
-    car_menu[4].submenu = beacon_position_recorder_get_menu();
-    if(car_menu[4].submenu == NULL)
-    {
-        menu_show_error("Beacon Menu Error");
-        return;
-    }
+
     menu_set_root(main_menu);
-}
-
-//====================================================用户函数实现====================================================
-static void load_slot_0_function(void)
-{
-    menu_load_slot(0);
-}
-
-static void load_slot_1_function(void)
-{
-    menu_load_slot(1);
-}
-
-static void save_slot_0_function(void)
-{
-    menu_save_slot(0);
-}
-
-static void save_slot_1_function(void)
-{
-    menu_save_slot(1);
 }
 
 static void load_air_slot_0_function(void)
@@ -873,15 +460,12 @@ static void sync_air_function(void)
     }
 }
 
-/* 显示一行诊断文本（line 0-7，每行16像素高） */
 static void diag_show_line(uint8 line, const char *text)
 {
-    if(line >= MENU_MAX_VISIBLE_LINES)
+    if(line < MENU_MAX_VISIBLE_LINES)
     {
-        return;
+        menu_show_text_line(line, text, UI_COLOR_NORMAL);
     }
-
-    menu_show_text_line(line, text, UI_COLOR_NORMAL);
 }
 
 static void diag_clear_lines(uint8 first, uint8 last)
@@ -894,21 +478,18 @@ static void diag_clear_lines(uint8 first, uint8 last)
     }
 }
 
-/* 诊断页初始化：保留屏幕内容，由行缓存仅更新变化部分。 */
 static void diag_begin(void)
 {
     ips114_set_color(UI_COLOR_NORMAL, UI_COLOR_BG);
     ips114_set_font(UI_FONT_NORMAL);
 }
 
-/* 诊断页：IMU数据（欧拉角 + 陀螺仪 + 加速度计） */
 static void diag_imu_function(void)
 {
     char text[32];
 
     diag_begin();
-    sprintf(text, "IMU RPY");
-    diag_show_line(0U, text);
+    diag_show_line(0U, "IMU RPY");
     sprintf(text, "R:%7.2f", (double)g_euler.roll);
     diag_show_line(1U, text);
     sprintf(text, "P:%7.2f Y:%7.2f", (double)g_euler.pitch, (double)g_euler.yaw);
@@ -924,47 +505,20 @@ static void diag_imu_function(void)
     diag_show_line(7U, "Back/Enter Exit");
 }
 
-/* 诊断页：四轮编码器（滤波值 + 原始值） */
 static void diag_encoder_function(void)
 {
     char text[32];
 
     diag_begin();
-    diag_show_line(0U, "Encoder filt");
-    sprintf(text, "LF:%7.1f", (double)encoder_get_left_front_filtered_count());
+    diag_show_line(0U, "Encoder");
+    sprintf(text, "Left:%d", (int)encoder_get_left_count());
     diag_show_line(1U, text);
-    sprintf(text, "RF:%7.1f", (double)encoder_get_right_front_filtered_count());
-    diag_show_line(2U, text);
-    sprintf(text, "LR:%7.1f", (double)encoder_get_left_rear_filtered_count());
-    diag_show_line(3U, text);
-    sprintf(text, "RR:%7.1f", (double)encoder_get_right_rear_filtered_count());
-    diag_show_line(4U, text);
-    sprintf(text, "Raw %d %d", (int)encoder_get_left_front_count(), (int)encoder_get_right_front_count());
-    diag_show_line(5U, text);
-    sprintf(text, "Raw %d %d", (int)encoder_get_left_rear_count(), (int)encoder_get_right_rear_count());
-    diag_show_line(6U, text);
-    diag_show_line(7U, "Back/Enter Exit");
-}
-
-/* 诊断页：里程计位置与全局速度。 */
-static void diag_position_function(void)
-{
-    char text[32];
-
-    diag_begin();
-    sprintf(text, "Odo Xr:%6.3f", (double)g_odometer.position[x]);
-    diag_show_line(0U, text);
-    sprintf(text, "Odo Yf:%6.3f", (double)g_odometer.position[y]);
-    diag_show_line(1U, text);
-    sprintf(text, "Vel R/F:%4.1f%4.1f",
-            (double)g_odometer.vel[x],
-            (double)g_odometer.vel[y]);
+    sprintf(text, "Right:%d", (int)encoder_get_right_count());
     diag_show_line(2U, text);
     diag_clear_lines(3U, 6U);
     diag_show_line(7U, "Back/Enter Exit");
 }
 
-/* Air诊断页：通信在线状态、飞行状态和Air时间戳。 */
 static void diag_air_state_function(void)
 {
     char text[32];
@@ -983,10 +537,6 @@ static void diag_air_state_function(void)
     diag_show_line(7U, "Back/Enter Exit");
 }
 
-/**
- * @brief 显示2BL3链路和菜单同步状态。
- * @return 无。
- */
 static void diag_2bl3_status_function(void)
 {
     uint16 index;
@@ -1054,7 +604,6 @@ static void diag_2bl3_status_function(void)
     diag_show_line(7U, "Back/Enter Exit");
 }
 
-/* Air诊断页：四路TOF高度与融合高度。 */
 static void diag_air_tof_function(void)
 {
     char text[32];
@@ -1126,7 +675,6 @@ static void diag_air_imu_function(void)
     diag_show_line(7U, "Back/Enter Exit");
 }
 
-/* Air诊断页：姿态角、TOF高度和位置估计速度。 */
 static void diag_air_attitude_function(void)
 {
     char text[32];
@@ -1148,7 +696,6 @@ static void diag_air_attitude_function(void)
     diag_show_line(7U, "Back/Enter Exit");
 }
 
-/* Air诊断页：CRSF标准化通道0-8 */
 static void diag_air_rc_function(void)
 {
     char text[32];

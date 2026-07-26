@@ -116,7 +116,6 @@
 #include "Common/car_math.h"
 #include "Common/car_filter.h"
 
-#include "Controller/pid.h"
 #include "Estimation/Attitude/IMU_Filtter.h"
 #include "Estimation/Attitude/MahonyAhrs.h"
 #include "HW_Drivers/IMU/ICM42688.h"
@@ -130,22 +129,12 @@
 
 #include "Estimation/Attitude/IMU_TOP.h"
 #include "Estimation/Attitude/Accel_Calibration.h"
-#include "Estimation/Position/beacon_config.h"
-#include "Estimation/Position/odometer.h"
-#include "Estimation/Position/beacon_position_recorder.h"
-#include "Estimation/Beacon_Detection/beacon_detection.h"
-#include "Estimation/Position/fixator.h"
-#include "Estimation/lightsequence/light_sequence.h"
 
 #include "Menu/menu_air_support.h"
 #include "Menu/menu_core.h"
 #include "Menu/menu_config.h"
 
-#include "Controller/control.h"
-#include "Controller/Planner/s_curve_planner.h"
-#include "Controller/carplanfix.h"
 #include "Controller/car_mode.h"
-#include "Controller/car_start_sbus.h"
 #include "Controller/car_loop.h"
 
 #include "Protocols/Wifi/wifi_cmd/wifi_cmd.h"

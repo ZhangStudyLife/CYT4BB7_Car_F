@@ -3,7 +3,6 @@
 #include "zf_common_headfile.h"
 
 static uint8_t pit_ch0_100HZ_count = 0;
-static uint8_t pit_ch0_25HZ_count = 0;
 
 void pit0_ch0_isr()
 {
@@ -24,12 +23,6 @@ void pit0_ch0_isr()
         menu_timer_handler();
     }
 
-    pit_ch0_25HZ_count++;
-    if(pit_ch0_25HZ_count >= 40)
-    {
-        pit_ch0_25HZ_count = 0;
-        timer_25HZ_flag = 1;
-    }
 }
 
 void pit0_ch1_isr()
@@ -134,20 +127,6 @@ void uart0_isr (void)
 
 void uart1_isr (void)
 {
-    if(uart_isr_mask(UART_1))
-    {
-        uint8 dat;
-
-        while(uart_query_byte(ALX_AOA_UART_INDEX, &dat))
-        {
-            ALX_AOA_InputByte(dat);
-        }
-
-    }
-    else
-    {
-
-    }
 }
 
 void uart2_isr (void)

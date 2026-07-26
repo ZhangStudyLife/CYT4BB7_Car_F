@@ -1219,78 +1219,9 @@
                     <name>$PROJ_DIR$\..\..\code\Estimation\Attitude\MahonyAhrs.h</name>
                 </file>
             </group>
-            <group>
-                <name>Position</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_config.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_config.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_position_recorder.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\beacon_position_recorder.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\fixator.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\fixator.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\odometer.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Position\odometer.h</name>
-                </file>
-            </group>
-            <group>
-                <name>lightsequence</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence.h</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence_config.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\lightsequence\light_sequence_config.h</name>
-                </file>
-            </group>
-            <group>
-                <name>Beacon_Detection</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Beacon_Detection\beacon_detection.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Estimation\Beacon_Detection\beacon_detection.h</name>
-                </file>
-            </group>
         </group>
         <group>
             <name>Controller</name>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\pid.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\pid.h</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\control.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\control.h</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\carplanfix.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\carplanfix.h</name>
-            </file>
             <file>
                 <name>$PROJ_DIR$\..\..\code\Controller\car_loop.c</name>
             </file>
@@ -1330,21 +1261,6 @@
             <file>
                 <name>$PROJ_DIR$\..\..\code\Controller\car_mode8.c</name>
             </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\car_start_sbus.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\..\code\Controller\car_start_sbus.h</name>
-            </file>
-            <group>
-                <name>Planner</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Controller\Planner\s_curve_planner.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Controller\Planner\s_curve_planner.h</name>
-                </file>
-            </group>
         </group>
         <group>
             <name>Menu</name>
