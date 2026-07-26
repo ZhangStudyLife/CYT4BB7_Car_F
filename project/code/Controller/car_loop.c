@@ -9,6 +9,12 @@ static uint32 s_system_time_ms = 0U;
 static uint8 s_air_menu_runtime_locked = 0U;
 static uint8 s_menu_runtime_was_locked = 0U;
 static float s_car_yaw_rate_lpf_dps = 0.0f;
+static int16 s_car_speed_left_prev_raw = 0;
+static int16 s_car_speed_right_prev_raw = 0;
+static uint8 s_car_speed_filter_initialized = 0U;
+
+volatile float g_car_speed_left_filtered = 0.0f;
+volatile float g_car_speed_right_filtered = 0.0f;
 
 volatile float g_air_tof_fused_height_mm = 0.0f;
 volatile float g_air_euler_roll = 0.0f;
@@ -165,6 +171,11 @@ void car_loop_init(void)
     s_air_menu_runtime_locked = 0U;
     s_menu_runtime_was_locked = 0U;
     s_car_yaw_rate_lpf_dps = 0.0f;
+    s_car_speed_left_prev_raw = 0;
+    s_car_speed_right_prev_raw = 0;
+    g_car_speed_left_filtered = 0.0f;
+    g_car_speed_right_filtered = 0.0f;
+    s_car_speed_filter_initialized = 0U;
 
     menu_init();
     menu_config_init();
@@ -189,14 +200,41 @@ static void car_loop_1000HZ(void)
                               (g_imufilter_1000hz.gyroz - s_car_yaw_rate_lpf_dps);
 }
 
+static void car_speed_control_100HZ(void)
+{
+    int16 left_raw;
+    int16 right_raw;
+
+    encoder_update_100HZ();
+    left_raw = encoder_get_left_count();
+    right_raw = encoder_get_right_count();
+
+    if(s_car_speed_filter_initialized == 0U)
+    {
+        s_car_speed_left_prev_raw = left_raw;
+        s_car_speed_right_prev_raw = right_raw;
+        g_car_speed_left_filtered = (float)left_raw;
+        g_car_speed_right_filtered = (float)right_raw;
+        s_car_speed_filter_initialized = 1U;
+        return;
+    }
+
+    g_car_speed_left_filtered = (float)s_car_speed_left_prev_raw +
+                                0.60f * ((float)left_raw - (float)s_car_speed_left_prev_raw);
+    g_car_speed_right_filtered = (float)s_car_speed_right_prev_raw +
+                                 0.60f * ((float)right_raw - (float)s_car_speed_right_prev_raw);
+    s_car_speed_left_prev_raw = left_raw;
+    s_car_speed_right_prev_raw = right_raw;
+}
+
 static void car_loop_100HZ(void)
 {
     float car_data[11];
     uint8 menu_runtime_locked;
 
     s_system_time_ms += 10U;
-    // motor_stop();
-    encoder_update_100HZ();
+    motor_stop();
+    car_speed_control_100HZ();
     air_comm_car_update_100HZ();
 
     menu_runtime_locked = car_menu_is_runtime_locked();

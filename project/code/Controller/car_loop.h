@@ -6,6 +6,8 @@
 extern volatile uint8_t timer_100HZ_flag;
 extern volatile uint16 g_tick_1000HZ;
 extern volatile uint32 tick_1000us_cnt;
+extern volatile float g_car_speed_left_filtered;
+extern volatile float g_car_speed_right_filtered;
 
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;
