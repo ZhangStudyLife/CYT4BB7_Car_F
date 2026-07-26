@@ -1261,6 +1261,12 @@
             <file>
                 <name>$PROJ_DIR$\..\..\code\Controller\car_mode8.c</name>
             </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\pid_core.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\..\code\Controller\pid_core.h</name>
+            </file>
         </group>
         <group>
             <name>Menu</name>
