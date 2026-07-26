@@ -20,12 +20,24 @@ static uint8 s_car_speed_filter_initialized = 0U;
 #define CAR_SPEED_KI                 (0.0f)
 #define CAR_SPEED_KD                 (0.027f)
 
+#define CAR_GYROZ_DEG_TO_RAD         (0.017453292519943295f)
+#define CAR_GYROZ_EQUIVALENT_SCALE   (28.1448005f)
+#define CAR_GYROZ_KP                 (0.70f)
+#define CAR_GYROZ_KI                 (0.60f)
+#define CAR_GYROZ_K_TURN             (2.0f)
+
 volatile float g_car_speed_left_filtered = 0.0f;
 volatile float g_car_speed_right_filtered = 0.0f;
 volatile float Left_Target_Speed = 0.0f;
 volatile float Right_Target_Speed = 0.0f;
 pid_t Left_Speed_PID;
 pid_t Right_Speed_PID;
+
+volatile float g_car_gyroz_target_dps = 0.0f;
+volatile float g_car_gyroz_feedback_equivalent = 0.0f;
+volatile float g_car_gyroz_error = 0.0f;
+volatile float g_car_gyroz_output = 0.0f;
+static float s_car_gyroz_last_error = 0.0f;
 
 volatile float g_air_tof_fused_height_mm = 0.0f;
 volatile float g_air_euler_roll = 0.0f;
@@ -204,6 +216,39 @@ static int16 car_speed_pid_update(pid_t *pid, float target, float feedback)
     return (int16)output;
 }
 
+void car_gyroz_control_100HZ(void)
+{
+    float base_speed = Left_Target_Speed;
+    float target_equivalent;
+    float delta_output;
+
+    /* Keep the Loongson scale, with the sign adapted to this car's gyro polarity. */
+    target_equivalent = -g_car_gyroz_target_dps *
+                        CAR_GYROZ_DEG_TO_RAD *
+                        CAR_GYROZ_EQUIVALENT_SCALE;
+    g_car_gyroz_feedback_equivalent = s_car_yaw_rate_lpf_dps *
+                                      CAR_GYROZ_DEG_TO_RAD *
+                                      CAR_GYROZ_EQUIVALENT_SCALE;
+    g_car_gyroz_error = target_equivalent - g_car_gyroz_feedback_equivalent;
+
+    /* Loongson incremental PI, with Ki doubled for the 200 Hz to 100 Hz move. */
+    delta_output = CAR_GYROZ_KP * (g_car_gyroz_error - s_car_gyroz_last_error) +
+                   CAR_GYROZ_KI * g_car_gyroz_error;
+    g_car_gyroz_output += delta_output;
+    s_car_gyroz_last_error = g_car_gyroz_error;
+
+    if(g_car_gyroz_output > 0.0f)
+    {
+        Left_Target_Speed = base_speed;
+        Right_Target_Speed = base_speed - CAR_GYROZ_K_TURN * g_car_gyroz_output;
+    }
+    else
+    {
+        Left_Target_Speed = base_speed + CAR_GYROZ_K_TURN * g_car_gyroz_output;
+        Right_Target_Speed = base_speed;
+    }
+}
+
 void car_loop_init(void)
 {
     timer_100HZ_flag = 0U;
@@ -217,6 +262,11 @@ void car_loop_init(void)
     g_car_speed_left_filtered = 0.0f;
     g_car_speed_right_filtered = 0.0f;
     s_car_speed_filter_initialized = 0U;
+    g_car_gyroz_target_dps = 0.0f;
+    g_car_gyroz_feedback_equivalent = 0.0f;
+    g_car_gyroz_error = 0.0f;
+    g_car_gyroz_output = 0.0f;
+    s_car_gyroz_last_error = 0.0f;
 
     PID_Init(&Left_Speed_PID, CAR_SPEED_KP, CAR_SPEED_KI, CAR_SPEED_KD, 0.0f,
              CAR_SPEED_CONTROL_DT_S, 0.0f, 0.0f);
@@ -273,15 +323,15 @@ static void car_speed_control_100HZ(void)
     speed_command = CRSF_STD[1];
     if(speed_command <= -800)
     {
-        Left_Target_Speed = -500.0f;
+        Left_Target_Speed = -700.0f;
     }
     else if(speed_command <= -400)
     {
-        Left_Target_Speed = -300.0f;
+        Left_Target_Speed = -400.0f;
     }
     else if(speed_command <= -100)
     {
-        Left_Target_Speed = -100.0f;
+        Left_Target_Speed = -200.0f;
     }
     else if(speed_command < 100)
     {
@@ -289,17 +339,24 @@ static void car_speed_control_100HZ(void)
     }
     else if(speed_command < 400)
     {
-        Left_Target_Speed = 100.0f;
+        Left_Target_Speed = 200.0f;
     }
     else if(speed_command < 800)
     {
-        Left_Target_Speed = 300.0f;
+        Left_Target_Speed = 400.0f;
     }
     else
     {
-        Left_Target_Speed = 500.0f;
+        Left_Target_Speed = 700.0f;
     }
     Right_Target_Speed = Left_Target_Speed;
+
+    if (CRSF_STD[7] == 0){
+        motor_stop();
+        return;
+    }
+
+    car_gyroz_control_100HZ();
 
     motor_left_set_speed(car_speed_pid_update(&Left_Speed_PID,
                                               Left_Target_Speed,

@@ -13,6 +13,10 @@ extern volatile float Left_Target_Speed;
 extern volatile float Right_Target_Speed;
 extern pid_t Left_Speed_PID;
 extern pid_t Right_Speed_PID;
+extern volatile float g_car_gyroz_target_dps;
+extern volatile float g_car_gyroz_feedback_equivalent;
+extern volatile float g_car_gyroz_error;
+extern volatile float g_car_gyroz_output;
 
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;
@@ -61,6 +65,7 @@ extern volatile float g_air_car_plan_dist_px;
 extern volatile float g_air_beacon_lost_flag;
 
 uint8 car_menu_is_runtime_locked(void);
+void car_gyroz_control_100HZ(void);
 void car_loop_init(void);
 void car_loop_poll(void);
 
