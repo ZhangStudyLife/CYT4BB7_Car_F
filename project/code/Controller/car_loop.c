@@ -10,12 +10,22 @@ static uint32 s_system_time_ms = 0U;
 static uint8 s_air_menu_runtime_locked = 0U;
 static uint8 s_menu_runtime_was_locked = 0U;
 static float s_car_yaw_rate_lpf_dps = 0.0f;
-static int16 s_car_speed_left_prev_raw = 0;
-static int16 s_car_speed_right_prev_raw = 0;
 static uint8 s_car_speed_filter_initialized = 0U;
+
+#define CAR_SPEED_CONTROL_DT_S       (0.01f)
+#define CAR_SPEED_FILTER_ALPHA       (0.557f)
+#define CAR_SPEED_FF_SLOPE           (3.5f)
+#define CAR_SPEED_STATIC_FF          (540.0f)
+#define CAR_SPEED_KP                 (18.0f)
+#define CAR_SPEED_KI                 (0.0f)
+#define CAR_SPEED_KD                 (0.027f)
 
 volatile float g_car_speed_left_filtered = 0.0f;
 volatile float g_car_speed_right_filtered = 0.0f;
+volatile float Left_Target_Speed = 0.0f;
+volatile float Right_Target_Speed = 0.0f;
+pid_t Left_Speed_PID;
+pid_t Right_Speed_PID;
 
 volatile float g_air_tof_fused_height_mm = 0.0f;
 volatile float g_air_euler_roll = 0.0f;
@@ -162,6 +172,38 @@ uint8 car_menu_is_runtime_locked(void)
     return s_air_menu_runtime_locked;
 }
 
+static int16 car_speed_pid_update(pid_t *pid, float target, float feedback)
+{
+    float static_feedforward = CAR_SPEED_FF_SLOPE * target;
+    float output;
+
+    if(target > 0.0f)
+    {
+        static_feedforward += CAR_SPEED_STATIC_FF;
+    }
+    else if(target < 0.0f)
+    {
+        static_feedforward -= CAR_SPEED_STATIC_FF;
+    }
+
+    /* The Loongson loop differentiates error, so feed feedback-target as measurement. */
+    output = static_feedforward +
+             PID_Update(pid, 0.0f, feedback - target, CAR_SPEED_CONTROL_DT_S);
+
+    if(output > (float)MOTOR_PWM_MAX)
+    {
+        output = (float)MOTOR_PWM_MAX;
+    }
+    else if(output < -(float)MOTOR_PWM_MAX)
+    {
+        output = -(float)MOTOR_PWM_MAX;
+    }
+
+    pid->ff_term = static_feedforward;
+    pid->output = output;
+    return (int16)output;
+}
+
 void car_loop_init(void)
 {
     timer_100HZ_flag = 0U;
@@ -172,11 +214,14 @@ void car_loop_init(void)
     s_air_menu_runtime_locked = 0U;
     s_menu_runtime_was_locked = 0U;
     s_car_yaw_rate_lpf_dps = 0.0f;
-    s_car_speed_left_prev_raw = 0;
-    s_car_speed_right_prev_raw = 0;
     g_car_speed_left_filtered = 0.0f;
     g_car_speed_right_filtered = 0.0f;
     s_car_speed_filter_initialized = 0U;
+
+    PID_Init(&Left_Speed_PID, CAR_SPEED_KP, CAR_SPEED_KI, CAR_SPEED_KD, 0.0f,
+             CAR_SPEED_CONTROL_DT_S, 0.0f, 0.0f);
+    PID_Init(&Right_Speed_PID, CAR_SPEED_KP, CAR_SPEED_KI, CAR_SPEED_KD, 0.0f,
+             CAR_SPEED_CONTROL_DT_S, 0.0f, 0.0f);
 
     menu_init();
     menu_config_init();
@@ -206,6 +251,7 @@ static void car_speed_control_100HZ(void)
 {
     int16 left_raw;
     int16 right_raw;
+    int16 speed_command;
 
     encoder_update_100HZ();
     left_raw = encoder_get_left_count();
@@ -213,20 +259,54 @@ static void car_speed_control_100HZ(void)
 
     if(s_car_speed_filter_initialized == 0U)
     {
-        s_car_speed_left_prev_raw = left_raw;
-        s_car_speed_right_prev_raw = right_raw;
         g_car_speed_left_filtered = (float)left_raw;
         g_car_speed_right_filtered = (float)right_raw;
         s_car_speed_filter_initialized = 1U;
         return;
     }
 
-    g_car_speed_left_filtered = (float)s_car_speed_left_prev_raw +
-                                0.60f * ((float)left_raw - (float)s_car_speed_left_prev_raw);
-    g_car_speed_right_filtered = (float)s_car_speed_right_prev_raw +
-                                 0.60f * ((float)right_raw - (float)s_car_speed_right_prev_raw);
-    s_car_speed_left_prev_raw = left_raw;
-    s_car_speed_right_prev_raw = right_raw;
+    g_car_speed_left_filtered += CAR_SPEED_FILTER_ALPHA *
+                                 ((float)left_raw - g_car_speed_left_filtered);
+    g_car_speed_right_filtered += CAR_SPEED_FILTER_ALPHA *
+                                  ((float)right_raw - g_car_speed_right_filtered);
+
+    speed_command = CRSF_STD[1];
+    if(speed_command <= -800)
+    {
+        Left_Target_Speed = -500.0f;
+    }
+    else if(speed_command <= -400)
+    {
+        Left_Target_Speed = -300.0f;
+    }
+    else if(speed_command <= -100)
+    {
+        Left_Target_Speed = -100.0f;
+    }
+    else if(speed_command < 100)
+    {
+        Left_Target_Speed = 0.0f;
+    }
+    else if(speed_command < 400)
+    {
+        Left_Target_Speed = 100.0f;
+    }
+    else if(speed_command < 800)
+    {
+        Left_Target_Speed = 300.0f;
+    }
+    else
+    {
+        Left_Target_Speed = 500.0f;
+    }
+    Right_Target_Speed = Left_Target_Speed;
+
+    motor_left_set_speed(car_speed_pid_update(&Left_Speed_PID,
+                                              Left_Target_Speed,
+                                              g_car_speed_left_filtered));
+    motor_right_set_speed(car_speed_pid_update(&Right_Speed_PID,
+                                               Right_Target_Speed,
+                                               g_car_speed_right_filtered));
 }
 
 static void car_loop_100HZ(void)
@@ -235,10 +315,9 @@ static void car_loop_100HZ(void)
     uint8 menu_runtime_locked;
 
     s_system_time_ms += 10U;
-    motor_stop();
+    CRSF_Update_100HZ();
     car_speed_control_100HZ();
     air_comm_car_update_100HZ();
-    CRSF_Update_100HZ();
 
     menu_runtime_locked = car_menu_is_runtime_locked();
     if(menu_runtime_locked != 0U)

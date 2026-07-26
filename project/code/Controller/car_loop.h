@@ -2,12 +2,17 @@
 #define CAR_LOOP_H
 
 #include "zf_common_headfile.h"
+#include "pid_core.h"
 
 extern volatile uint8_t timer_100HZ_flag;
 extern volatile uint16 g_tick_1000HZ;
 extern volatile uint32 tick_1000us_cnt;
 extern volatile float g_car_speed_left_filtered;
 extern volatile float g_car_speed_right_filtered;
+extern volatile float Left_Target_Speed;
+extern volatile float Right_Target_Speed;
+extern pid_t Left_Speed_PID;
+extern pid_t Right_Speed_PID;
 
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;
