@@ -26,12 +26,12 @@ static void motor_set(gpio_pin_enum dir_pin, pwm_channel_enum pwm_ch, int16_t sp
 
     if (speed >= 0)
     {
-        gpio_set_level(dir_pin, GPIO_LOW);
+        gpio_set_level(dir_pin, GPIO_HIGH);
         pwm_set_duty(pwm_ch, speed);
     }
     else
     {
-        gpio_set_level(dir_pin, GPIO_HIGH);
+        gpio_set_level(dir_pin, GPIO_LOW);
         pwm_set_duty(pwm_ch, -speed);
     }
 }

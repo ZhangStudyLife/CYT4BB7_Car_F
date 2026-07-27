@@ -16,6 +16,8 @@ extern pid_t Right_Speed_PID;
 extern volatile float g_car_gyroz_target_dps;
 extern volatile float g_car_gyroz_feedback_equivalent;
 extern volatile float g_car_gyroz_error;
+extern volatile float g_car_gyroz_p_term;
+extern volatile float g_car_gyroz_i_term;
 extern volatile float g_car_gyroz_output;
 
 extern volatile float g_air_tof_fused_height_mm;
