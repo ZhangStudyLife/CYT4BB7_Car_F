@@ -1,6 +1,6 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (12U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (11U)
 
 static void load_air_slot_0_function(void);
 static void load_air_slot_1_function(void);
@@ -44,14 +44,13 @@ static menu_item_t car_right_speed_menu[] = {
 static menu_item_t car_speed_common_menu[] = {
     {"Filter", MENU_TYPE_PARAMETER, .param_index = 6U},
     {"FF Slope", MENU_TYPE_PARAMETER, .param_index = 7U},
-    {"Static FF", MENU_TYPE_PARAMETER, .param_index = 8U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static menu_item_t car_gyroz_menu[] = {
-    {"Kp", MENU_TYPE_PARAMETER, .param_index = 9U},
-    {"Ki", MENU_TYPE_PARAMETER, .param_index = 10U},
-    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 11U},
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 8U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 9U},
+    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 10U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -412,7 +411,6 @@ void menu_config_init(void)
     menu_register_param(&car_speed_right_kd, 0.001f, 0.0f, 10.0f);
     menu_register_param(&car_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
     menu_register_param(&car_speed_ff_slope, 0.1f, 0.0f, 20.0f);
-    menu_register_param(&car_speed_static_ff, 10.0f, 0.0f, 3000.0f);
     menu_register_param(&car_gyroz_kp, 0.01f, 0.0f, 10.0f);
     menu_register_param(&car_gyroz_ki, 0.01f, 0.0f, 10.0f);
     menu_register_param(&car_gyroz_k_turn, 0.1f, 0.0f, 10.0f);

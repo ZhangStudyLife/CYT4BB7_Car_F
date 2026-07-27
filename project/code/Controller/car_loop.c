@@ -11,15 +11,20 @@ static uint32 s_system_time_ms = 0U;
 static uint8 s_air_menu_runtime_locked = 0U;
 static uint8 s_menu_runtime_was_locked = 0U;
 static float s_car_yaw_rate_lpf_dps = 0.0f;
-static float s_car_yaw_target_deg = 0.0f;
+static uint8 s_car_yaw_button_history = 0U;
+static uint8 s_car_yaw_stopped = 0U;
 static uint8 s_car_speed_filter_initialized = 0U;
 
 #define CAR_SPEED_CONTROL_DT_S (0.01f)
 
 #define CAR_GYROZ_DEG_TO_RAD (0.017453292519943295f)
 #define CAR_GYROZ_EQUIVALENT_SCALE (28.1448005f)
-#define CAR_YAW_HOLD_KP (2.0f)
-#define CAR_YAW_RATE_LIMIT_DPS (300.0f)
+#define CAR_YAW_HOLD_KP (4.0f)
+#define CAR_YAW_HOLD_KD (0.50f)
+#define CAR_GYROZ_OUTPUT_LIMIT (250.0f)
+#define CAR_YAW_STOP_ERROR_DEG (1.0f)
+#define CAR_YAW_STOP_RATE_DPS (5.0f)
+#define CAR_WHEEL_STOP_SPEED (5.0f)
 
 float car_speed_left_kp = 18.0f;
 float car_speed_left_ki = 0.0f;
@@ -29,7 +34,6 @@ float car_speed_right_ki = 0.0f;
 float car_speed_right_kd = 0.027f;
 float car_speed_filter_alpha = 0.557f;
 float car_speed_ff_slope = 3.5f;
-float car_speed_static_ff = 540.0f;
 float car_gyroz_kp = 1.50f;
 float car_gyroz_ki = 0.40f;
 float car_gyroz_k_turn = 1.0f;
@@ -47,6 +51,9 @@ volatile float g_car_gyroz_error = 0.0f;
 volatile float g_car_gyroz_p_term = 0.0f;
 volatile float g_car_gyroz_i_term = 0.0f;
 volatile float g_car_gyroz_output = 0.0f;
+volatile float g_car_yaw_target_deg = 0.0f;
+volatile float g_car_yaw_p_term = 0.0f;
+volatile float g_car_yaw_d_term = 0.0f;
 static float s_car_gyroz_last_error = 0.0f;
 
 volatile float g_air_tof_fused_height_mm = 0.0f;
@@ -199,32 +206,15 @@ uint8 car_menu_is_runtime_locked(void)
 static int16 car_speed_pid_update(pid_t *pid, float target, float feedback,
                                   float kp, float ki, float kd)
 {
-    float static_feedforward = car_speed_ff_slope * target;
+    float feedforward = car_speed_ff_slope * target;
     float output;
 
     pid->kp = kp;
     pid->ki = ki;
     pid->kd = kd;
 
-    if (fabsf(target) < 50.0f)
-    {
-        PID_Reset(pid);
-        pid->ff_term = 0.0f;
-        pid->output = 0.0f;
-        return 0;
-    }
-
-    if (target > 0.0f)
-    {
-        static_feedforward += car_speed_static_ff;
-    }
-    else if (target < 0.0f)
-    {
-        static_feedforward -= car_speed_static_ff;
-    }
-
     /* The Loongson loop differentiates error, so feed feedback-target as measurement. */
-    output = static_feedforward +
+    output = feedforward +
              PID_Update(pid, 0.0f, feedback - target, CAR_SPEED_CONTROL_DT_S);
 
     if (output > (float)MOTOR_PWM_MAX)
@@ -236,54 +226,64 @@ static int16 car_speed_pid_update(pid_t *pid, float target, float feedback,
         output = -(float)MOTOR_PWM_MAX;
     }
 
-    pid->ff_term = static_feedforward;
+    pid->ff_term = feedforward;
     pid->output = output;
     return (int16)output;
 }
 
 void car_yaw_control_100HZ(void)
 {
-    int16_t yaw_command = CRSF_STD[0];
     float desired_rate_dps;
     float yaw_error_deg;
-    float normalized_input;
+    float yaw_step_deg;
 
-    if ((yaw_command > -100) && (yaw_command < 100))
+    s_car_yaw_button_history = (uint8)(((s_car_yaw_button_history << 1U) |
+                                        ((CRSF_STD[8] != 0) ? 1U : 0U)) & 0x3FU);
+
+    if (CRSF_STD[5] == 0)
     {
-        yaw_error_deg = s_car_yaw_target_deg - g_euler.yaw;
-        if (yaw_error_deg > 180.0f)
-        {
-            yaw_error_deg -= 360.0f;
-        }
-        else if (yaw_error_deg < -180.0f)
-        {
-            yaw_error_deg += 360.0f;
-        }
-
-        desired_rate_dps = CAR_YAW_HOLD_KP * yaw_error_deg;
-        if (desired_rate_dps > CAR_YAW_RATE_LIMIT_DPS)
-        {
-            desired_rate_dps = CAR_YAW_RATE_LIMIT_DPS;
-        }
-        else if (desired_rate_dps < -CAR_YAW_RATE_LIMIT_DPS)
-        {
-            desired_rate_dps = -CAR_YAW_RATE_LIMIT_DPS;
-        }
+        yaw_step_deg = 30.0f;
+    }
+    else if (CRSF_STD[5] == 1)
+    {
+        yaw_step_deg = 90.0f;
     }
     else
     {
-        s_car_yaw_target_deg = g_euler.yaw;
-        normalized_input = ((float)((yaw_command < 0) ? -yaw_command : yaw_command) -
-                            100.0f) / 900.0f;
-        desired_rate_dps = CAR_YAW_RATE_LIMIT_DPS *
-                           (0.25f * normalized_input +
-                            0.75f * normalized_input * normalized_input);
-        if (yaw_command < 0)
-        {
-            desired_rate_dps = -desired_rate_dps;
-        }
+        yaw_step_deg = 180.0f;
     }
 
+    if (s_car_yaw_button_history == 0x07U)
+    {
+        g_car_yaw_target_deg += yaw_step_deg;
+    }
+    else if (s_car_yaw_button_history == 0x38U)
+    {
+        g_car_yaw_target_deg -= yaw_step_deg;
+    }
+
+    if (g_car_yaw_target_deg > 180.0f)
+    {
+        g_car_yaw_target_deg -= 360.0f;
+    }
+    else if (g_car_yaw_target_deg < -180.0f)
+    {
+        g_car_yaw_target_deg += 360.0f;
+    }
+
+    yaw_error_deg = g_car_yaw_target_deg - g_euler.yaw;
+    if (yaw_error_deg > 180.0f)
+    {
+        yaw_error_deg -= 360.0f;
+    }
+    else if (yaw_error_deg < -180.0f)
+    {
+        yaw_error_deg += 360.0f;
+    }
+
+    g_car_yaw_p_term = CAR_YAW_HOLD_KP * yaw_error_deg;
+    g_car_yaw_d_term = -CAR_YAW_HOLD_KD * s_car_yaw_rate_lpf_dps;
+    desired_rate_dps = g_car_yaw_p_term + g_car_yaw_d_term;
     g_car_gyroz_target_dps = -desired_rate_dps;
 }
 
@@ -308,6 +308,14 @@ void car_gyroz_control_100HZ(void)
     g_car_gyroz_i_term = car_gyroz_ki * g_car_gyroz_error;
     delta_output = g_car_gyroz_p_term + g_car_gyroz_i_term;
     g_car_gyroz_output += delta_output;
+    if (g_car_gyroz_output > CAR_GYROZ_OUTPUT_LIMIT)
+    {
+        g_car_gyroz_output = CAR_GYROZ_OUTPUT_LIMIT;
+    }
+    else if (g_car_gyroz_output < -CAR_GYROZ_OUTPUT_LIMIT)
+    {
+        g_car_gyroz_output = -CAR_GYROZ_OUTPUT_LIMIT;
+    }
     s_car_gyroz_last_error = g_car_gyroz_error;
 
     Left_Target_Speed = base_speed + car_gyroz_k_turn * g_car_gyroz_output;
@@ -324,7 +332,11 @@ void car_loop_init(void)
     s_air_menu_runtime_locked = 0U;
     s_menu_runtime_was_locked = 0U;
     s_car_yaw_rate_lpf_dps = 0.0f;
-    s_car_yaw_target_deg = 0.0f;
+    s_car_yaw_button_history = 0U;
+    s_car_yaw_stopped = 0U;
+    g_car_yaw_target_deg = 0.0f;
+    g_car_yaw_p_term = 0.0f;
+    g_car_yaw_d_term = 0.0f;
     g_car_speed_left_filtered = 0.0f;
     g_car_speed_right_filtered = 0.0f;
     s_car_speed_filter_initialized = 0U;
@@ -372,6 +384,7 @@ static void car_speed_control_100HZ(void)
     int16 left_raw;
     int16 right_raw;
     int16 speed_command;
+    float selected_speed;
 
     encoder_update_100HZ();
     left_raw = encoder_get_left_count();
@@ -391,50 +404,99 @@ static void car_speed_control_100HZ(void)
                                   ((float)right_raw - g_car_speed_right_filtered);
 
     speed_command = CRSF_STD[1];
-    if (speed_command <= -800)
+    if (CRSF_STD[6] == 0)
     {
-        Left_Target_Speed = -700.0f;
+        selected_speed = 200.0f;
     }
-    else if (speed_command <= -400)
+    else if (CRSF_STD[6] == 1)
     {
-        Left_Target_Speed = -400.0f;
-    }
-    else if (speed_command <= -100)
-    {
-        Left_Target_Speed = -200.0f;
-    }
-    else if (speed_command < 100)
-    {
-        Left_Target_Speed = 0.0f;
-    }
-    else if (speed_command < 400)
-    {
-        Left_Target_Speed = 200.0f;
-    }
-    else if (speed_command < 800)
-    {
-        Left_Target_Speed = 400.0f;
+        selected_speed = 400.0f;
     }
     else
     {
-        Left_Target_Speed = 700.0f;
+        selected_speed = 500.0f;
+    }
+
+    if (speed_command <= -500)
+    {
+        Left_Target_Speed = -selected_speed;
+    }
+    else if (speed_command >= 500)
+    {
+        Left_Target_Speed = selected_speed;
+    }
+    else
+    {
+        Left_Target_Speed = 0.0f;
     }
     Right_Target_Speed = Left_Target_Speed;
 
-    if (CRSF_STD[7] == 0)
+    if ((CRSF_LINK_UP == 0U) || (CRSF_STD[7] == 0))
     {
-        s_car_yaw_target_deg = g_euler.yaw;
+        s_car_yaw_button_history = (CRSF_STD[8] != 0) ? 0x3FU : 0U;
+        PID_Reset(&Left_Speed_PID);
+        PID_Reset(&Right_Speed_PID);
+        Left_Target_Speed = 0.0f;
+        Right_Target_Speed = 0.0f;
+        g_car_yaw_target_deg = g_euler.yaw;
+        g_car_yaw_p_term = 0.0f;
+        g_car_yaw_d_term = 0.0f;
         g_car_gyroz_target_dps = 0.0f;
         g_car_gyroz_error = 0.0f;
         g_car_gyroz_p_term = 0.0f;
         g_car_gyroz_i_term = 0.0f;
         g_car_gyroz_output = 0.0f;
         s_car_gyroz_last_error = 0.0f;
+        s_car_yaw_stopped = 0U;
         motor_stop();
         return;
     }
 
     car_yaw_control_100HZ();
+
+    if (s_car_yaw_stopped != 0U)
+    {
+        if ((Left_Target_Speed == 0.0f) &&
+            (fabsf(g_car_gyroz_target_dps) <
+             (2.0f * CAR_YAW_HOLD_KP * CAR_YAW_STOP_ERROR_DEG)) &&
+            (fabsf(s_car_yaw_rate_lpf_dps) <
+             (2.0f * CAR_YAW_STOP_RATE_DPS)) &&
+            (fabsf(g_car_speed_left_filtered) <
+             (2.0f * CAR_WHEEL_STOP_SPEED)) &&
+            (fabsf(g_car_speed_right_filtered) <
+             (2.0f * CAR_WHEEL_STOP_SPEED)))
+        {
+            Left_Target_Speed = 0.0f;
+            Right_Target_Speed = 0.0f;
+            g_car_gyroz_target_dps = 0.0f;
+            motor_stop();
+            return;
+        }
+        s_car_yaw_stopped = 0U;
+    }
+
+    if ((Left_Target_Speed == 0.0f) &&
+        (fabsf(g_car_gyroz_target_dps) <
+         (CAR_YAW_HOLD_KP * CAR_YAW_STOP_ERROR_DEG)) &&
+        (fabsf(s_car_yaw_rate_lpf_dps) < CAR_YAW_STOP_RATE_DPS) &&
+        (fabsf(g_car_speed_left_filtered) < CAR_WHEEL_STOP_SPEED) &&
+        (fabsf(g_car_speed_right_filtered) < CAR_WHEEL_STOP_SPEED))
+    {
+        PID_Reset(&Left_Speed_PID);
+        PID_Reset(&Right_Speed_PID);
+        g_car_gyroz_target_dps = 0.0f;
+        g_car_gyroz_error = 0.0f;
+        g_car_gyroz_p_term = 0.0f;
+        g_car_gyroz_i_term = 0.0f;
+        g_car_gyroz_output = 0.0f;
+        s_car_gyroz_last_error = 0.0f;
+        Left_Target_Speed = 0.0f;
+        Right_Target_Speed = 0.0f;
+        s_car_yaw_stopped = 1U;
+        motor_stop();
+        return;
+    }
+
     car_gyroz_control_100HZ();
 
     motor_left_set_speed(car_speed_pid_update(&Left_Speed_PID,

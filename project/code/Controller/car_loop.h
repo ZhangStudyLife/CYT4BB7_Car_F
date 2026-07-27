@@ -21,7 +21,6 @@ extern float car_speed_right_ki;
 extern float car_speed_right_kd;
 extern float car_speed_filter_alpha;
 extern float car_speed_ff_slope;
-extern float car_speed_static_ff;
 extern float car_gyroz_kp;
 extern float car_gyroz_ki;
 extern float car_gyroz_k_turn;
@@ -31,6 +30,9 @@ extern volatile float g_car_gyroz_error;
 extern volatile float g_car_gyroz_p_term;
 extern volatile float g_car_gyroz_i_term;
 extern volatile float g_car_gyroz_output;
+extern volatile float g_car_yaw_target_deg;
+extern volatile float g_car_yaw_p_term;
+extern volatile float g_car_yaw_d_term;
 
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;

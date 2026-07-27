@@ -23,8 +23,10 @@ int main(void)
                        Left_Speed_PID.p_term, Left_Speed_PID.i_term, Left_Speed_PID.d_term,
                        Right_Speed_PID.p_term, Right_Speed_PID.i_term, Right_Speed_PID.d_term,
                        (int16_t)Left_Speed_PID.output, (int16_t)Right_Speed_PID.output,
-                       g_car_gyroz_feedback_equivalent,
+                       g_car_gyroz_target_dps, g_car_gyroz_feedback_equivalent,
                        g_car_gyroz_p_term, g_car_gyroz_i_term,
-                       g_car_gyroz_error, g_car_gyroz_output);
+                       g_car_gyroz_output,
+                       g_car_yaw_target_deg,
+                       g_car_yaw_p_term, g_car_yaw_d_term);
     }
 }
