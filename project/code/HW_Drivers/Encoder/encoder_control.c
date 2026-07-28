@@ -5,7 +5,7 @@ encoder_data_t encoder_left = {
     .ch1_pin = ENCODER_LEFT_A,
     .ch2_pin = ENCODER_LEFT_B,
     .count_raw = 0,
-    .invert = 1
+    .invert = 0
 };
 
 encoder_data_t encoder_right = {
@@ -13,7 +13,7 @@ encoder_data_t encoder_right = {
     .ch1_pin = ENCODER_RIGHT_A,
     .ch2_pin = ENCODER_RIGHT_B,
     .count_raw = 0,
-    .invert = 0
+    .invert = 1
 };
 
 static void encoder_update_single(encoder_data_t *encoder)
