@@ -1,6 +1,6 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (11U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (24U)
 
 static void load_air_slot_0_function(void);
 static void load_air_slot_1_function(void);
@@ -44,13 +44,29 @@ static menu_item_t car_right_speed_menu[] = {
 static menu_item_t car_speed_common_menu[] = {
     {"Filter", MENU_TYPE_PARAMETER, .param_index = 6U},
     {"FF Slope", MENU_TYPE_PARAMETER, .param_index = 7U},
+    {"FF Static", MENU_TYPE_PARAMETER, .param_index = 11U},
+    {"Delta Max", MENU_TYPE_PARAMETER, .param_index = 17U},
+    {"Brake FF", MENU_TYPE_PARAMETER, .param_index = 18U},
+    {"Acc Step", MENU_TYPE_PARAMETER, .param_index = 19U},
+    {"Acc Limit", MENU_TYPE_PARAMETER, .param_index = 20U},
+    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 21U},
+    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 22U},
+    {"Dec Step", MENU_TYPE_PARAMETER, .param_index = 23U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static menu_item_t car_gyroz_menu[] = {
     {"Kp", MENU_TYPE_PARAMETER, .param_index = 8U},
     {"Ki", MENU_TYPE_PARAMETER, .param_index = 9U},
+    {"Kff", MENU_TYPE_PARAMETER, .param_index = 12U},
     {"K Turn", MENU_TYPE_PARAMETER, .param_index = 10U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_yaw_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 13U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 14U},
+    {"Rate Max", MENU_TYPE_PARAMETER, .param_index = 15U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -58,6 +74,8 @@ static menu_item_t car_menu[] = {
     {"L_Speed", MENU_TYPE_SUBMENU, .submenu = car_left_speed_menu},
     {"R_Speed", MENU_TYPE_SUBMENU, .submenu = car_right_speed_menu},
     {"Speed Com", MENU_TYPE_SUBMENU, .submenu = car_speed_common_menu},
+    {"Yaw Mode", MENU_TYPE_PARAMETER, .param_index = 16U},
+    {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_yaw_menu},
     {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_gyroz_menu},
     {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
@@ -404,16 +422,29 @@ static uint8 menu_build_air_param_menus(void)
 void menu_config_init(void)
 {
     menu_register_param(&car_speed_left_kp, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_left_ki, 0.01f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_left_kd, 0.001f, 0.0f, 10.0f);
+    menu_register_param(&car_speed_left_ki, 0.001f, 0.0f, 10.0f);
+    menu_register_param(&car_speed_left_kd, 0.1f, 0.0f, 100.0f);
     menu_register_param(&car_speed_right_kp, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_right_ki, 0.01f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_right_kd, 0.001f, 0.0f, 10.0f);
+    menu_register_param(&car_speed_right_ki, 0.001f, 0.0f, 10.0f);
+    menu_register_param(&car_speed_right_kd, 0.1f, 0.0f, 100.0f);
     menu_register_param(&car_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
     menu_register_param(&car_speed_ff_slope, 0.1f, 0.0f, 20.0f);
     menu_register_param(&car_gyroz_kp, 0.01f, 0.0f, 10.0f);
-    menu_register_param(&car_gyroz_ki, 0.01f, 0.0f, 10.0f);
+    menu_register_param(&car_gyroz_ki, 0.001f, 0.0f, 10.0f);
     menu_register_param(&car_gyroz_k_turn, 0.1f, 0.0f, 10.0f);
+    menu_register_param(&car_speed_ff_static, 10.0f, 0.0f, 3000.0f);
+    menu_register_param(&car_gyroz_kff, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&car_yaw_kp, 0.1f, 0.0f, 20.0f);
+    menu_register_param(&car_yaw_kd, 0.1f, 0.0f, 500.0f);
+    menu_register_param(&car_yaw_rate_limit_dps, 10.0f, 0.0f, 1000.0f);
+    menu_register_param(&car_yaw_control_mode, 1.0f, 0.0f, 1.0f);
+    menu_register_param(&car_speed_delta_output_limit, 100.0f, 0.0f, 8000.0f);
+    menu_register_param(&car_speed_brake_static, 10.0f, 0.0f, 3000.0f);
+    menu_register_param(&car_speed_accel_step_limit, 1.0f, 1.0f, 200.0f);
+    menu_register_param(&car_speed_accel_ff_limit, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&car_speed_ff_deadband, 1.0f, 0.0f, 50.0f);
+    menu_register_param(&car_speed_ff_transition, 10.0f, 20.0f, 300.0f);
+    menu_register_param(&car_speed_decel_step_limit, 1.0f, 1.0f, 200.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {

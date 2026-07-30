@@ -17,16 +17,25 @@ int main(void)
     {
         car_loop_poll();
         wifi_justfloat(g_euler.roll, g_euler.pitch, g_euler.yaw,
-                       encoder_get_left_count(), encoder_get_right_count(),
-                       g_car_speed_left_filtered, g_car_speed_right_filtered,
+                       g_car_base_speed_command,
+                       g_car_base_speed_target,
+                       g_car_base_speed_delta,
+                       g_car_speed_accel_ff,
                        Left_Target_Speed, Right_Target_Speed,
-                       Left_Speed_PID.p_term, Left_Speed_PID.i_term, Left_Speed_PID.d_term,
-                       Right_Speed_PID.p_term, Right_Speed_PID.i_term, Right_Speed_PID.d_term,
-                       (int16_t)Left_Speed_PID.output, (int16_t)Right_Speed_PID.output,
-                       g_car_gyroz_target_dps, g_car_gyroz_feedback_equivalent,
+                       g_car_speed_left_filtered, g_car_speed_right_filtered,
+                       Left_Speed_PID.incremental_output, Right_Speed_PID.incremental_output,
+                       Left_Speed_PID.output, Right_Speed_PID.output,
+                       g_car_speed_left_brake_ff,
+                       g_car_speed_right_brake_ff,
+                       g_car_speed_left_motor_output,
+                       g_car_speed_right_motor_output,
+                       g_car_speed_brake_active,
+                       -g_car_gyroz_target_dps, g_car_gyroz_feedback_dps,
                        g_car_gyroz_p_term, g_car_gyroz_i_term,
+                       g_car_gyroz_ff_term,
                        g_car_gyroz_output,
                        g_car_yaw_target_deg,
-                       g_car_yaw_p_term, g_car_yaw_d_term);
+                       g_car_yaw_p_term, g_car_yaw_d_term,
+                       car_yaw_control_mode);
     }
 }

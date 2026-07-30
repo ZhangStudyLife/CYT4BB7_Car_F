@@ -3,109 +3,73 @@
 
 #include <stdint.h>
 
-/* PID D 项二阶滤波器状态 */
-typedef struct
-{
-    float b0;
-    float b1;
-    float b2;
-    float a1;
-    float a2;
-    float d1;
-    float d2;
-} pid_biquad_t;
-
-/* PID PT3 低通滤波器状态 */
-typedef struct
-{
-    float k;
-    float state1;
-    float state2;
-    float state3;
-} pid_pt3_t;
-
+/*
+ * PID 系数均为每采样周期的离散系数：
+ *   位置式 I[k] = I[k-1] + Ki * e[k]
+ *   位置式 D[k] = Kd * (e[k] - e[k-1])
+ * 调用接口不传入 dt，控制周期变化后应重新整定 Ki、Kd。
+ */
 typedef struct
 {
     float kp;
     float ki;
     float kd;
     float kff;
-    float dt;
+    float ff_static;
+    float ff_deadband;
+    float ff_transition;
+    float external_ff_term;
 
     float i_limit;
-    float ff_smoothing_ms; /* 前馈 PT3 平滑时间，单位 ms，0 表示旁路 */
-    float output_lpf_hz;   /* 输出 PT3 低通截止频率，单位 Hz，0 表示旁路 */
-    float d_lpf_hz; /* D 项低通截止频率，单位 Hz，0 表示旁路 */
+    float output_min;
+    float output_max;
+    float incremental_limit;
 
     float integral;
+    float error;
+    float prev_error;
+    float prev_prev_error;
     float prev_meas;
     float prev_sp;
-    uint8_t d_initialized;
-    pid_biquad_t d_lpf_filter; /* D 项滤波器系数与状态 */
+    uint8_t initialized;
 
-    pid_pt3_t ff_pt3_filter;     /* 前馈 PT3 滤波器状态 */
-    pid_pt3_t output_pt3_filter; /* 输出 PT3 滤波器状态 */
-
-    float error;
+    /* 调试与遥测量。增量式PID中 P/I/D 为本周期输出增量。 */
     float p_term;
     float i_term;
     float d_term;
     float ff_term;
+    float incremental_output;
     float output;
     float sp_rate;
-    float iterm_relax_threshold;
-
-    /* anti-windup 配置：默认关闭，不影响未启用的 PID */
-    float output_min;
-    float output_max;
-    float aw_gain;
-    uint8_t aw_enable;
 } pid_t;
 
-/**
- * 函数功能: 初始化 PID 控制器参数和 D 项滤波器。
- * 输入参数:
- *   pid     - PID 控制器实例指针。
- *   kp      - 比例增益。
- *   ki      - 积分增益。
- *   kd      - 微分增益。
- *   kff     - 前馈增益。
- *   dt      - 控制周期，单位 s。
- *   i_limit - 积分限幅绝对值。
- *   d_lpf   - D 项低通截止频率，单位 Hz，0 表示旁路。
- * 返回值: 无。
- */
+/** 初始化离散PID，不需要控制周期 dt。 */
 void PID_Init(pid_t *pid, float kp, float ki, float kd, float kff,
-              float dt, float i_limit, float d_lpf);
+              float i_limit);
 
-/**
- * 函数功能: 配置 PID 前馈和输出 PT3 滤波。
- * 输入参数:
- *   pid             - PID 控制器实例指针。
- *   ff_smoothing_ms - 前馈平滑时间，单位 ms，0 表示旁路。
- *   output_lpf_hz   - 输出低通截止频率，单位 Hz，0 表示旁路。
- * 返回值: 无。
- */
-void PID_SetFeedforwardFilter(pid_t *pid, float ff_smoothing_ms, float output_lpf_hz);
+/** 配置最终输出限幅。 */
+void PID_SetOutputLimits(pid_t *pid, float output_min, float output_max);
 
-/**
- * 函数功能: 使用当前设定值和测量值更新 PID 输出。
- * 输入参数:
- *   pid         - PID 控制器实例指针。
- *   setpoint    - 目标值。
- *   measurement - 测量值。
- *   dt          - 本次更新周期，单位 s；若非正值则沿用上次有效周期。
- * 返回值:
- *   PID 当前输出值。
- */
-float PID_Update(pid_t *pid, float setpoint, float measurement, float dt);
+/** 配置与目标方向一致的静态前馈绝对值。 */
+void PID_SetStaticFeedforward(pid_t *pid, float ff_static);
 
-/**
- * 函数功能: 清零 PID 积分项、D 项状态和调试输出。
- * 输入参数:
- *   pid - PID 控制器实例指针。
- * 返回值: 无。
- */
+/** 配置目标前馈死区和平滑过渡上限，过渡上限不大于死区时仅使用死区。 */
+void PID_SetFeedforwardTransition(pid_t *pid, float deadband,
+                                  float transition);
+
+/** 配置外部动态前馈，并与目标前馈共同经过死区、平滑和最终输出限幅。 */
+void PID_SetExternalFeedforward(pid_t *pid, float external_ff);
+
+/** 配置增量式PID每个采样周期的输出增量限幅，非正值表示不限幅。 */
+void PID_SetIncrementLimit(pid_t *pid, float incremental_limit);
+
+/** 位置式离散PID：可通过将某项系数设为0实现P、PI或PD控制。 */
+float PID_Update(pid_t *pid, float setpoint, float measurement);
+
+/** 增量式离散PID。 */
+float PID_UpdateIncremental(pid_t *pid, float setpoint, float measurement);
+
+/** 清零PID历史状态和输出。 */
 void PID_Reset(pid_t *pid);
 
 #endif /* PID_CORE_H */
