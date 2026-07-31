@@ -1118,6 +1118,18 @@
         <file>
             <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>
         </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\negative_pressure_motor.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\negative_pressure_motor.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\car_safety.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\car_safety.h</name>
+        </file>
         <group>
             <name>Common</name>
             <file>

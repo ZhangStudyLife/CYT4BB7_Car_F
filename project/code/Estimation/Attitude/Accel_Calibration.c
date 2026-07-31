@@ -55,7 +55,7 @@
 #define IMU_CALIB_GYRO_TARGET_VALID_SAMPLES      (60000U) /* �����Ǿ�ֹ�궨Ŀ����Ч��������Լ60�� */
 #define IMU_CALIB_GYRO_TIMEOUT_SAMPLES           (300000U) /* �����Ǿ�ֹ�궨��ʱ������ */
 #define IMU_CALIB_GYRO_STATIC_MAX_DPS            (10.0f)
-#define IMU_CALIB_GYRO_STATIC_ACC_ERR_G          (0.06f)
+#define IMU_CALIB_GYRO_STATIC_ACC_ERR_G          (0.08f)
 #define IMU_CALIB_GYRO_STD_MAX_DPS               (0.20f)
 #define IMU_CALIB_GYRO_BIAS_MAX_DPS              (3.0f)
 #define IMU_CALIB_GYRO_PRE_STABLE_SAMPLES        (1500U) /* �����Ǳ궨Ԥ���ȶ������� */
@@ -121,6 +121,10 @@ typedef struct
     uint32_t gyro_static_stable_samples;
     uint8_t gyro_stable_progress_bucket;
     uint8_t gyro_collect_progress_bucket;
+    float gyro_current_norm_dps;
+    float gyro_current_acc_norm_g;
+    uint8_t gyro_current_static_ok;
+    uint8_t gyro_static_fail_reason;
     float gyro_prev_bias_dps[3];
     uint8_t gyro_prev_enabled;
 
@@ -2244,6 +2248,14 @@ static int32_t imu_calib_update_gyro_step(void)
     if (!is_finitef_local(gx) || !is_finitef_local(gy) || !is_finitef_local(gz) ||
         !is_finitef_local(ax) || !is_finitef_local(ay) || !is_finitef_local(az))
     {
+        s_imu_calib.gyro_current_norm_dps = 0.0f;
+        s_imu_calib.gyro_current_acc_norm_g = 0.0f;
+        s_imu_calib.gyro_current_static_ok = 0U;
+        s_imu_calib.gyro_static_fail_reason = IMU_CALIB_GYRO_STATIC_FAIL_INVALID;
+        if (s_imu_calib.gyro_valid_samples == 0U)
+        {
+            s_imu_calib.gyro_static_stable_samples = 0U;
+        }
         s_imu_calib.gyro_total_samples++;
         if (s_imu_calib.gyro_total_samples >= IMU_CALIB_GYRO_TIMEOUT_SAMPLES)
         {
@@ -2257,6 +2269,27 @@ static int32_t imu_calib_update_gyro_step(void)
     s_imu_calib.gyro_total_samples++;
     static_ok = ((gyro_norm_dps < IMU_CALIB_GYRO_STATIC_MAX_DPS) &&
                  (fabsf(acc_norm_g - 1.0f) < IMU_CALIB_GYRO_STATIC_ACC_ERR_G)) ? 1U : 0U;
+
+    s_imu_calib.gyro_current_norm_dps = gyro_norm_dps;
+    s_imu_calib.gyro_current_acc_norm_g = acc_norm_g;
+    s_imu_calib.gyro_current_static_ok = static_ok;
+    if (static_ok != 0U)
+    {
+        s_imu_calib.gyro_static_fail_reason = IMU_CALIB_GYRO_STATIC_FAIL_NONE;
+    }
+    else if ((gyro_norm_dps >= IMU_CALIB_GYRO_STATIC_MAX_DPS) &&
+             (fabsf(acc_norm_g - 1.0f) >= IMU_CALIB_GYRO_STATIC_ACC_ERR_G))
+    {
+        s_imu_calib.gyro_static_fail_reason = IMU_CALIB_GYRO_STATIC_FAIL_BOTH;
+    }
+    else if (gyro_norm_dps >= IMU_CALIB_GYRO_STATIC_MAX_DPS)
+    {
+        s_imu_calib.gyro_static_fail_reason = IMU_CALIB_GYRO_STATIC_FAIL_GYRO;
+    }
+    else
+    {
+        s_imu_calib.gyro_static_fail_reason = IMU_CALIB_GYRO_STATIC_FAIL_ACCEL;
+    }
 
     if (s_imu_calib.gyro_valid_samples == 0U)
     {
@@ -3857,8 +3890,25 @@ void IMUCalib_GetStatus(IMUCalibStatus_t *status)
     status->progress_percent = imu_calib_progress_percent();
     status->current_samples = 0U;
     status->target_samples = 0U;
+    status->gyro_pre_stable_samples = 0U;
+    status->gyro_pre_stable_target = 0U;
+    status->gyro_norm_dps = 0.0f;
+    status->accel_norm_g = 0.0f;
+    status->gyro_static_ok = 0U;
+    status->gyro_static_fail_reason = IMU_CALIB_GYRO_STATIC_FAIL_NONE;
 
-    if (s_imu_calib.mode == IMU_CALIB_MODE_ELLIP_MANUAL)
+    if (s_imu_calib.mode == IMU_CALIB_MODE_GYRO)
+    {
+        status->current_samples = s_imu_calib.gyro_valid_samples;
+        status->target_samples = IMU_CALIB_GYRO_TARGET_VALID_SAMPLES;
+        status->gyro_pre_stable_samples = s_imu_calib.gyro_static_stable_samples;
+        status->gyro_pre_stable_target = IMU_CALIB_GYRO_PRE_STABLE_SAMPLES;
+        status->gyro_norm_dps = s_imu_calib.gyro_current_norm_dps;
+        status->accel_norm_g = s_imu_calib.gyro_current_acc_norm_g;
+        status->gyro_static_ok = s_imu_calib.gyro_current_static_ok;
+        status->gyro_static_fail_reason = s_imu_calib.gyro_static_fail_reason;
+    }
+    else if (s_imu_calib.mode == IMU_CALIB_MODE_ELLIP_MANUAL)
     {
         if (s_ellip_manual.substate == IMU_CALIB_MANUAL_SUBSTATE_WAIT_STATIC)
         {

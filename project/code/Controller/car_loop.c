@@ -1,5 +1,7 @@
 #include "car_loop.h"
 #include "../Protocols/crsf/crsf.h"
+#include "../car_safety.h"
+#include "../negative_pressure_motor.h"
 #include <math.h>
 
 volatile uint8_t timer_100HZ_flag = 0U;
@@ -17,7 +19,6 @@ static uint8 s_car_yaw_mode_initialized = 0U;
 static uint8 s_car_yaw_angle_mode_active = 1U;
 static uint8 s_car_speed_brake_active = 0U;
 static uint8 s_car_world_command_active = 0U;
-static uint8 s_car_world_reverse_active = 0U;
 static float s_car_speed_left_brake_direction = 0.0f;
 static float s_car_speed_right_brake_direction = 0.0f;
 
@@ -30,9 +31,7 @@ static float s_car_speed_right_brake_direction = 0.0f;
 #define CAR_WORLD_INPUT_DEADZONE (50.0f)
 #define CAR_WORLD_SPEED_LIMIT_LOW (200.0f)
 #define CAR_WORLD_SPEED_LIMIT_MID (400.0f)
-#define CAR_WORLD_SPEED_LIMIT_HIGH (500.0f)
-#define CAR_WORLD_REVERSE_ENTER_DEG (95.0f)
-#define CAR_WORLD_REVERSE_EXIT_DEG (85.0f)
+#define CAR_WORLD_SPEED_LIMIT_HIGH (700.0f)
 #define CAR_WORLD_ALIGNMENT_STOP_DEG (90.0f)
 #define CAR_WHEEL_TARGET_ABS_LIMIT (1000.0f)
 
@@ -50,6 +49,7 @@ static float s_car_speed_right_brake_direction = 0.0f;
 #define CAR_GYROZ_WAKE_TARGET_RATE_DPS (4.0f)
 #define CAR_YAW_STOP_RATE_DPS (5.0f)
 #define CAR_WHEEL_STOP_SPEED (5.0f)
+#define CAR_NEGATIVE_PRESSURE_FIXED_THROTTLE (4000U)
 
 float car_speed_left_kp = 3.00f;
 float car_speed_left_ki = 0.00f;
@@ -313,7 +313,6 @@ static float car_world_speed_limit_get(void)
 static void car_world_control_state_reset(float yaw_target_deg)
 {
     s_car_world_command_active = 0U;
-    s_car_world_reverse_active = 0U;
 
     g_car_base_speed_command = 0.0f;
     g_car_yaw_target_deg = car_angle_wrap_deg(yaw_target_deg);
@@ -335,12 +334,9 @@ static void car_world_command_update_100HZ(void)
     float raw_magnitude;
     float direction_scale;
     float world_heading_deg;
-    float forward_heading_error_deg;
-    float selected_heading_deg;
-    float selected_heading_error_deg;
+    float heading_error_deg;
     float alignment_scale;
     float desired_speed;
-    uint8 previous_reverse_state;
 
     g_car_world_speed_limit = car_world_speed_limit_get();
     g_car_world_body_speed_feedback =
@@ -350,7 +346,6 @@ static void car_world_command_update_100HZ(void)
     if (s_car_yaw_angle_mode_active == 0U)
     {
         s_car_world_command_active = 0U;
-        s_car_world_reverse_active = 0U;
         g_car_base_speed_command = 0.0f;
         g_car_world_velocity_x_command = 0.0f;
         g_car_world_velocity_y_command = 0.0f;
@@ -371,7 +366,6 @@ static void car_world_command_update_100HZ(void)
         if (s_car_world_command_active != 0U)
         {
             s_car_world_command_active = 0U;
-            s_car_world_reverse_active = 0U;
             g_car_yaw_target_deg = g_euler.yaw;
             car_yaw_outer_reset();
         }
@@ -403,62 +397,30 @@ static void car_world_command_update_100HZ(void)
     world_heading_deg = atan2f(g_car_world_velocity_y_command,
                                g_car_world_velocity_x_command) *
                         CAR_GYROZ_RAD_TO_DEG;
-    forward_heading_error_deg =
+    heading_error_deg =
         car_angle_wrap_deg(world_heading_deg - g_euler.yaw);
 
-    previous_reverse_state = s_car_world_reverse_active;
-    if (s_car_world_reverse_active == 0U)
-    {
-        if (fabsf(forward_heading_error_deg) >
-            CAR_WORLD_REVERSE_ENTER_DEG)
-        {
-            s_car_world_reverse_active = 1U;
-        }
-    }
-    else if (fabsf(forward_heading_error_deg) <
-             CAR_WORLD_REVERSE_EXIT_DEG)
-    {
-        s_car_world_reverse_active = 0U;
-    }
-
-    if (s_car_world_reverse_active != previous_reverse_state)
-    {
-        car_yaw_outer_reset();
-    }
-
-    selected_heading_deg = world_heading_deg;
-    if (s_car_world_reverse_active != 0U)
-    {
-        selected_heading_deg = car_angle_wrap_deg(world_heading_deg + 180.0f);
-    }
-
-    selected_heading_error_deg =
-        car_angle_wrap_deg(selected_heading_deg - g_euler.yaw);
-    if (fabsf(selected_heading_error_deg) >=
+    /* 始终让车头对准世界坐标指令方向，不再通过倒车缩短转向路径。 */
+    if (fabsf(heading_error_deg) >=
         CAR_WORLD_ALIGNMENT_STOP_DEG)
     {
         alignment_scale = 0.0f;
     }
     else
     {
-        alignment_scale = cosf(selected_heading_error_deg *
+        alignment_scale = cosf(heading_error_deg *
                                CAR_GYROZ_DEG_TO_RAD);
         alignment_scale = car_speed_clampf(alignment_scale, 0.0f, 1.0f);
     }
 
     desired_speed = g_car_world_speed_magnitude * alignment_scale;
-    if (s_car_world_reverse_active != 0U)
-    {
-        desired_speed = -desired_speed;
-    }
 
-    g_car_yaw_target_deg = selected_heading_deg;
+    g_car_yaw_target_deg = world_heading_deg;
     g_car_base_speed_command = desired_speed;
-    g_car_world_heading_target_deg = selected_heading_deg;
-    g_car_world_heading_error_deg = selected_heading_error_deg;
+    g_car_world_heading_target_deg = world_heading_deg;
+    g_car_world_heading_error_deg = heading_error_deg;
     g_car_world_alignment_scale = alignment_scale;
-    g_car_world_reverse_active =
-        (s_car_world_reverse_active != 0U) ? 1.0f : 0.0f;
+    g_car_world_reverse_active = 0.0f;
 }
 
 static uint8 car_world_brake_requested(void)
@@ -890,6 +852,8 @@ void car_loop_init(void)
     menu_config_init();
     motor_init();
     motor_stop();
+    negative_pressure_init();
+    car_safety_init();
     encoder_control_init();
     IMU_Init_All();
     AccelCalibration_Init();
@@ -912,8 +876,45 @@ static void car_loop_1000HZ(void)
                                 (g_imufilter_1000hz.gyroz - g_car_gyroz_feedback_dps);
 }
 
+static uint8 car_run_command_is_neutral(void)
+{
+    return (((CRSF_STD[0] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
+             (CRSF_STD[0] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
+            ((CRSF_STD[1] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
+             (CRSF_STD[1] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
+            ((CRSF_STD[3] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
+             (CRSF_STD[3] <=  (int16)CAR_WORLD_INPUT_DEADZONE))) ? 1U : 0U;
+}
+
+static void car_total_emergency_stop(void)
+{
+    PID_Reset(&Left_Speed_PID);
+    PID_Reset(&Right_Speed_PID);
+    car_yaw_outer_reset();
+    PID_Reset(&s_car_gyroz_pid);
+    car_speed_plan_reset();
+    car_speed_brake_state_clear();
+    car_world_control_state_reset(g_euler.yaw);
+
+    Left_Target_Speed = 0.0f;
+    Right_Target_Speed = 0.0f;
+    g_car_speed_left_motor_output = 0.0f;
+    g_car_speed_right_motor_output = 0.0f;
+    g_car_gyroz_target_dps = 0.0f;
+    g_car_gyroz_error = 0.0f;
+    g_car_gyroz_ff_term = 0.0f;
+    g_car_gyroz_p_term = 0.0f;
+    g_car_gyroz_i_term = 0.0f;
+    g_car_gyroz_output = 0.0f;
+    s_car_yaw_stopped = 0U;
+
+    motor_stop();
+    negative_pressure_disable();
+}
+
 static void car_speed_control_100HZ(void)
 {
+    car_safety_input_t safety_input;
     int16 left_raw;
     int16 right_raw;
     float effective_accel_ff;
@@ -941,25 +942,37 @@ static void car_speed_control_100HZ(void)
     g_car_speed_right_filtered += car_speed_filter_alpha *
                                   ((float)right_raw - g_car_speed_right_filtered);
 
-    if ((CRSF_LINK_UP == 0U) || (CRSF_STD[7] == 0))
+    safety_input.link_up = CRSF_LINK_UP;
+    safety_input.run_switch_on = (CRSF_STD[7] != 0) ? 1U : 0U;
+    safety_input.command_neutral = car_run_command_is_neutral();
+    safety_input.left_target_speed = Left_Target_Speed;
+    safety_input.right_target_speed = Right_Target_Speed;
+    safety_input.left_feedback_speed = g_car_speed_left_filtered;
+    safety_input.right_feedback_speed = g_car_speed_right_filtered;
+    safety_input.left_motor_output = g_car_speed_left_motor_output;
+    safety_input.right_motor_output = g_car_speed_right_motor_output;
+    safety_input.gyroz_dps = g_car_gyroz_feedback_dps;
+    car_safety_update_100HZ(&safety_input);
+
+    if (car_safety_is_output_allowed() == 0U)
     {
-        PID_Reset(&Left_Speed_PID);
-        PID_Reset(&Right_Speed_PID);
-        car_yaw_outer_reset();
-        PID_Reset(&s_car_gyroz_pid);
-        car_speed_plan_reset();
-        car_world_control_state_reset(g_euler.yaw);
-        Left_Target_Speed = 0.0f;
-        Right_Target_Speed = 0.0f;
-        g_car_gyroz_target_dps = 0.0f;
-        g_car_gyroz_error = 0.0f;
-        g_car_gyroz_ff_term = 0.0f;
-        g_car_gyroz_p_term = 0.0f;
-        g_car_gyroz_i_term = 0.0f;
-        g_car_gyroz_output = 0.0f;
-        s_car_yaw_stopped = 0U;
-        motor_stop();
+        car_total_emergency_stop();
         return;
+    }
+
+    /* 遥控器CH5对应CRSF_STD[4]：CH8总使能有效时控制固定40%负压。 */
+    if (CRSF_STD[4] != 0)
+    {
+        if (negative_pressure_is_enabled() == 0U)
+        {
+            negative_pressure_enable();
+        }
+        negative_pressure_set_throttle(CAR_NEGATIVE_PRESSURE_FIXED_THROTTLE,
+                                       CAR_NEGATIVE_PRESSURE_FIXED_THROTTLE);
+    }
+    else
+    {
+        negative_pressure_disable();
     }
 
     car_yaw_mode_prepare_100HZ();

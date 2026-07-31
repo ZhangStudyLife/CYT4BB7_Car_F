@@ -113,6 +113,37 @@ static const char *wifi_cal_imu_manual_substate_name(uint8_t substate)
 }
 
 /*
+ * 函数功能: 将陀螺仪静止判定失败原因转换为可读文本
+ * 输入参数:
+ *   reason - IMU_CALIB_GYRO_STATIC_FAIL_* 原因码
+ * 返回值: 中文失败原因
+ */
+static const char *wifi_cal_imu_gyro_static_fail_reason_name(uint8_t reason)
+{
+    if (IMU_CALIB_GYRO_STATIC_FAIL_INVALID == reason)
+    {
+        return "样本无效";
+    }
+
+    if (IMU_CALIB_GYRO_STATIC_FAIL_GYRO == reason)
+    {
+        return "角速度过大";
+    }
+
+    if (IMU_CALIB_GYRO_STATIC_FAIL_ACCEL == reason)
+    {
+        return "加速度模长异常";
+    }
+
+    if (IMU_CALIB_GYRO_STATIC_FAIL_BOTH == reason)
+    {
+        return "角速度过大且加速度模长异常";
+    }
+
+    return "等待首个样本";
+}
+
+/*
  * 函数功能: 输出 imu 总帮助
  * 输入参数: 无
  * 返回值: 无
@@ -353,6 +384,30 @@ static void wifi_cal_imu_process_status(void)
     IMUCalibStatus_t status = {0};
 
     IMUCalib_GetStatus(&status);
+    if (status.mode == IMU_CALIB_STATUS_MODE_GYRO)
+    {
+        const char *phase = (status.current_samples == 0U) ? "预稳定" : "采集";
+        const char *reason = (status.gyro_static_ok != 0U)
+                                 ? "无"
+                                 : wifi_cal_imu_gyro_static_fail_reason_name(status.gyro_static_fail_reason);
+
+        (void)wifi_cmd_SendLine("OK imu status 状态=%s 模式=%s 阶段=%s 进度=%lu%% 采集=%lu/%lu",
+                                (0U != status.busy) ? "忙" : "空闲",
+                                wifi_cal_imu_mode_name(status.mode),
+                                phase,
+                                (unsigned long)status.progress_percent,
+                                (unsigned long)status.current_samples,
+                                (unsigned long)status.target_samples);
+        (void)wifi_cmd_SendLine("OK imu gyro diag 静止=%s 原因=%s 预稳定=%lu/%lu gyro_norm_dps=%f acc_norm_g=%f",
+                                (status.gyro_static_ok != 0U) ? "是" : "否",
+                                reason,
+                                (unsigned long)status.gyro_pre_stable_samples,
+                                (unsigned long)status.gyro_pre_stable_target,
+                                (double)status.gyro_norm_dps,
+                                (double)status.accel_norm_g);
+        return;
+    }
+
     if (status.mode == IMU_CALIB_STATUS_MODE_ELLIP_MANUAL)
     {
         (void)wifi_cmd_SendLine("OK imu status 状态=%s 模式=%s 子状态=%s 进度=%lu%% 姿态点=%u 当前样本=%lu/%lu",

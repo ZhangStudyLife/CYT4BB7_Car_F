@@ -122,6 +122,13 @@ typedef struct
 #define IMU_CALIB_MANUAL_SUBSTATE_COLLECTING (3U)           /* 正在采集当前姿态点 */
 #define IMU_CALIB_MANUAL_SUBSTATE_SOLVING    (4U)           /* 已停止采点，正在求解 */
 
+/* 陀螺仪静止判定失败原因，用于状态查询诊断 */
+#define IMU_CALIB_GYRO_STATIC_FAIL_NONE       (0U)           /* 当前样本满足静止条件或尚未取得样本 */
+#define IMU_CALIB_GYRO_STATIC_FAIL_INVALID    (1U)           /* 样本包含 NaN/Inf 等非法值 */
+#define IMU_CALIB_GYRO_STATIC_FAIL_GYRO       (2U)           /* 角速度模长超过门限 */
+#define IMU_CALIB_GYRO_STATIC_FAIL_ACCEL      (3U)           /* 加速度模长不在允许范围 */
+#define IMU_CALIB_GYRO_STATIC_FAIL_BOTH       (4U)           /* 角速度与加速度条件同时不满足 */
+
 typedef struct
 {
     uint32_t magic;
@@ -145,6 +152,12 @@ typedef struct
     uint32_t progress_percent; /* 当前校准进度百分比 */
     uint32_t current_samples;  /* 当前子阶段累计样本数 */
     uint32_t target_samples;   /* 当前子阶段目标样本数 */
+    uint32_t gyro_pre_stable_samples; /* 陀螺仪预稳定连续有效样本数 */
+    uint32_t gyro_pre_stable_target;  /* 陀螺仪预稳定目标样本数 */
+    float gyro_norm_dps;       /* 当前原始三轴角速度模长，单位 dps */
+    float accel_norm_g;        /* 当前原始三轴加速度模长，单位 g */
+    uint8_t gyro_static_ok;    /* 当前样本是否满足陀螺仪静止判定 */
+    uint8_t gyro_static_fail_reason; /* 当前静止判定失败原因 */
 } IMUCalibStatus_t;
 
 typedef struct
