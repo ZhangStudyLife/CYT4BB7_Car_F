@@ -58,6 +58,15 @@ extern volatile float g_car_gyroz_output;
 extern volatile float g_car_yaw_target_deg;
 extern volatile float g_car_yaw_p_term;
 extern volatile float g_car_yaw_d_term;
+extern volatile float g_car_world_velocity_x_command;
+extern volatile float g_car_world_velocity_y_command;
+extern volatile float g_car_world_speed_magnitude;
+extern volatile float g_car_world_speed_limit;
+extern volatile float g_car_world_heading_target_deg;
+extern volatile float g_car_world_heading_error_deg;
+extern volatile float g_car_world_alignment_scale;
+extern volatile float g_car_world_body_speed_feedback;
+extern volatile float g_car_world_reverse_active;
 
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;
