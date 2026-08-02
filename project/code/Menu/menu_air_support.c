@@ -1,5 +1,6 @@
 #include "menu_air_support.h"
 #include "menu_config.h"
+#include "../car_safety.h"
 
 #define MENU_AIR_SLOT_BASE_PAGE             (80U)
 #define MENU_AIR_SLOT_COUNT                 (4U)
@@ -1996,11 +1997,19 @@ uint8 menu_load_air_slot(uint8 slot)
         return 1U;
     }
 
+    if(car_safety_maintenance_acquire() == 0U)
+    {
+        menu_show_error("Stop First");
+        return 1U;
+    }
+
     if(menu_air_load_slot_values(slot) != 0U)
     {
+        car_safety_maintenance_release();
         menu_show_error("No Air Data");
         return 1U;
     }
+    car_safety_maintenance_release();
     if(menu_air_sync_all_start(MENU_AIR_SYNC_REASON_LOAD) != 0U)
     {
         menu_air_restore_all_confirmed();
@@ -2079,6 +2088,12 @@ uint8 menu_save_air_slot(uint8 slot)
     }
     header->checksum = menu_air_calc_buffer_checksum((uint16)data_words, offset);
 
+    if(car_safety_maintenance_acquire() == 0U)
+    {
+        menu_show_error("Stop First");
+        return 1U;
+    }
+
     for(page_index = 0U; page_index < MENU_AIR_SLOT_SIZE; page_index++)
     {
         uint32 written_words = (uint32)page_index * FLASH_PAGE_LENGTH;
@@ -2101,10 +2116,12 @@ uint8 menu_save_air_slot(uint8 slot)
 
     if(menu_air_slot_valid(slot, NULL) == 0U)
     {
+        car_safety_maintenance_release();
         menu_show_error("Air Save Fail");
         return 1U;
     }
 
+    car_safety_maintenance_release();
     return 0U;
 }
 

@@ -4,9 +4,21 @@
 #include "zf_common_headfile.h"
 #include "pid_core.h"
 
-extern volatile uint8_t timer_100HZ_flag;
-extern volatile uint16 g_tick_1000HZ;
 extern volatile uint32 tick_1000us_cnt;
+
+typedef struct
+{
+    uint32 imu_tick_count;
+    uint32 control_tick_count;
+    uint32 control_period_fault_count;
+    uint32 background_coalesced_count;
+    uint32 command_stale_count;
+    uint32 imu_snapshot_fault_count;
+    uint32 imu_stale_fault_count;
+} car_realtime_diag_t;
+
+extern volatile uint32 g_car_background_100hz_generation;
+extern volatile car_realtime_diag_t g_car_realtime_diag;
 extern volatile float g_car_speed_left_filtered;
 extern volatile float g_car_speed_right_filtered;
 extern volatile float g_car_base_speed_command;
@@ -22,31 +34,31 @@ extern volatile float Left_Target_Speed;
 extern volatile float Right_Target_Speed;
 extern pid_t Left_Speed_PID;
 extern pid_t Right_Speed_PID;
-extern float car_speed_left_kp;
-extern float car_speed_left_ki;
-extern float car_speed_left_kd;
-extern float car_speed_right_kp;
-extern float car_speed_right_ki;
-extern float car_speed_right_kd;
-extern float car_speed_filter_alpha;
-extern float car_speed_ff_slope;
-extern float car_speed_ff_static;
-extern float car_speed_ff_deadband;
-extern float car_speed_ff_transition;
-extern float car_speed_brake_static;
-extern float car_speed_delta_output_limit;
-extern float car_speed_accel_kff;
-extern float car_speed_accel_step_limit;
-extern float car_speed_decel_step_limit;
-extern float car_speed_accel_ff_limit;
-extern float car_gyroz_kff;
-extern float car_gyroz_kp;
-extern float car_gyroz_ki;
-extern float car_gyroz_k_turn;
-extern float car_yaw_kp;
-extern float car_yaw_kd;
-extern float car_yaw_rate_limit_dps;
-extern float car_yaw_control_mode;
+extern volatile float car_speed_left_kp;
+extern volatile float car_speed_left_ki;
+extern volatile float car_speed_left_kd;
+extern volatile float car_speed_right_kp;
+extern volatile float car_speed_right_ki;
+extern volatile float car_speed_right_kd;
+extern volatile float car_speed_filter_alpha;
+extern volatile float car_speed_ff_slope;
+extern volatile float car_speed_ff_static;
+extern volatile float car_speed_ff_deadband;
+extern volatile float car_speed_ff_transition;
+extern volatile float car_speed_brake_static;
+extern volatile float car_speed_delta_output_limit;
+extern volatile float car_speed_accel_kff;
+extern volatile float car_speed_accel_step_limit;
+extern volatile float car_speed_decel_step_limit;
+extern volatile float car_speed_accel_ff_limit;
+extern volatile float car_gyroz_kff;
+extern volatile float car_gyroz_kp;
+extern volatile float car_gyroz_ki;
+extern volatile float car_gyroz_k_turn;
+extern volatile float car_yaw_kp;
+extern volatile float car_yaw_kd;
+extern volatile float car_yaw_rate_limit_dps;
+extern volatile float car_yaw_control_mode;
 extern volatile float g_car_gyroz_target_dps;
 extern volatile float g_car_gyroz_feedback_dps;
 extern volatile float g_car_gyroz_feedback_equivalent;
@@ -119,5 +131,8 @@ void car_yaw_control_100HZ(void);
 void car_gyroz_control_100HZ(void);
 void car_loop_init(void);
 void car_loop_poll(void);
+void car_loop_imu_1000HZ_isr(void);
+void car_loop_motion_100HZ_isr(void);
+void car_loop_release_background_100HZ_isr(void);
 
 #endif

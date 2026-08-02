@@ -1,4 +1,5 @@
 #include "car_safety.h"
+#include "zf_common_interrupt.h"
 #include <math.h>
 
 #define CAR_SAFETY_UPDATE_PERIOD_S                 (0.01f)
@@ -16,19 +17,19 @@
 #define CAR_SAFETY_STALL_SPEED_MAX                 (5.0f)
 #define CAR_SAFETY_STALL_CYCLES                    (50U)
 
-/* 同方向角速度不低于300°/s累计720°，或不低于500°/s持续1500 ms。 */
-#define CAR_SAFETY_ROTATION_RATE_MIN_DPS           (300.0f)
-#define CAR_SAFETY_ROTATION_ANGLE_LIMIT_DEG        (720.0f)
+/* 同方向角速度不低于350°/s累计1080°，或不低于500°/s持续2500 ms。 */
+#define CAR_SAFETY_ROTATION_RATE_MIN_DPS           (350.0f)
+#define CAR_SAFETY_ROTATION_ANGLE_LIMIT_DEG        (1080.0f)
 #define CAR_SAFETY_EXTREME_RATE_MIN_DPS            (500.0f)
-#define CAR_SAFETY_EXTREME_RATE_CYCLES             (150U)
+#define CAR_SAFETY_EXTREME_RATE_CYCLES             (250U)
 #define CAR_SAFETY_ROTATION_RESET_CYCLES           (10U)
 
 typedef struct
 {
-    uint8 output_allowed;
+    volatile uint8 output_allowed;
     uint8 rearm_ready;
     uint8 previous_switch_on;
-    car_safety_fault_e fault;
+    volatile car_safety_fault_e fault;
 
     uint16 stop_grace_cycles;
     uint16 stop_trend_cycles;
@@ -45,6 +46,8 @@ typedef struct
 } car_safety_state_t;
 
 static car_safety_state_t s_car_safety;
+static volatile uint8 s_car_motion_scheduler_started = 0U;
+static volatile uint8 s_car_maintenance_request = 0U;
 
 static void car_safety_reset_stop_monitor(void)
 {
@@ -257,7 +260,41 @@ void car_safety_init(void)
     s_car_safety.rearm_ready = 0U;
     s_car_safety.previous_switch_on = 0U;
     s_car_safety.fault = CAR_SAFETY_FAULT_NONE;
+    s_car_motion_scheduler_started = 0U;
+    s_car_maintenance_request = 0U;
     car_safety_reset_motion_monitors();
+}
+
+void car_safety_set_motion_scheduler_started(void)
+{
+    s_car_motion_scheduler_started = 1U;
+}
+
+uint8 car_safety_maintenance_acquire(void)
+{
+    uint32 irq_state;
+    uint8 acquired = 0U;
+
+    irq_state = interrupt_global_disable();
+    if ((s_car_maintenance_request == 0U) &&
+        ((s_car_motion_scheduler_started == 0U) ||
+         (s_car_safety.output_allowed == 0U)))
+    {
+        s_car_maintenance_request = 1U;
+        acquired = 1U;
+    }
+    interrupt_global_enable(irq_state);
+    return acquired;
+}
+
+void car_safety_maintenance_release(void)
+{
+    s_car_maintenance_request = 0U;
+}
+
+uint8 car_safety_is_maintenance_requested(void)
+{
+    return s_car_maintenance_request;
 }
 
 void car_safety_update_100HZ(const car_safety_input_t *input)
@@ -277,6 +314,18 @@ void car_safety_update_100HZ(const car_safety_input_t *input)
     if (input->link_up == 0U)
     {
         car_safety_trip(CAR_SAFETY_FAULT_REMOTE_LOSS);
+        return;
+    }
+
+    if (input->imu_healthy == 0U)
+    {
+        car_safety_trip(CAR_SAFETY_FAULT_IMU_LOSS);
+        return;
+    }
+
+    if (input->maintenance_active != 0U)
+    {
+        car_safety_trip(CAR_SAFETY_FAULT_MAINTENANCE_ACTIVE);
         return;
     }
 

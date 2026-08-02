@@ -11,7 +11,7 @@
 #define MOTOR_LEFT_PWM      (TCPWM_CH24_P09_0)
 #define MOTOR_LEFT_INVERT   1
 
-#define MOTOR_PWM_MAX        8000
+#define MOTOR_PWM_MAX        9000
 
 void motor_init(void);
 void motor_left_set_speed(int16_t speed);

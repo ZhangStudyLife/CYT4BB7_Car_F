@@ -1,6 +1,8 @@
 #include "crsf.h"
 #include "zf_common_headfile.h"
 
+#define CRSF_RX_BYTES_PER_POLL (128U)
+
 /* CRSF 接收机使用 UART4，引脚为 P14_1(TX) / P14_0(RX)，底层在 zf_driver_uart 中映射到 SCB2。 */
 #define CRSF_UART_INDEX        (UART_4)          /* CRSF 使用的串口号。 */
 #define CRSF_UART_TX_PIN       (UART4_TX_P14_1) /* CRSF 回传使用的发送引脚。 */
@@ -9,6 +11,8 @@
 
 #define CRSF_TIMER_INDEX       (TC_TIME2_CH0)   /* CRSF 链路超时检测使用的定时器通道。 */
 #define CRSF_LINK_TIMEOUT_US   (100000)         /* CRSF 判定失联的超时时间，单位 us。 */
+/* timer_get(TIMER_US) 将 32bit/8MHz 原始计数除以 8，返回值按 2^29 us 回绕。 */
+#define CRSF_TIMER_US_MASK     (0x1FFFFFFFU)
 
 #define CRSF_CH_MID            (992)            /* 居中类通道的默认中位值。 */
 #define CRSF_CH_LOW            (172)            /* 油门/开关类通道的默认低位值。 */
@@ -30,6 +34,15 @@ static uint8_t crsf_rx_len = 0;
 static uint8_t crsf_rx_pos = 0;
 static uint8_t crsf_rx_state = 0;
 static uint8_t crsf_rx_buf[CRSF_FRAME_MAX_LEN] = {0};
+
+static uint8_t s_crsf_valid_frame_received = 0U;
+static crsf_control_snapshot_t s_crsf_control_snapshot[2] = {0};
+static volatile uint8_t s_crsf_control_snapshot_active = 0U;
+
+static uint32_t crsf_timer_elapsed_us(uint32_t now, uint32_t before)
+{
+    return (now - before) & CRSF_TIMER_US_MASK;
+}
 
 static uint8_t crsf_crc8_update(uint8_t crc, uint8_t data)
 {
@@ -125,6 +138,66 @@ static void crsf_update_std(void)
     }
 }
 
+static void crsf_set_safe_channels(void)
+{
+    CRSF_CH[0] = CRSF_CH_MID;
+    CRSF_CH[1] = CRSF_CH_MID;
+    CRSF_CH[2] = CRSF_CH_LOW;
+    CRSF_CH[3] = CRSF_CH_MID;
+    CRSF_CH[4] = CRSF_CH_LOW;
+    CRSF_CH[5] = CRSF_CH_LOW;
+    CRSF_CH[6] = CRSF_CH_LOW;
+    CRSF_CH[7] = CRSF_CH_LOW;
+    CRSF_CH[8] = CRSF_CH_LOW;
+    CRSF_CH[9] = CRSF_CH_LOW;
+    crsf_update_std();
+}
+
+static void crsf_publish_control_snapshot(void)
+{
+    uint8_t index = (uint8_t)(s_crsf_control_snapshot_active ^ 1U);
+    uint8_t i;
+
+    for (i = 0U; i < CRSF_CH_COUNT; i++)
+    {
+        s_crsf_control_snapshot[index].channel[i] = CRSF_STD[i];
+    }
+    s_crsf_control_snapshot[index].last_update_time_us =
+        CRSF_LAST_UPDATE_TIME;
+    s_crsf_control_snapshot[index].link_up = CRSF_LINK_UP;
+    __DMB();
+    s_crsf_control_snapshot_active = index;
+}
+
+void CRSF_GetControlSnapshot(crsf_control_snapshot_t *snapshot)
+{
+    uint8_t index;
+    uint32_t now;
+
+    if (snapshot == NULL)
+    {
+        return;
+    }
+
+    index = s_crsf_control_snapshot_active;
+    __DMB();
+    *snapshot = s_crsf_control_snapshot[index];
+    __DMB();
+
+    now = timer_get(CRSF_TIMER_INDEX);
+    if ((snapshot->link_up == 0U) ||
+        (crsf_timer_elapsed_us(now, snapshot->last_update_time_us) >
+         CRSF_LINK_TIMEOUT_US))
+    {
+        uint8_t i;
+        snapshot->link_up = 0U;
+        for (i = 0U; i < CRSF_CH_COUNT; i++)
+        {
+            snapshot->channel[i] = 0;
+        }
+    }
+}
+
 static void crsf_parse_channels(const uint8_t *payload)
 {
     CRSF_CH[0]  = (uint16_t)((payload[0] | (payload[1] << 8)) & 0x07FF);
@@ -139,6 +212,7 @@ static void crsf_parse_channels(const uint8_t *payload)
     CRSF_CH[9]  = (uint16_t)(((payload[12] >> 3) | (payload[13] << 5)) & 0x07FF);
 
     CRSF_LAST_UPDATE_TIME = timer_get(CRSF_TIMER_INDEX);
+    s_crsf_valid_frame_received = 1U;
     crsf_update_std();
 }
 
@@ -190,36 +264,33 @@ static void crsf_rx_byte(uint8_t byte)
     }
 }
 
-void CRSF_Update_100HZ(void)
+void CRSF_Poll(void)
 {
     volatile stc_SCB_t *crsf_scb = get_scb_module(CRSF_UART_INDEX);
+    uint32_t byte_count = 0U;
+    uint32_t now;
 
-    while (Cy_SCB_GetNumInRxFifo(crsf_scb))
+    while ((Cy_SCB_GetNumInRxFifo(crsf_scb) != 0U) &&
+           (byte_count < CRSF_RX_BYTES_PER_POLL))
     {
         uint8_t data = (uint8_t)Cy_SCB_ReadRxFifo(crsf_scb);
         crsf_rx_byte(data);
+        byte_count++;
     }
 
-    uint32_t now = timer_get(CRSF_TIMER_INDEX);
-    if ((uint32_t)(now - CRSF_LAST_UPDATE_TIME) > CRSF_LINK_TIMEOUT_US)
+    now = timer_get(CRSF_TIMER_INDEX);
+    if ((s_crsf_valid_frame_received == 0U) ||
+        (crsf_timer_elapsed_us(now, CRSF_LAST_UPDATE_TIME) >
+         CRSF_LINK_TIMEOUT_US))
     {
         CRSF_LINK_UP = 0;
-        CRSF_CH[0] = CRSF_CH_MID;
-        CRSF_CH[1] = CRSF_CH_MID;
-        CRSF_CH[2] = CRSF_CH_LOW;
-        CRSF_CH[3] = CRSF_CH_MID;
-        CRSF_CH[4] = CRSF_CH_LOW;
-        CRSF_CH[5] = CRSF_CH_LOW;
-        CRSF_CH[6] = CRSF_CH_LOW;
-        CRSF_CH[7] = CRSF_CH_LOW;
-        CRSF_CH[8] = CRSF_CH_LOW;
-        CRSF_CH[9] = CRSF_CH_LOW;
-        crsf_update_std();
+        crsf_set_safe_channels();
     }
     else
     {
         CRSF_LINK_UP = 1;
     }
+    crsf_publish_control_snapshot();
 }
 
 void crsf_init(void)
@@ -229,6 +300,17 @@ void crsf_init(void)
 
     timer_init(CRSF_TIMER_INDEX, TIMER_US);
     timer_start(CRSF_TIMER_INDEX);
+
+    crsf_rx_len = 0U;
+    crsf_rx_pos = 0U;
+    crsf_rx_state = 0U;
+    s_crsf_valid_frame_received = 0U;
+    CRSF_LINK_UP = 0U;
+    CRSF_LAST_UPDATE_TIME = timer_get(CRSF_TIMER_INDEX);
+    crsf_set_safe_channels();
+    memset(s_crsf_control_snapshot, 0, sizeof(s_crsf_control_snapshot));
+    s_crsf_control_snapshot_active = 0U;
+    crsf_publish_control_snapshot();
 }
 
 static void crsf_send_attitude(int16_t roll, int16_t pitch, int16_t yaw)

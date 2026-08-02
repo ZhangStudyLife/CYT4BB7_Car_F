@@ -19,7 +19,6 @@ void menu_runtime_resume(void);
 
 
 // 外部变量声明
-extern volatile uint8_t timer_100HZ_flag;    // 100HZ定时器标志
 
 // 菜单系统配置
 #define MENU_MAX_ITEMS          32          // 每个菜单最大选项数
@@ -106,7 +105,7 @@ typedef struct menu_item {
 
 // 参数配置结构
 typedef struct {
-    float* variable;            // 参数变量指针
+    volatile float* variable;   // 参数变量指针（可由控制中断读取）
     float step;                 // 编辑步进值
     float min_val;              // 最小值
     float max_val;              // 最大值
@@ -167,7 +166,7 @@ void menu_show(void);                                  // 手动刷新菜单显�
 void menu_timer_handler(void);                         // 10ms定时器中断处理函数（在用户ISR中调用）
 
 // 参数管理
-void menu_register_param(float* var, float step, float min, float max);    // 注册参数
+void menu_register_param(volatile float* var, float step, float min, float max); // 注册参数
 uint8_t menu_get_param_count(void);                                        // 获取参数数量
 float menu_get_param_by_index(uint8_t index);                             // 按索引获取参数值
 void menu_set_param_by_index(uint8_t index, float value);                 // 按索引设置参数值
@@ -212,8 +211,8 @@ void menu_key_handler(menu_key_t key);                 // 按键处理
 
 // Flash存档内部函数
 uint8_t menu_flash_check_slot(uint8_t slot);          // 检查存档有效性
-void menu_flash_load_params(uint8_t slot);            // 从Flash加载参数
-void menu_flash_save_params(uint8_t slot);            // 保存参数到Flash
+uint8_t menu_flash_load_params(uint8_t slot);         // 从Flash加载参数
+uint8_t menu_flash_save_params(uint8_t slot);         // 保存参数到Flash
 void menu_flash_format_slot(uint8_t slot);            // 格式化存档
 void menu_flash_test(void);                           // Flash功能测试
 

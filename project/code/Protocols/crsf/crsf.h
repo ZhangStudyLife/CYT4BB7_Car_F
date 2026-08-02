@@ -25,6 +25,13 @@ typedef struct
 	uint16_t high_th;
 } CRSF_ChannelConfig;
 
+typedef struct
+{
+    int16_t channel[CRSF_CH_COUNT];
+    uint32_t last_update_time_us;
+    uint8_t link_up;
+} crsf_control_snapshot_t;
+
 #define CRSF_MID(min, max)        ((uint16_t)(((min) + (max)) / 2U))
 #define CRSF_THRESH_LOW(min, mid) ((uint16_t)(((min) + (mid)) / 2U))
 #define CRSF_THRESH_HIGH(mid, max) ((uint16_t)(((mid) + (max)) / 2U))
@@ -53,7 +60,8 @@ extern volatile uint8_t CRSF_LINK_UP;
 
 void crsf_init(void);
 
-void CRSF_Update_100HZ(void);
+void CRSF_Poll(void);
+void CRSF_GetControlSnapshot(crsf_control_snapshot_t *snapshot);
 
 void crsf_send_50hz(void);
 

@@ -227,7 +227,7 @@ void AccelCalibration_GetParams(AccelCalibrationParams_t *params);       /* 读�
 
 /* ======================== IMU 校准状态机 API ======================== */
 void IMUCalib_Init(void);                                  /* 初始化校准子系统，尝试从 Flash 恢复 */
-void IMUCalib_Update_1000HZ(void);                         /* 1kHz 状态机更新，由 IMU_Update 调用 */
+void IMUCalib_Update_1000HZ(const imudata_t *sample);      /* 校准状态机更新，由主循环服务调用 */
 uint8_t IMUCalib_LoadFromFlashAndApply(void);              /* 从 Flash 加载并应用 */
 uint8_t IMUCalib_SaveCurrentToFlash(void);                 /* 保存当前参数到 Flash */
 uint8_t IMUCalib_ClearFlash(void);                         /* 擦除 Flash 中的校准数据 */

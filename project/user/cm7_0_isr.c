@@ -2,33 +2,20 @@
 
 #include "zf_common_headfile.h"
 
-static uint8_t pit_ch0_100HZ_count = 0;
-
 void pit0_ch0_isr()
 {
     pit_isr_flag_clear(PIT_CH0);
     air_comm_car_tick_1MS();
-
-    if(g_tick_1000HZ < 60000U)
-    {
-        g_tick_1000HZ++;
-    }
     tick_1000us_cnt++;
-
-    pit_ch0_100HZ_count++;
-    if(pit_ch0_100HZ_count >= 10)
-    {
-        pit_ch0_100HZ_count = 0;
-        timer_100HZ_flag = 1;
-        menu_timer_handler();
-    }
-
+    car_loop_imu_1000HZ_isr();
 }
 
 void pit0_ch1_isr()
 {
     pit_isr_flag_clear(PIT_CH1);
-
+    car_loop_motion_100HZ_isr();
+    menu_timer_handler();
+    car_loop_release_background_100HZ_isr();
 }
 
 void pit0_ch2_isr()

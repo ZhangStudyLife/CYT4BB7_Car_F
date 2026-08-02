@@ -422,10 +422,10 @@ static uint8 menu_build_air_param_menus(void)
 void menu_config_init(void)
 {
     menu_register_param(&car_speed_left_kp, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_left_ki, 0.001f, 0.0f, 10.0f);
+    menu_register_param(&car_speed_left_ki, 0.1f, 0.0f, 10.0f);
     menu_register_param(&car_speed_left_kd, 0.1f, 0.0f, 100.0f);
     menu_register_param(&car_speed_right_kp, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_right_ki, 0.001f, 0.0f, 10.0f);
+    menu_register_param(&car_speed_right_ki, 0.1f, 0.0f, 10.0f);
     menu_register_param(&car_speed_right_kd, 0.1f, 0.0f, 100.0f);
     menu_register_param(&car_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
     menu_register_param(&car_speed_ff_slope, 0.1f, 0.0f, 20.0f);

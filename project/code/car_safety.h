@@ -11,6 +11,8 @@ typedef enum
 {
     CAR_SAFETY_FAULT_NONE = 0,
     CAR_SAFETY_FAULT_REMOTE_LOSS,
+    CAR_SAFETY_FAULT_IMU_LOSS,
+    CAR_SAFETY_FAULT_MAINTENANCE_ACTIVE,
     CAR_SAFETY_FAULT_STOP_NOT_DECELERATING,
     CAR_SAFETY_FAULT_LEFT_MOTOR_STALL,
     CAR_SAFETY_FAULT_RIGHT_MOTOR_STALL,
@@ -21,6 +23,8 @@ typedef enum
 typedef struct
 {
     uint8 link_up;
+    uint8 imu_healthy;
+    uint8 maintenance_active;
     uint8 run_switch_on;
     uint8 command_neutral;
     float left_target_speed;
@@ -33,6 +37,10 @@ typedef struct
 } car_safety_input_t;
 
 void car_safety_init(void);
+void car_safety_set_motion_scheduler_started(void);
+uint8 car_safety_maintenance_acquire(void);
+void car_safety_maintenance_release(void);
+uint8 car_safety_is_maintenance_requested(void);
 void car_safety_update_100HZ(const car_safety_input_t *input);
 uint8 car_safety_is_output_allowed(void);
 car_safety_fault_e car_safety_get_fault(void);

@@ -109,7 +109,7 @@ typedef enum
 
 typedef struct
 {
-    uint8_t busy;
+    volatile uint8_t busy;
     uint8_t mode;
     uint8_t all_stage;
 
@@ -150,6 +150,7 @@ typedef struct
 
 AccelCalibration_t g_accel_calibration = {0};
 static IMUCalibRuntime_t s_imu_calib = {0};
+static imudata_t s_imu_calib_service_sample = {0};
 /* IMU 校准文本输出回调，优先用于 WiFi 文本提示 */
 static IMUCalibTextSink_t s_imu_calib_text_sink = NULL;
 
@@ -880,6 +881,21 @@ static void imu_calib_get_raw_sensor_sample(float accel_sensor_g[3], float gyro_
                                    &accel_sensor_g[2]);
 }
 
+static void imu_calib_get_service_sample(float accel_sensor_g[3], float gyro_sensor_dps[3])
+{
+    if ((accel_sensor_g == NULL) || (gyro_sensor_dps == NULL))
+    {
+        return;
+    }
+
+    gyro_sensor_dps[0] = s_imu_calib_service_sample.gyrox;
+    gyro_sensor_dps[1] = s_imu_calib_service_sample.gyroy;
+    gyro_sensor_dps[2] = s_imu_calib_service_sample.gyroz;
+    accel_sensor_g[0] = s_imu_calib_service_sample.accx;
+    accel_sensor_g[1] = s_imu_calib_service_sample.accy;
+    accel_sensor_g[2] = s_imu_calib_service_sample.accz;
+}
+
 static void update_running_stats(float sample, float *mean, float *m2, uint32_t sample_count)
 {
     float delta;
@@ -1220,6 +1236,124 @@ typedef struct
     uint32_t reserved[8];
 } IMUCalibBlobV1_t;
 
+static float imu_calib_matrix_det(const float matrix[3][3])
+{
+    return matrix[0][0] *
+               (matrix[1][1] * matrix[2][2] -
+                matrix[1][2] * matrix[2][1]) -
+           matrix[0][1] *
+               (matrix[1][0] * matrix[2][2] -
+                matrix[1][2] * matrix[2][0]) +
+           matrix[0][2] *
+               (matrix[1][0] * matrix[2][1] -
+                matrix[1][1] * matrix[2][0]);
+}
+
+static uint8_t imu_calib_accel_values_are_valid(
+    const float accel_bias_g[3],
+    const float accel_corr_matrix[3][3],
+    const float imu_to_body[3][3])
+{
+    uint8_t row;
+    uint8_t column;
+    float determinant;
+
+    for (row = 0U; row < 3U; row++)
+    {
+        if (!is_finitef_local(accel_bias_g[row]) ||
+            (fabsf(accel_bias_g[row]) > ACCEL_CALIBRATION_BIAS_MAX_G))
+        {
+            return 0U;
+        }
+
+        for (column = 0U; column < 3U; column++)
+        {
+            if (!is_finitef_local(accel_corr_matrix[row][column]) ||
+                (fabsf(accel_corr_matrix[row][column]) > 1.5f) ||
+                !is_finitef_local(imu_to_body[row][column]) ||
+                (fabsf(imu_to_body[row][column]) > 1.05f))
+            {
+                return 0U;
+            }
+        }
+
+        if ((accel_corr_matrix[row][row] < ELLIP_POST_DIAG_MIN) ||
+            (accel_corr_matrix[row][row] > ELLIP_POST_DIAG_MAX))
+        {
+            return 0U;
+        }
+    }
+
+    determinant = imu_calib_matrix_det(accel_corr_matrix);
+    if (!is_finitef_local(determinant) ||
+        (determinant < 0.25f) ||
+        (determinant > 4.0f))
+    {
+        return 0U;
+    }
+
+    for (row = 0U; row < 3U; row++)
+    {
+        float row_norm_sq = 0.0f;
+        for (column = 0U; column < 3U; column++)
+        {
+            row_norm_sq +=
+                imu_to_body[row][column] * imu_to_body[row][column];
+        }
+        if ((row_norm_sq < 0.8f) || (row_norm_sq > 1.2f))
+        {
+            return 0U;
+        }
+    }
+
+    for (row = 0U; row < 2U; row++)
+    {
+        uint8_t other_row;
+        for (other_row = (uint8_t)(row + 1U); other_row < 3U; other_row++)
+        {
+            float dot = 0.0f;
+            for (column = 0U; column < 3U; column++)
+            {
+                dot += imu_to_body[row][column] *
+                       imu_to_body[other_row][column];
+            }
+            if (fabsf(dot) > 0.2f)
+            {
+                return 0U;
+            }
+        }
+    }
+
+    determinant = imu_calib_matrix_det(imu_to_body);
+    if (!is_finitef_local(determinant) ||
+        (determinant < 0.8f) || (determinant > 1.2f))
+    {
+        return 0U;
+    }
+    return 1U;
+}
+
+static uint8_t imu_calib_values_are_valid(
+    const float gyro_bias_dps[3],
+    const float accel_bias_g[3],
+    const float accel_corr_matrix[3][3],
+    const float imu_to_body[3][3])
+{
+    uint8_t axis;
+
+    for (axis = 0U; axis < 3U; axis++)
+    {
+        if (!is_finitef_local(gyro_bias_dps[axis]) ||
+            (fabsf(gyro_bias_dps[axis]) > IMU_CALIB_GYRO_BIAS_MAX_DPS))
+        {
+            return 0U;
+        }
+    }
+
+    return imu_calib_accel_values_are_valid(
+        accel_bias_g, accel_corr_matrix, imu_to_body);
+}
+
 /* Check if raw flash data contains a valid blob (v1 or v2) */
 static uint8_t imu_calib_blob_is_valid(const IMUCalibBlob_t *blob)
 {
@@ -1231,15 +1365,26 @@ static uint8_t imu_calib_blob_is_valid(const IMUCalibBlob_t *blob)
     {
         return 0U;
     }
-    /* Accept v2 directly */
-    if ((blob->version == IMU_CALIB_FLASH_VERSION) && (blob->size == (uint16_t)sizeof(IMUCalibBlob_t)))
+    /* Accept v2 only after validating every value used by the realtime chain. */
+    if ((blob->version == IMU_CALIB_FLASH_VERSION) &&
+        (blob->size == (uint16_t)sizeof(IMUCalibBlob_t)))
     {
-        return 1U;
+        return imu_calib_values_are_valid(
+            blob->gyro_bias_dps, blob->accel_bias_g,
+            blob->accel_corr_matrix, blob->imu_to_body);
     }
-    /* Accept v1 by checking magic+version on same raw memory (sizes match for both structs) */
-    if (blob->version == IMU_CALIB_FLASH_VERSION_V1)
+    /* V1 uses diagonal scale values; convert to a temporary matrix for validation. */
+    if ((blob->version == IMU_CALIB_FLASH_VERSION_V1) &&
+        (blob->size == (uint16_t)sizeof(IMUCalibBlobV1_t)))
     {
-        return 1U;
+        const IMUCalibBlobV1_t *v1 = (const IMUCalibBlobV1_t *)blob;
+        float matrix[3][3] = {{0.0f}};
+        matrix[0][0] = v1->accel_scale[0];
+        matrix[1][1] = v1->accel_scale[1];
+        matrix[2][2] = v1->accel_scale[2];
+        return imu_calib_values_are_valid(
+            v1->gyro_bias_dps, v1->accel_bias_g,
+            matrix, v1->imu_to_body);
     }
     return 0U;
 }
@@ -1282,8 +1427,7 @@ static uint8_t imu_calib_apply_blob(const IMUCalibBlob_t *blob)
         return 0U;
     }
 
-    /* Check raw magic first */
-    if (blob->magic != IMU_CALIB_FLASH_MAGIC)
+    if (imu_calib_blob_is_valid(blob) == 0U)
     {
         return 0U;
     }
@@ -1704,7 +1848,7 @@ static int32_t imu_calib_update_ellip_manual_step(void)
         return imu_calib_manual_solve();
     }
 
-    imu_calib_get_raw_sensor_sample(accel_sensor_g, gyro_sensor_dps);
+    imu_calib_get_service_sample(accel_sensor_g, gyro_sensor_dps);
 
     if (!imu_sample_valid(accel_sensor_g[0], accel_sensor_g[1], accel_sensor_g[2],
                           gyro_sensor_dps[0], gyro_sensor_dps[1], gyro_sensor_dps[2]))
@@ -1840,7 +1984,7 @@ static int32_t imu_calib_update_ellip_step(void)
         return -1;
     }
 
-    imu_calib_get_raw_sensor_sample(accel_sensor_g, gyro_sensor_dps);
+    imu_calib_get_service_sample(accel_sensor_g, gyro_sensor_dps);
 
     if (!imu_sample_valid(accel_sensor_g[0], accel_sensor_g[1], accel_sensor_g[2],
                           gyro_sensor_dps[0], gyro_sensor_dps[1], gyro_sensor_dps[2]))
@@ -2243,7 +2387,12 @@ static int32_t imu_calib_update_gyro_step(void)
     float acc_norm_g;
     uint8_t static_ok;
 
-    IMU_GetRawSampleForCalibration(&gx, &gy, &gz, &ax, &ay, &az);
+    gx = s_imu_calib_service_sample.gyrox;
+    gy = s_imu_calib_service_sample.gyroy;
+    gz = s_imu_calib_service_sample.gyroz;
+    ax = s_imu_calib_service_sample.accx;
+    ay = s_imu_calib_service_sample.accy;
+    az = s_imu_calib_service_sample.accz;
 
     if (!is_finitef_local(gx) || !is_finitef_local(gy) || !is_finitef_local(gz) ||
         !is_finitef_local(ax) || !is_finitef_local(ay) || !is_finitef_local(az))
@@ -2416,7 +2565,7 @@ static int32_t imu_calib_update_acc6_step(void)
         return -1;
     }
 
-    imu_calib_get_raw_sensor_sample(accel_sensor_g, gyro_sensor_dps);
+    imu_calib_get_service_sample(accel_sensor_g, gyro_sensor_dps);
 
     if (!imu_sample_valid(accel_sensor_g[0], accel_sensor_g[1], accel_sensor_g[2],
                           gyro_sensor_dps[0], gyro_sensor_dps[1], gyro_sensor_dps[2]))
@@ -2821,8 +2970,6 @@ static void imu_calib_command_to_lower(char *line)
 
 static void imu_calib_process_command(char *line)
 {
-    uint32_t irq_state;
-
     if (line == NULL)
     {
         return;
@@ -2888,9 +3035,7 @@ static void imu_calib_process_command(char *line)
             printf("cal,busy\r\n");
             return;
         }
-        irq_state = interrupt_global_disable();
         imu_calib_start_gyro();
-        interrupt_global_enable(irq_state);
         printf("cal,gyro,start\r\n");
         return;
     }
@@ -2902,9 +3047,7 @@ static void imu_calib_process_command(char *line)
             printf("cal,busy\r\n");
             return;
         }
-        irq_state = interrupt_global_disable();
         imu_calib_start_ellip();
-        interrupt_global_enable(irq_state);
         printf("cal,ellip,start\r\n");
         return;
     }
@@ -3554,6 +3697,9 @@ void AccelCalibration_RotateImuToBody(const float vec_sensor[3], float vec_body[
 
 bool AccelCalibration_LoadParams(const AccelCalibrationParams_t *params)
 {
+    float matrix_to_validate[3][3];
+    uint32_t irq_state;
+
     if (params == NULL)
     {
         return false;
@@ -3569,6 +3715,38 @@ bool AccelCalibration_LoadParams(const AccelCalibrationParams_t *params)
         return false;
     }
 
+    if (params->use_full_matrix != 0U)
+    {
+        memcpy(matrix_to_validate, params->accel_corr_matrix,
+               sizeof(matrix_to_validate));
+    }
+    else
+    {
+        if ((params->accel_scale[0] < ACCEL_CALIBRATION_SCALE_MIN) ||
+            (params->accel_scale[0] > ACCEL_CALIBRATION_SCALE_MAX) ||
+            (params->accel_scale[1] < ACCEL_CALIBRATION_SCALE_MIN) ||
+            (params->accel_scale[1] > ACCEL_CALIBRATION_SCALE_MAX) ||
+            (params->accel_scale[2] < ACCEL_CALIBRATION_SCALE_MIN) ||
+            (params->accel_scale[2] > ACCEL_CALIBRATION_SCALE_MAX))
+        {
+            return false;
+        }
+
+        memset(matrix_to_validate, 0, sizeof(matrix_to_validate));
+        matrix_to_validate[0][0] = params->accel_scale[0];
+        matrix_to_validate[1][1] = params->accel_scale[1];
+        matrix_to_validate[2][2] = params->accel_scale[2];
+    }
+
+    if (imu_calib_accel_values_are_valid(
+            params->accel_bias_g,
+            matrix_to_validate,
+            params->imu_to_body) == 0U)
+    {
+        return false;
+    }
+
+    irq_state = interrupt_global_disable();
     g_accel_calibration.accel_bias_g[0] = params->accel_bias_g[0];
     g_accel_calibration.accel_bias_g[1] = params->accel_bias_g[1];
     g_accel_calibration.accel_bias_g[2] = params->accel_bias_g[2];
@@ -3612,16 +3790,20 @@ bool AccelCalibration_LoadParams(const AccelCalibrationParams_t *params)
 #endif
 
     g_accel_calibration.is_calibrated = true;
+    interrupt_global_enable(irq_state);
     return true;
 }
 
 void AccelCalibration_GetParams(AccelCalibrationParams_t *params)
 {
+    uint32_t irq_state;
+
     if (params == NULL)
     {
         return;
     }
 
+    irq_state = interrupt_global_disable();
     params->accel_bias_g[0] = g_accel_calibration.accel_bias_g[0];
     params->accel_bias_g[1] = g_accel_calibration.accel_bias_g[1];
     params->accel_bias_g[2] = g_accel_calibration.accel_bias_g[2];
@@ -3632,6 +3814,7 @@ void AccelCalibration_GetParams(AccelCalibrationParams_t *params)
     params->use_full_matrix = g_accel_calibration.use_full_matrix;
     memcpy(params->imu_to_body, g_accel_calibration.imu_to_body, sizeof(params->imu_to_body));
     params->gravity_mps2 = g_accel_calibration.gravity_mps2;
+    interrupt_global_enable(irq_state);
 }
 
 void IMUCalib_Init(void)
@@ -3753,23 +3936,13 @@ uint8_t IMUCalib_ReadFlashInfo(IMUCalibFlashInfo_t *info)
 /* �����º�����IMUУ׼״̬����1kHz ��ѭ���е��� */
 uint8_t IMUCalib_StartGyro(void)
 {
-    uint32_t irq_state;
-
     if (0U != s_imu_calib.busy)
     {
         return 0U;
     }
 
-    irq_state = interrupt_global_disable();
-    if (0U == s_imu_calib.busy)
-    {
-        imu_calib_start_gyro();
-        interrupt_global_enable(irq_state);
-        return 1U;
-    }
-
-    interrupt_global_enable(irq_state);
-    return 0U;
+    imu_calib_start_gyro();
+    return 1U;
 }
 
 /*
@@ -3781,80 +3954,52 @@ uint8_t IMUCalib_StartGyro(void)
  */
 uint8_t IMUCalib_StartAccel(void)
 {
-    uint32_t irq_state;
-
     if (0U != s_imu_calib.busy)
     {
         return 0U;
     }
 
-    irq_state = interrupt_global_disable();
-    if (0U == s_imu_calib.busy)
-    {
-        imu_calib_start_ellip();
-        interrupt_global_enable(irq_state);
-        return 1U;
-    }
-
-    interrupt_global_enable(irq_state);
-    return 0U;
+    imu_calib_start_ellip();
+    return 1U;
 }
 
 uint8_t IMUCalib_StartAccelManual(void)
 {
-    uint32_t irq_state;
-
     if (0U != s_imu_calib.busy)
     {
         return 0U;
     }
 
-    irq_state = interrupt_global_disable();
-    if (0U == s_imu_calib.busy)
-    {
-        imu_calib_start_ellip_manual();
-        interrupt_global_enable(irq_state);
-        return 1U;
-    }
-
-    interrupt_global_enable(irq_state);
-    return 0U;
+    imu_calib_start_ellip_manual();
+    return 1U;
 }
 
 uint8_t IMUCalib_ManualCollect(void)
 {
-    uint32_t irq_state;
-
     if ((0U == s_imu_calib.busy) || (s_imu_calib.mode != IMU_CALIB_MODE_ELLIP_MANUAL))
     {
         return 0U;
     }
 
-    irq_state = interrupt_global_disable();
     if ((s_imu_calib.busy != 0U) &&
         (s_imu_calib.mode == IMU_CALIB_MODE_ELLIP_MANUAL) &&
         (s_ellip_manual.substate == IMU_CALIB_MANUAL_SUBSTATE_READY) &&
         (s_ellip_manual.orient_count < ELLIP_MANUAL_MAX_ORIENT))
     {
         imu_calib_manual_begin_collect();
-        interrupt_global_enable(irq_state);
         return 1U;
     }
 
-    interrupt_global_enable(irq_state);
     return 0U;
 }
 
 uint8_t IMUCalib_ManualStop(void)
 {
-    uint32_t irq_state;
-
     if ((0U == s_imu_calib.busy) || (s_imu_calib.mode != IMU_CALIB_MODE_ELLIP_MANUAL))
     {
         return 0U;
     }
 
-    irq_state = interrupt_global_disable();
     if ((s_imu_calib.busy != 0U) &&
         (s_imu_calib.mode == IMU_CALIB_MODE_ELLIP_MANUAL) &&
         (s_ellip_manual.substate != IMU_CALIB_MANUAL_SUBSTATE_SOLVING))
@@ -3868,11 +4013,9 @@ uint8_t IMUCalib_ManualStop(void)
         s_ellip_manual.substate = IMU_CALIB_MANUAL_SUBSTATE_SOLVING;
         imu_calib_emit_text("OK imu accel_man 开始求解 pose_count=%u",
                             (unsigned int)s_ellip_manual.orient_count);
-        interrupt_global_enable(irq_state);
         return 1U;
     }
 
-    interrupt_global_enable(irq_state);
     return 0U;
 }
 
@@ -3923,14 +4066,16 @@ void IMUCalib_GetStatus(IMUCalibStatus_t *status)
     }
 }
 
-void IMUCalib_Update_1000HZ(void)
+void IMUCalib_Update_1000HZ(const imudata_t *sample)
 {
     int32_t ret;
 
-    if (s_imu_calib.busy == 0U)
+    if ((s_imu_calib.busy == 0U) || (sample == NULL))
     {
         return;
     }
+
+    s_imu_calib_service_sample = *sample;
 
     if (s_imu_calib.mode == IMU_CALIB_MODE_GYRO)
     {

@@ -209,16 +209,20 @@ extern ICM42688_CONFIG_STRUCT ICM42688_CONFIG;   /* 初始化配置（全局，�
 extern float Gyro_Sensitivity;                   /* 当前陀螺灵敏度（LSB/dps） */
 extern float Acc_Sensitivity;                    /* 当前加速度灵敏度（LSB/g） */
 extern ICM42688_RAW_DATA ICM42688_RAW;           /* 最近一次原始 LSB 数据 */
-extern float ICM42688_Bias_gyro_x;               /* 陀螺零偏（dps） */
-extern float ICM42688_Bias_gyro_y;
-extern float ICM42688_Bias_gyro_z;
-extern uint8 ICM42688_Bias_Init_Flag;            /* 1=已标定，Get_Data 会自动扣零偏 */
+extern volatile float ICM42688_Bias_gyro_x;      /* 陀螺零偏（dps） */
+extern volatile float ICM42688_Bias_gyro_y;
+extern volatile float ICM42688_Bias_gyro_z;
+extern volatile uint8 ICM42688_Bias_Init_Flag;   /* 1=已标定，Get_Data 会自动扣零偏 */
 extern ICM42688_real_data ICM42688;              /* 最近一次物理量数据（dps / g） */
 
 /*
  * 初始化 ICM42688：SPI 硬件 -> 软复位 -> 校验 ID -> 配置量程/ODR/滤波器 -> LN 模式
  * config: 配置结构体指针，传入前可按需修改字段
  */
+extern volatile uint32 g_icm42688_spi_timeout_count;
+extern volatile uint32 g_icm42688_invalid_frame_count;
+extern volatile uint32 g_icm42688_identity_error_count;
+
 void ICM42688_Init(ICM42688_CONFIG_STRUCT *ICM42688_CONFIG);
 
 /*
@@ -234,7 +238,7 @@ void ICM42688_Bias_Init(uint32 times);
  * 若 Bias_Init_Flag==1，自动扣除陀螺零偏
  * 调用者：IMU 采样中断或主循环
  */
-void ICM42688_Get_Data(void);
+uint8 ICM42688_Get_Data(void);
 
 /* 外部设置/读取陀螺零偏（dps），用于从 Flash 恢复标定值 */
 void ICM42688_SetGyroBiasDps(float bx, float by, float bz, uint8 enable);

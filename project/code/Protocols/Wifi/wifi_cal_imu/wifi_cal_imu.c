@@ -10,6 +10,7 @@
 
 #include "Estimation/Attitude/Accel_Calibration.h"
 #include "Protocols/wifi/wifi_cmd/wifi_cmd.h"
+#include "car_safety.h"
 
 /*
  * 函数功能: 判断当前是否允许执行 IMU 校准写操作
@@ -20,7 +21,7 @@
  */
 static uint8_t wifi_cal_imu_is_edit_allowed(void)
 {
-    return 1U;
+    return (car_safety_is_output_allowed() == 0U) ? 1U : 0U;
 }
 
 /*
@@ -435,11 +436,7 @@ static void wifi_cal_imu_process_status(void)
  */
 static void wifi_cal_imu_process_load(void)
 {
-    if (0U == wifi_cal_imu_is_edit_allowed())
-    {
-        wifi_cal_imu_reply_error("state");
-        return;
-    }
+    uint8_t ok;
 
     if (0U != IMUCalib_IsBusy())
     {
@@ -447,7 +444,15 @@ static void wifi_cal_imu_process_load(void)
         return;
     }
 
-    if (0U == IMUCalib_LoadFromFlashAndApply())
+    if (car_safety_maintenance_acquire() == 0U)
+    {
+        wifi_cal_imu_reply_error("state");
+        return;
+    }
+    ok = IMUCalib_LoadFromFlashAndApply();
+    car_safety_maintenance_release();
+
+    if (ok == 0U)
     {
         wifi_cal_imu_reply_error("flash");
         return;
@@ -463,11 +468,7 @@ static void wifi_cal_imu_process_load(void)
  */
 static void wifi_cal_imu_process_save(void)
 {
-    if (0U == wifi_cal_imu_is_edit_allowed())
-    {
-        wifi_cal_imu_reply_error("state");
-        return;
-    }
+    uint8_t ok;
 
     if (0U != IMUCalib_IsBusy())
     {
@@ -475,7 +476,15 @@ static void wifi_cal_imu_process_save(void)
         return;
     }
 
-    if (0U == IMUCalib_SaveCurrentToFlash())
+    if (car_safety_maintenance_acquire() == 0U)
+    {
+        wifi_cal_imu_reply_error("state");
+        return;
+    }
+    ok = IMUCalib_SaveCurrentToFlash();
+    car_safety_maintenance_release();
+
+    if (ok == 0U)
     {
         wifi_cal_imu_reply_error("flash");
         return;
@@ -491,11 +500,7 @@ static void wifi_cal_imu_process_save(void)
  */
 static void wifi_cal_imu_process_clear(void)
 {
-    if (0U == wifi_cal_imu_is_edit_allowed())
-    {
-        wifi_cal_imu_reply_error("state");
-        return;
-    }
+    uint8_t ok;
 
     if (0U != IMUCalib_IsBusy())
     {
@@ -503,7 +508,15 @@ static void wifi_cal_imu_process_clear(void)
         return;
     }
 
-    if (0U == IMUCalib_ClearFlash())
+    if (car_safety_maintenance_acquire() == 0U)
+    {
+        wifi_cal_imu_reply_error("state");
+        return;
+    }
+    ok = IMUCalib_ClearFlash();
+    car_safety_maintenance_release();
+
+    if (ok == 0U)
     {
         wifi_cal_imu_reply_error("flash");
         return;
@@ -581,15 +594,15 @@ static void wifi_cal_imu_process_start(const char *mode)
 {
     uint8_t ok = 0U;
 
-    if (0U == wifi_cal_imu_is_edit_allowed())
-    {
-        wifi_cal_imu_reply_error("state");
-        return;
-    }
-
     if (0U != IMUCalib_IsBusy())
     {
         wifi_cal_imu_reply_error("busy");
+        return;
+    }
+
+    if (car_safety_maintenance_acquire() == 0U)
+    {
+        wifi_cal_imu_reply_error("state");
         return;
     }
 
@@ -607,9 +620,11 @@ static void wifi_cal_imu_process_start(const char *mode)
     }
     else
     {
+        car_safety_maintenance_release();
         wifi_cal_imu_reply_error("unknown");
         return;
     }
+    car_safety_maintenance_release();
 
     if (0U == ok)
     {

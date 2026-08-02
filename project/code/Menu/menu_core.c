@@ -8,6 +8,8 @@
 * 日期：2025年
 ********************************************************************************************************************/
 #include "menu_core.h"
+#include "../car_safety.h"
+#include <float.h>
 
 //====================================================内部变量====================================================
 // 菜单状态变量
@@ -71,6 +73,13 @@ static uint8_t pending_slot_number = 0;                // 待操作的存档号
 #define FLASH_OP_NONE    0
 #define FLASH_OP_LOAD    1
 #define FLASH_OP_SAVE    2
+
+static uint8_t menu_float_is_finite(float value)
+{
+    return ((value == value) &&
+            (value <= FLT_MAX) &&
+            (value >= -FLT_MAX)) ? 1U : 0U;
+}
 
 /* 判断菜单项是否为参数类型（本地参数或Air参数） */
 static uint8_t menu_is_param_item(const menu_item_t *item)
@@ -738,33 +747,46 @@ void menu_update_100HZ(void)
     // 处理待执行的Flash操作（在主循环中执行，避免在中断中操作Flash）
     if(pending_flash_operation != FLASH_OP_NONE)
     {
-        switch(pending_flash_operation)
+        if(car_safety_maintenance_acquire() == 0U)
         {
-        case FLASH_OP_LOAD:
-            if(menu_flash_check_slot(pending_slot_number))
+            menu_show_error("Stop First");
+        }
+        else
+        {
+            switch(pending_flash_operation)
             {
-                // 存档有效，加载数据
-                menu_flash_load_params(pending_slot_number);
-                menu_show_success("Load OK");
-            }
-            else
-            {
-                // 存档无效，显示错误
-                menu_show_error("No Data");
-            }
-            break;
+            case FLASH_OP_LOAD:
+                if(menu_flash_check_slot(pending_slot_number))
+                {
+                    // 存档有效，加载数据
+                    if(menu_flash_load_params(pending_slot_number) != 0U)
+                    {
+                        menu_show_success("Load OK");
+                    }
+                    else
+                    {
+                        menu_show_error("Load Fail");
+                    }
+                }
+                else
+                {
+                    // 存档无效，显示错误
+                    menu_show_error("No Data");
+                }
+                break;
 
-        case FLASH_OP_SAVE:
-            menu_flash_save_params(pending_slot_number);
-            if(menu_flash_check_slot(pending_slot_number) != 0U)
-            {
-                menu_show_success("Save OK");
+            case FLASH_OP_SAVE:
+                if(menu_flash_save_params(pending_slot_number) != 0U)
+                {
+                    menu_show_success("Save OK");
+                }
+                else
+                {
+                    menu_show_error("Save Fail");
+                }
+                break;
             }
-            else
-            {
-                menu_show_error("Save Fail");
-            }
-            break;
+            car_safety_maintenance_release();
         }
         pending_flash_operation = FLASH_OP_NONE;
         need_refresh = 1;
@@ -806,7 +828,7 @@ void menu_show(void)
  * @param min 最小值
  * @param max 最大值
  */
-void menu_register_param(float* var, float step, float min, float max)
+void menu_register_param(volatile float* var, float step, float min, float max)
 {
     if(param_count >= MENU_MAX_PARAMS) return;
 
@@ -880,6 +902,9 @@ float menu_get_param_by_index(uint8_t index)
 void menu_set_param_by_index(uint8_t index, float value)
 {
     if(index >= param_count || param_configs[index].variable == NULL)
+        return;
+
+    if(menu_float_is_finite(value) == 0U)
         return;
 
     // 限制在范围内
@@ -1505,9 +1530,10 @@ uint8_t menu_flash_check_slot(uint8_t slot)
 /**
  * @brief 从Flash加载参数，只接受带magic/version/checksum的新格式。
  */
-void menu_flash_load_params(uint8_t slot)
+uint8_t menu_flash_load_params(uint8_t slot)
 {
     menu_flash_slot_header_t header;
+    uint32_t irq_state;
     uint32_t offset;
     uint16_t index;
     float value;
@@ -1515,13 +1541,13 @@ void menu_flash_load_params(uint8_t slot)
     if(slot >= MENU_SLOT_COUNT || param_count == 0U)
     {
         menu_show_error("Error");
-        return;
+        return 0U;
     }
 
     if(menu_flash_slot_valid(slot, &header) == 0U)
     {
         menu_show_error("No Data");
-        return;
+        return 0U;
     }
 
     offset = (uint32_t)((sizeof(menu_flash_slot_header_t) + 3U) / 4U);
@@ -1531,6 +1557,10 @@ void menu_flash_load_params(uint8_t slot)
         if(param_configs[index].variable != NULL)
         {
             value = flash_union_buffer[offset + index].float_type;
+            if(menu_float_is_finite(value) == 0U)
+            {
+                return 0U;
+            }
             if(value < param_configs[index].min_val)
             {
                 value = param_configs[index].min_val;
@@ -1539,17 +1569,30 @@ void menu_flash_load_params(uint8_t slot)
             {
                 value = param_configs[index].max_val;
             }
-            *(param_configs[index].variable) = value;
+            flash_union_buffer[offset + index].float_type = value;
         }
     }
 
+    /* 控制中断只能看到加载前或加载后的完整参数集，不能看到半套新参数。 */
+    irq_state = interrupt_global_disable();
+    for(index = 0U; index < header.param_count; index++)
+    {
+        if(param_configs[index].variable != NULL)
+        {
+            *(param_configs[index].variable) =
+                flash_union_buffer[offset + index].float_type;
+        }
+    }
+    interrupt_global_enable(irq_state);
+
     current_slot = slot;
+    return 1U;
 }
 
 /**
  * @brief 保存参数到Flash，写入magic/version/checksum防止垃圾值进控制器。
  */
-void menu_flash_save_params(uint8_t slot)
+uint8_t menu_flash_save_params(uint8_t slot)
 {
     menu_flash_slot_header_t *header;
     uint32_t page_num;
@@ -1559,14 +1602,14 @@ void menu_flash_save_params(uint8_t slot)
     if(slot >= MENU_SLOT_COUNT || param_count == 0U)
     {
         menu_show_error("Error");
-        return;
+        return 0U;
     }
 
     page_num = menu_get_slot_page(slot);
     if((page_num + MENU_SLOT_SIZE - 1U) >= FLASH_PAGE_NUM)
     {
         menu_show_error("Error");
-        return;
+        return 0U;
     }
 
     flash_buffer_clear();
@@ -1576,7 +1619,17 @@ void menu_flash_save_params(uint8_t slot)
     if((offset + param_count) > FLASH_PAGE_LENGTH)
     {
         menu_show_error("Error");
-        return;
+        return 0U;
+    }
+
+    for(index = 0U; index < param_count; index++)
+    {
+        if((param_configs[index].variable != NULL) &&
+           (menu_float_is_finite(*(param_configs[index].variable)) == 0U))
+        {
+            menu_show_error("Bad Param");
+            return 0U;
+        }
     }
 
     for(index = 0U; index < param_count; index++)
@@ -1597,7 +1650,14 @@ void menu_flash_save_params(uint8_t slot)
     sprintf(header->slot_name, "Slot%u", (unsigned int)slot);
 
     (void)flash_write_page_from_buffer(0U, page_num, offset + param_count);
+
+    if(menu_flash_slot_valid(slot, NULL) == 0U)
+    {
+        return 0U;
+    }
+
     current_slot = slot;
+    return 1U;
 }
 
 /**
@@ -1621,10 +1681,17 @@ void menu_flash_format_slot(uint8_t slot)
         return;
     }
 
+    if(car_safety_maintenance_acquire() == 0U)
+    {
+        menu_show_message("Stop First");
+        return;
+    }
+
     for(index = 0U; index < MENU_SLOT_SIZE; index++)
     {
         flash_erase_page(0U, page_num + index);
     }
+    car_safety_maintenance_release();
 
     menu_show_message("Formatted");
 }

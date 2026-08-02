@@ -29,6 +29,14 @@
 
 #include "ICM42688.h"
 
+#define ICM42688_SPI_BURST_TIMEOUT_US (100U)
+#define ICM42688_DWT_UNLOCK_KEY        (0xC5ACCE55U)
+#define ICM42688_ID_CHECK_INTERVAL     (100U)
+#define ICM42688_FROZEN_FRAME_LIMIT    (100U)
+
+/* zf_driver_spi.c 中的模块表；ICM42688 仅使用独占的 SPI2/SCB9。 */
+extern volatile stc_SCB_t *spi_module[4];
+
 /*
  * ICM42688 默认配置（1kHz）
  * 1) 陀螺仪量程 2000dps，覆盖小车常见角速度
@@ -51,8 +59,119 @@ ICM42688_CONFIG_STRUCT ICM42688_CONFIG = {
 float Gyro_Sensitivity, Acc_Sensitivity;
 ICM42688_RAW_DATA ICM42688_RAW;      /* 原始 LSB 数据 */
 ICM42688_real_data ICM42688;         /* 换算后的物理量 */
-float ICM42688_Bias_gyro_x = 0, ICM42688_Bias_gyro_y = 0, ICM42688_Bias_gyro_z = 0;
-uint8 ICM42688_Bias_Init_Flag = 0;
+volatile float ICM42688_Bias_gyro_x = 0;
+volatile float ICM42688_Bias_gyro_y = 0;
+volatile float ICM42688_Bias_gyro_z = 0;
+volatile uint8 ICM42688_Bias_Init_Flag = 0;
+volatile uint32 g_icm42688_spi_timeout_count = 0U;
+volatile uint32 g_icm42688_invalid_frame_count = 0U;
+volatile uint32 g_icm42688_identity_error_count = 0U;
+
+static uint8 s_icm42688_cycle_counter_ready = 0U;
+static uint8 s_icm42688_last_raw_valid = 0U;
+static uint16 s_icm42688_frozen_frame_count = 0U;
+static uint16 s_icm42688_identity_check_divider = 0U;
+static ICM42688_RAW_DATA s_icm42688_last_raw = {0};
+
+static uint8 ICM42688_CycleCounter_Init(void)
+{
+    uint32 start_cycles;
+
+    if ((s_icm42688_cycle_counter_ready != 0U) &&
+        ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) != 0U))
+    {
+        return 1U;
+    }
+
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->LAR = ICM42688_DWT_UNLOCK_KEY;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+    start_cycles = DWT->CYCCNT;
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
+    s_icm42688_cycle_counter_ready =
+        (DWT->CYCCNT != start_cycles) ? 1U : 0U;
+    return s_icm42688_cycle_counter_ready;
+}
+
+static void ICM42688_SPI_Recover(void)
+{
+    volatile stc_SCB_t *module = spi_module[(uint32)ICM42688_SPI];
+
+    module->unCTRL.stcField.u1ENABLED = 0U;
+    Cy_SCB_SPI_ClearTxFifo(module);
+    Cy_SCB_SPI_ClearRxFifo(module);
+    /* SPI2 为 IMU 独占；运行期恢复必须明确重新启用，避免永久离线。 */
+    module->unCTRL.stcField.u1ENABLED = 1U;
+}
+
+static uint8 ICM42688_SPI_Transfer8_Timeout(const uint8 *write_buffer,
+                                            uint8 *read_buffer,
+                                            uint32 len,
+                                            uint32 timeout_us)
+{
+    volatile stc_SCB_t *module = spi_module[(uint32)ICM42688_SPI];
+    uint32 clock_hz;
+    uint32 start_cycles;
+    uint32 timeout_cycles;
+
+    if ((write_buffer == NULL) || (read_buffer == NULL) ||
+        (len == 0U) || (timeout_us == 0U) ||
+        (ICM42688_CycleCounter_Init() == 0U))
+    {
+        return 0U;
+    }
+
+    clock_hz = SystemCoreClock;
+    if (clock_hz == 0U)
+    {
+        clock_hz = system_clock;
+    }
+    timeout_cycles = (clock_hz / 1000000U) * timeout_us;
+    if (timeout_cycles == 0U)
+    {
+        return 0U;
+    }
+
+    /* 初始化寄存器访问使用 16bit，采样突发读取前切回 8bit。 */
+    module->unCTRL.u32Register &= 0xFFFF3FFFU;
+    module->unTX_CTRL.u32Register &= 0xFFFFFFE0U;
+    module->unTX_CTRL.u32Register |= 0x00000007U;
+    module->unRX_CTRL.u32Register &= 0xFFFFFFE0U;
+    module->unRX_CTRL.u32Register |= 0x00000007U;
+    Cy_SCB_SPI_ClearRxFifo(module);
+
+    start_cycles = DWT->CYCCNT;
+    while (len > 0U)
+    {
+        Cy_SCB_WriteTxFifo(module, *write_buffer++);
+        while (Cy_SCB_IsTxComplete(module) == 0U)
+        {
+            if ((uint32)(DWT->CYCCNT - start_cycles) >= timeout_cycles)
+            {
+                ICM42688_SPI_Recover();
+                return 0U;
+            }
+        }
+
+        while (Cy_SCB_SPI_GetNumInRxFifo(module) == 0U)
+        {
+            if ((uint32)(DWT->CYCCNT - start_cycles) >= timeout_cycles)
+            {
+                ICM42688_SPI_Recover();
+                return 0U;
+            }
+        }
+
+        *read_buffer++ = (uint8)module->unRX_FIFO_RD.u32Register;
+        len--;
+    }
+
+    return 1U;
+}
 
 /* 初始化 SPI 与片选 GPIO */
 static void ICM42688_SPI_HardWare_Init(void)
@@ -78,28 +197,98 @@ static uint16_t SPI_Transfer_16bit(uint16_t dout)
  * 连续读取加速度与陀螺仪原始值
  * 数据顺序：ax ay az gx gy gz
  */
-static void ICM42688_Read_Burst(ICM42688_RAW_DATA *raw)
+static uint8 ICM42688_Read_Burst(ICM42688_RAW_DATA *raw)
 {
     uint8_t tx_buf[13] = {0};
     uint8_t rx_buf[13] = {0};
+    ICM42688_RAW_DATA new_raw = {0};
 
     if (raw == NULL)
     {
-        return;
+        return 0U;
     }
 
     tx_buf[0] = READ_ACC_X_HIGH;
 
     gpio_low(ICM42688_CS_Pin);
-    spi_transfer_8bit(ICM42688_SPI, tx_buf, rx_buf, 13);
+    if (ICM42688_SPI_Transfer8_Timeout(tx_buf, rx_buf, 13U,
+                                      ICM42688_SPI_BURST_TIMEOUT_US) == 0U)
+    {
+        gpio_high(ICM42688_CS_Pin);
+        g_icm42688_spi_timeout_count++;
+        return 0U;
+    }
     gpio_high(ICM42688_CS_Pin);
 
-    raw->acc_x_lsb = (int16)(((uint16)rx_buf[1] << 8) | rx_buf[2]);
-    raw->acc_y_lsb = (int16)(((uint16)rx_buf[3] << 8) | rx_buf[4]);
-    raw->acc_z_lsb = (int16)(((uint16)rx_buf[5] << 8) | rx_buf[6]);
-    raw->gyro_x_lsb = (int16)(((uint16)rx_buf[7] << 8) | rx_buf[8]);
-    raw->gyro_y_lsb = (int16)(((uint16)rx_buf[9] << 8) | rx_buf[10]);
-    raw->gyro_z_lsb = (int16)(((uint16)rx_buf[11] << 8) | rx_buf[12]);
+    new_raw.acc_x_lsb = (int16)(((uint16)rx_buf[1] << 8) | rx_buf[2]);
+    new_raw.acc_y_lsb = (int16)(((uint16)rx_buf[3] << 8) | rx_buf[4]);
+    new_raw.acc_z_lsb = (int16)(((uint16)rx_buf[5] << 8) | rx_buf[6]);
+    new_raw.gyro_x_lsb = (int16)(((uint16)rx_buf[7] << 8) | rx_buf[8]);
+    new_raw.gyro_y_lsb = (int16)(((uint16)rx_buf[9] << 8) | rx_buf[10]);
+    new_raw.gyro_z_lsb = (int16)(((uint16)rx_buf[11] << 8) | rx_buf[12]);
+
+    if (((new_raw.acc_x_lsb == 0) &&
+         (new_raw.acc_y_lsb == 0) &&
+         (new_raw.acc_z_lsb == 0) &&
+         (new_raw.gyro_x_lsb == 0) &&
+         (new_raw.gyro_y_lsb == 0) &&
+         (new_raw.gyro_z_lsb == 0)) ||
+        ((new_raw.acc_x_lsb == -1) &&
+         (new_raw.acc_y_lsb == -1) &&
+         (new_raw.acc_z_lsb == -1) &&
+         (new_raw.gyro_x_lsb == -1) &&
+         (new_raw.gyro_y_lsb == -1) &&
+         (new_raw.gyro_z_lsb == -1)))
+    {
+        g_icm42688_invalid_frame_count++;
+        return 0U;
+    }
+
+    if ((s_icm42688_last_raw_valid != 0U) &&
+        (memcmp(&new_raw, &s_icm42688_last_raw, sizeof(new_raw)) == 0))
+    {
+        if (s_icm42688_frozen_frame_count < ICM42688_FROZEN_FRAME_LIMIT)
+        {
+            s_icm42688_frozen_frame_count++;
+        }
+        if (s_icm42688_frozen_frame_count >= ICM42688_FROZEN_FRAME_LIMIT)
+        {
+            g_icm42688_invalid_frame_count++;
+            return 0U;
+        }
+    }
+    else
+    {
+        s_icm42688_last_raw = new_raw;
+        s_icm42688_last_raw_valid = 1U;
+        s_icm42688_frozen_frame_count = 0U;
+    }
+
+    *raw = new_raw;
+    return 1U;
+}
+
+static uint8 ICM42688_CheckIdentityBounded(void)
+{
+    uint8 tx_buf[2] = {(uint8)(WHO_AM_I >> 8), 0U};
+    uint8 rx_buf[2] = {0U};
+
+    gpio_low(ICM42688_CS_Pin);
+    if (ICM42688_SPI_Transfer8_Timeout(tx_buf, rx_buf, 2U,
+                                      ICM42688_SPI_BURST_TIMEOUT_US) == 0U)
+    {
+        gpio_high(ICM42688_CS_Pin);
+        g_icm42688_spi_timeout_count++;
+        return 0U;
+    }
+    gpio_high(ICM42688_CS_Pin);
+
+    if (rx_buf[1] != ICM42688_ID)
+    {
+        g_icm42688_identity_error_count++;
+        return 0U;
+    }
+    return 1U;
 }
 
 /* 读取并校验芯片 ID */
@@ -423,8 +612,9 @@ static void Set_ICM42688_LN_Mode(void)
  * 读取一次传感器数据，存入 ICM42688（物理量）和 ICM42688_RAW（LSB）
  * 流程：burst 读 13 字节 -> LSB/灵敏度 -> 乘轴符号 -> 扣零偏（如果已标定）
  */
-void ICM42688_Get_Data(void)
+uint8 ICM42688_Get_Data(void)
 {
+    ICM42688_RAW_DATA new_raw;
     float gyro_x_raw;
     float gyro_y_raw;
     float gyro_z_raw;
@@ -432,7 +622,25 @@ void ICM42688_Get_Data(void)
     float acc_y_raw;
     float acc_z_raw;
 
-    ICM42688_Read_Burst(&ICM42688_RAW);
+    if (ICM42688_Read_Burst(&new_raw) == 0U)
+    {
+        return 0U;
+    }
+
+    s_icm42688_identity_check_divider++;
+    if (s_icm42688_identity_check_divider >= ICM42688_ID_CHECK_INTERVAL)
+    {
+        if (ICM42688_CheckIdentityBounded() == 0U)
+        {
+            /* 身份异常后逐帧复检，使连续失败能触发上层 5 帧故障门限。 */
+            s_icm42688_identity_check_divider =
+                ICM42688_ID_CHECK_INTERVAL - 1U;
+            return 0U;
+        }
+        s_icm42688_identity_check_divider = 0U;
+    }
+
+    ICM42688_RAW = new_raw;
 
     /* LSB -> 物理值（dps 或 g） */
     gyro_x_raw = ICM42688_RAW.gyro_x_lsb / Gyro_Sensitivity;
@@ -459,6 +667,7 @@ void ICM42688_Get_Data(void)
         ICM42688.gyro_y -= ICM42688_Bias_gyro_y;
         ICM42688.gyro_z -= ICM42688_Bias_gyro_z;
     }
+    return 1U;
 }
 
 /*
@@ -473,6 +682,7 @@ void ICM42688_Bias_Init(uint32 times)
     int64_t sum_gyro_y = 0;
     int64_t sum_gyro_z = 0;
     uint32 i;
+    uint32 valid_samples = 0U;
 
     if (ICM42688_Bias_Init_Flag == 1)
     {
@@ -486,52 +696,82 @@ void ICM42688_Bias_Init(uint32 times)
 
     for (i = 0U; i < times; i++)
     {
-        ICM42688_Read_Burst(&ICM42688_RAW);
+        if (ICM42688_Read_Burst(&ICM42688_RAW) == 0U)
+        {
+            continue;
+        }
         sum_gyro_x += ICM42688_RAW.gyro_x_lsb;
         sum_gyro_y += ICM42688_RAW.gyro_y_lsb;
         sum_gyro_z += ICM42688_RAW.gyro_z_lsb;
+        valid_samples++;
         system_delay_us(ICM42688_SAMPLE_INTERVAL_US);
     }
 
-    ICM42688_Bias_gyro_x = ICM42688_SIGN_GX * (((float)sum_gyro_x / (float)times) / Gyro_Sensitivity);
-    ICM42688_Bias_gyro_y = ICM42688_SIGN_GY * (((float)sum_gyro_y / (float)times) / Gyro_Sensitivity);
-    ICM42688_Bias_gyro_z = ICM42688_SIGN_GZ * (((float)sum_gyro_z / (float)times) / Gyro_Sensitivity);
+    if (valid_samples == 0U)
+    {
+        return;
+    }
+
+    ICM42688_Bias_gyro_x = ICM42688_SIGN_GX * (((float)sum_gyro_x / (float)valid_samples) / Gyro_Sensitivity);
+    ICM42688_Bias_gyro_y = ICM42688_SIGN_GY * (((float)sum_gyro_y / (float)valid_samples) / Gyro_Sensitivity);
+    ICM42688_Bias_gyro_z = ICM42688_SIGN_GZ * (((float)sum_gyro_z / (float)valid_samples) / Gyro_Sensitivity);
     ICM42688_Bias_Init_Flag = 1;
 }
 
 /* 设置陀螺零偏（dps），enable=0 时关闭零偏补偿。用于从 Flash 恢复标定值 */
 void ICM42688_SetGyroBiasDps(float bx, float by, float bz, uint8 enable)
 {
+    uint32 irq_state = interrupt_global_disable();
+
     ICM42688_Bias_gyro_x = bx;
     ICM42688_Bias_gyro_y = by;
     ICM42688_Bias_gyro_z = bz;
     ICM42688_Bias_Init_Flag = (enable != 0U) ? 1U : 0U;
+    interrupt_global_enable(irq_state);
 }
 
 /* 读取当前陀螺零偏（dps）和启用状态，用于保存到 Flash */
 void ICM42688_GetGyroBiasDps(float *bx, float *by, float *bz, uint8 *enable)
 {
+    float local_bx;
+    float local_by;
+    float local_bz;
+    uint8 local_enable;
+    uint32 irq_state = interrupt_global_disable();
+
+    local_bx = ICM42688_Bias_gyro_x;
+    local_by = ICM42688_Bias_gyro_y;
+    local_bz = ICM42688_Bias_gyro_z;
+    local_enable = ICM42688_Bias_Init_Flag;
+    interrupt_global_enable(irq_state);
+
     if (bx != NULL)
     {
-        *bx = ICM42688_Bias_gyro_x;
+        *bx = local_bx;
     }
     if (by != NULL)
     {
-        *by = ICM42688_Bias_gyro_y;
+        *by = local_by;
     }
     if (bz != NULL)
     {
-        *bz = ICM42688_Bias_gyro_z;
+        *bz = local_bz;
     }
     if (enable != NULL)
     {
-        *enable = ICM42688_Bias_Init_Flag;
+        *enable = local_enable;
     }
 }
 
 /* 初始化 ICM42688 并加载配置 */
 void ICM42688_Init(ICM42688_CONFIG_STRUCT *ICM42688_CONFIG)
 {
+    g_icm42688_spi_timeout_count = 0U;
+    g_icm42688_invalid_frame_count = 0U;
+    g_icm42688_identity_error_count = 0U;
+    s_icm42688_last_raw_valid = 0U;
+    s_icm42688_frozen_frame_count = 0U;
+    s_icm42688_identity_check_divider = ICM42688_ID_CHECK_INTERVAL - 1U;
     ICM42688_SPI_HardWare_Init();
     Rest_ICM42688();
     system_delay_ms(10);

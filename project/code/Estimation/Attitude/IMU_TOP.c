@@ -13,16 +13,117 @@
  ********************************************************************/
 
 #include "IMU_TOP.h"
-
 #define IMU_DEG_TO_RAD (0.017453292519943295f)
+#define IMU_RUNTIME_FAULT_THRESHOLD  (5U)
+#define IMU_RUNTIME_RECOVERY_SAMPLES (20U)
 
 /* ======================== IMU 全局状态 ======================== */
 MahonyAhrs_t g_mahony_ahrs;       /* Mahony 姿态解算器状态 */
 MahonyAhrs_Euler_t g_euler;       /* 当前姿态欧拉角（单位: 度） */
-uint8 g_imu_ready = 0U;           /* 1=IMU 初始化+自检+暖机全部完成 */
+uint8 g_imu_ready = 0U;           /* 1=IMU 初始化与暖机完成；健康状态见 IMU_RuntimeHealthy */
 static imudata_t s_imu_raw_calib_1000hz = {0}; /* 当前帧原始 IMU 快照，供校准链读取 */
 static uint8 s_imu_initializing = 0U;           /* 1=正在初始化中（暖机阶段） */
 /* ======================== 本地工具函数 ======================== */
+volatile uint32 g_imu_update_count = 0U;
+volatile uint32 g_imu_read_error_count = 0U;
+volatile uint32 g_imu_processing_error_count = 0U;
+volatile uint32 g_imu_calibration_sample_drop_count = 0U;
+volatile uint16 g_imu_consecutive_read_error_count = 0U;
+volatile uint16 g_imu_max_consecutive_read_error_count = 0U;
+volatile uint8 g_imu_runtime_fault = 0U;
+volatile uint8 g_imu_startup_selftest_fault = 0U;
+
+static volatile uint32 s_imu_raw_sequence = 0U;
+static uint32 s_imu_calibration_serviced_sequence = 0U;
+static uint16 s_imu_recovery_success_count = 0U;
+static volatile uint32 s_imu_snapshot_sequence = 0U;
+static imu_realtime_snapshot_t s_imu_realtime_snapshot = {0};
+
+static uint8 IMU_CopyRawSample(imudata_t *sample, uint32 *sequence);
+
+static void IMU_PublishRawSample(void)
+{
+    s_imu_raw_sequence++;
+    __DMB();
+    s_imu_raw_calib_1000hz.gyrox = ICM42688.gyro_x;
+    s_imu_raw_calib_1000hz.gyroy = ICM42688.gyro_y;
+    s_imu_raw_calib_1000hz.gyroz = ICM42688.gyro_z;
+    s_imu_raw_calib_1000hz.accx = ICM42688.acc_x;
+    s_imu_raw_calib_1000hz.accy = ICM42688.acc_y;
+    s_imu_raw_calib_1000hz.accz = ICM42688.acc_z;
+    __DMB();
+    s_imu_raw_sequence++;
+}
+
+static void IMU_PublishRealtimeSnapshot(void)
+{
+    s_imu_snapshot_sequence++;
+    __DMB();
+    s_imu_realtime_snapshot.euler = g_euler;
+    s_imu_realtime_snapshot.filtered = g_imufilter_1000hz;
+    s_imu_realtime_snapshot.sample_count = g_imu_update_count;
+    s_imu_realtime_snapshot.healthy =
+        ((g_imu_ready != 0U) &&
+         (g_imu_runtime_fault == 0U) &&
+         (g_imu_startup_selftest_fault == 0U)) ? 1U : 0U;
+    __DMB();
+    s_imu_snapshot_sequence++;
+}
+
+static void IMU_RecordFrameFailure(void)
+{
+    s_imu_recovery_success_count = 0U;
+    if (g_imu_consecutive_read_error_count < 0xFFFFU)
+    {
+        g_imu_consecutive_read_error_count++;
+    }
+    if (g_imu_consecutive_read_error_count >
+        g_imu_max_consecutive_read_error_count)
+    {
+        g_imu_max_consecutive_read_error_count =
+            g_imu_consecutive_read_error_count;
+    }
+    if (g_imu_consecutive_read_error_count >= IMU_RUNTIME_FAULT_THRESHOLD)
+    {
+        g_imu_runtime_fault = 1U;
+    }
+}
+
+static void IMU_RecordReadFailure(void)
+{
+    g_imu_read_error_count++;
+    IMU_RecordFrameFailure();
+}
+
+static void IMU_RecordProcessingFailure(void)
+{
+    g_imu_processing_error_count++;
+    IMU_RecordFrameFailure();
+    /* 非有限值意味着计算链已失效，不等待连续 5 帧，立即禁止输出。 */
+    g_imu_runtime_fault = 1U;
+}
+
+static void IMU_RecordReadSuccess(void)
+{
+    g_imu_consecutive_read_error_count = 0U;
+    if (g_imu_runtime_fault != 0U)
+    {
+        if (s_imu_recovery_success_count < IMU_RUNTIME_RECOVERY_SAMPLES)
+        {
+            s_imu_recovery_success_count++;
+        }
+        if (s_imu_recovery_success_count >= IMU_RUNTIME_RECOVERY_SAMPLES)
+        {
+            g_imu_runtime_fault = 0U;
+            s_imu_recovery_success_count = 0U;
+        }
+    }
+    else
+    {
+        s_imu_recovery_success_count = 0U;
+    }
+}
+
 static uint8 IMU_IsFiniteFloat(float value)
 {
 	if (value != value)
@@ -49,30 +150,77 @@ static uint8 IMU_IsFiniteFloat(float value)
 void IMU_GetRawSampleForCalibration(float *gx, float *gy, float *gz,
                                     float *ax, float *ay, float *az)
 {
+	imudata_t sample;
+	uint32 sequence;
+
+	if (IMU_CopyRawSample(&sample, &sequence) == 0U)
+	{
+		return;
+	}
+
 	if (gx != NULL)
 	{
-		*gx = s_imu_raw_calib_1000hz.gyrox;
+		*gx = sample.gyrox;
 	}
 	if (gy != NULL)
 	{
-		*gy = s_imu_raw_calib_1000hz.gyroy;
+		*gy = sample.gyroy;
 	}
 	if (gz != NULL)
 	{
-		*gz = s_imu_raw_calib_1000hz.gyroz;
+		*gz = sample.gyroz;
 	}
 	if (ax != NULL)
 	{
-		*ax = s_imu_raw_calib_1000hz.accx;
+		*ax = sample.accx;
 	}
 	if (ay != NULL)
 	{
-		*ay = s_imu_raw_calib_1000hz.accy;
+		*ay = sample.accy;
 	}
 	if (az != NULL)
 	{
-		*az = s_imu_raw_calib_1000hz.accz;
+		*az = sample.accz;
 	}
+}
+
+uint8 IMU_GetRealtimeSnapshot(imu_realtime_snapshot_t *snapshot)
+{
+    uint32 sequence_after;
+    uint32 sequence_before;
+
+    if (snapshot == NULL)
+    {
+        return 0U;
+    }
+
+    for (;;)
+    {
+        sequence_before = s_imu_snapshot_sequence;
+        if ((sequence_before & 1U) != 0U)
+        {
+            continue;
+        }
+        __DMB();
+        *snapshot = s_imu_realtime_snapshot;
+        __DMB();
+        sequence_after = s_imu_snapshot_sequence;
+        if ((sequence_before == sequence_after) &&
+            ((sequence_after & 1U) == 0U))
+        {
+            break;
+        }
+    }
+
+    snapshot->healthy = IMU_RuntimeHealthy();
+    return 1U;
+}
+
+uint8 IMU_RuntimeHealthy(void)
+{
+    return ((g_imu_ready != 0U) &&
+            (g_imu_runtime_fault == 0U) &&
+            (g_imu_startup_selftest_fault == 0U)) ? 1U : 0U;
 }
 
 /*
@@ -95,7 +243,10 @@ static uint8 IMU_Startup_SelfCheck(void)
 		float gyro_abs;
 		float acc_mag;
 
-		ICM42688_Get_Data();
+		if (ICM42688_Get_Data() == 0U)
+		{
+			return 0U;
+		}
 
 		if ((0U == IMU_IsFiniteFloat(ICM42688.gyro_x)) ||
 			(0U == IMU_IsFiniteFloat(ICM42688.gyro_y)) ||
@@ -142,16 +293,32 @@ static uint8 IMU_Startup_SelfCheck(void)
 void IMU_Init_All(void)
 {
 	uint32 i;
+	uint8 startup_ok;
 
 	g_imu_ready = 0U;
 	s_imu_initializing = 1U;
 	s_imu_raw_calib_1000hz = (imudata_t){0};
+	g_imu_update_count = 0U;
+	g_imu_read_error_count = 0U;
+	g_imu_processing_error_count = 0U;
+	g_imu_calibration_sample_drop_count = 0U;
+	g_imu_consecutive_read_error_count = 0U;
+	g_imu_max_consecutive_read_error_count = 0U;
+	g_imu_runtime_fault = 0U;
+	g_imu_startup_selftest_fault = 0U;
+	s_imu_raw_sequence = 0U;
+	s_imu_calibration_serviced_sequence = 0U;
+	s_imu_recovery_success_count = 0U;
+	s_imu_snapshot_sequence = 0U;
+	s_imu_realtime_snapshot = (imu_realtime_snapshot_t){0};
 
 	/* 步骤1: 初始化 ICM42688 驱动（SPI 通信、量程配置等） */
 	ICM42688_Init(&ICM42688_CONFIG);
 
 	/* 步骤2: 上电自检（必须静止放置，失败则死循环） */
-	if (0U == IMU_Startup_SelfCheck())
+	startup_ok = IMU_Startup_SelfCheck();
+	g_imu_startup_selftest_fault = (startup_ok == 0U) ? 1U : 0U;
+	if (startup_ok == 0U)
 	{
 		printf("IMU startup self-check failed.\r\n");
 	}
@@ -176,10 +343,12 @@ void IMU_Init_All(void)
 
 	g_imu_ready = 1U;
 	s_imu_initializing = 0U;
+	s_imu_calibration_serviced_sequence = s_imu_raw_sequence;
+	IMU_PublishRealtimeSnapshot();
 }
 
 /* 1kHz 主更新，由定时器中断或主循环调用 */
-void IMU_Update_1000HZ(void)
+uint8 IMU_Update_1000HZ(void)
 {
 	const float dt_s = IMU_UPDATE_DT_SEC;
 	float ahrs_gx;
@@ -188,21 +357,20 @@ void IMU_Update_1000HZ(void)
 	float ahrs_ax;
 	float ahrs_ay;
 	float ahrs_az;
+	MahonyAhrs_Euler_t new_euler;
 	if ((0U == g_imu_ready) && (0U == s_imu_initializing))
 	{
-		return;
+		return 0U;
+	}
+	/* 1. 原始数据 (gyro已去零偏) */
+	if (ICM42688_Get_Data() == 0U)
+	{
+		IMU_RecordReadFailure();
+		return 0U;
 	}
 
-	/* 1. 原始数据 (gyro已去零偏) */
-	ICM42688_Get_Data();
-
 	/* 缓存当前帧原始 IMU 物理量，供校准流程直接读取 */
-	s_imu_raw_calib_1000hz.gyrox = ICM42688.gyro_x;
-	s_imu_raw_calib_1000hz.gyroy = ICM42688.gyro_y;
-	s_imu_raw_calib_1000hz.gyroz = ICM42688.gyro_z;
-	s_imu_raw_calib_1000hz.accx = ICM42688.acc_x;
-	s_imu_raw_calib_1000hz.accy = ICM42688.acc_y;
-	s_imu_raw_calib_1000hz.accz = ICM42688.acc_z;
+	IMU_PublishRawSample();
 
 	/* 2. 加速度计校准前置（传感器坐标系） */
 	float cal_ax = ICM42688.acc_x;
@@ -214,8 +382,7 @@ void IMU_Update_1000HZ(void)
 	IMUFilter_Update(ICM42688.gyro_x, ICM42688.gyro_y, ICM42688.gyro_z,
 	                 cal_ax, cal_ay, cal_az);
 
-	/* 4. 校准状态机 + 高级处理（当前帧） */
-	IMUCalib_Update_1000HZ();
+	/* 4. 仅保留固定耗时的实时加速度处理；校准状态机由主循环服务。 */
 	AccelCalibration_Update_1000HZ();
 
 	/* 5. 姿态解算统一使用 1kHz 滤波 IMU 输出 */
@@ -226,23 +393,40 @@ void IMU_Update_1000HZ(void)
 	ahrs_ay = g_imufilter_1000hz.accy;
 	ahrs_az = g_imufilter_1000hz.accz;
 
-	if ((0U != IMU_IsFiniteFloat(ahrs_gx)) &&
-		(0U != IMU_IsFiniteFloat(ahrs_gy)) &&
-		(0U != IMU_IsFiniteFloat(ahrs_gz)) &&
-		(0U != IMU_IsFiniteFloat(ahrs_ax)) &&
-		(0U != IMU_IsFiniteFloat(ahrs_ay)) &&
-		(0U != IMU_IsFiniteFloat(ahrs_az)))
+	if ((0U == IMU_IsFiniteFloat(ahrs_gx)) ||
+		(0U == IMU_IsFiniteFloat(ahrs_gy)) ||
+		(0U == IMU_IsFiniteFloat(ahrs_gz)) ||
+		(0U == IMU_IsFiniteFloat(ahrs_ax)) ||
+		(0U == IMU_IsFiniteFloat(ahrs_ay)) ||
+		(0U == IMU_IsFiniteFloat(ahrs_az)))
 	{
-		MahonyAhrs_Update(
-			&g_mahony_ahrs,
-			ahrs_gx, ahrs_gy, ahrs_gz,
-			ahrs_ax, ahrs_ay, ahrs_az,
-			dt_s);
+		IMU_RecordProcessingFailure();
+		return 0U;
 	}
 
-	/* 步骤5: 从四元数提取欧拉角（单位: 度），缓存到 g_euler 供全局使用 */
-	g_euler = MahonyAhrs_GetEulerDegrees(&g_mahony_ahrs);
+	MahonyAhrs_Update(
+		&g_mahony_ahrs,
+		ahrs_gx, ahrs_gy, ahrs_gz,
+		ahrs_ax, ahrs_ay, ahrs_az,
+		dt_s);
 
+	/* 步骤5: 从四元数提取欧拉角（单位: 度），缓存到 g_euler 供全局使用 */
+	new_euler = MahonyAhrs_GetEulerDegrees(&g_mahony_ahrs);
+	if ((0U == IMU_IsFiniteFloat(new_euler.roll)) ||
+		(0U == IMU_IsFiniteFloat(new_euler.pitch)) ||
+		(0U == IMU_IsFiniteFloat(new_euler.yaw)) ||
+		(0U == IMU_IsFiniteFloat(new_euler.sin_roll)) ||
+		(0U == IMU_IsFiniteFloat(new_euler.cos_roll)) ||
+		(0U == IMU_IsFiniteFloat(new_euler.sin_pitch)) ||
+		(0U == IMU_IsFiniteFloat(new_euler.cos_pitch)))
+	{
+		IMU_RecordProcessingFailure();
+		return 0U;
+	}
+	g_euler = new_euler;
+	g_imu_update_count++;
+	IMU_RecordReadSuccess();
+	IMU_PublishRealtimeSnapshot();
 
 	// wifi_justfloat(tick_1000us_cnt,ICM42688.gyro_x, ICM42688.gyro_y, ICM42688.gyro_z,
 	// 				ICM42688.acc_x, ICM42688.acc_y, ICM42688.acc_z,
@@ -250,6 +434,69 @@ void IMU_Update_1000HZ(void)
 	// 				g_imufilter_1000hz.accx, g_imufilter_1000hz.accy, g_imufilter_1000hz.accz,
 	// 				g_euler.roll, g_euler.pitch, g_euler.yaw);
 
+	return 1U;
+}
+
+static uint8 IMU_CopyRawSample(imudata_t *sample, uint32 *sequence)
+{
+	uint32 sequence_after;
+	uint32 sequence_before;
+
+	if ((sample == NULL) || (sequence == NULL))
+	{
+		return 0U;
+	}
+
+	for (;;)
+	{
+		sequence_before = s_imu_raw_sequence;
+		if ((sequence_before & 1U) != 0U)
+		{
+			continue;
+		}
+		__DMB();
+		*sample = s_imu_raw_calib_1000hz;
+		__DMB();
+		sequence_after = s_imu_raw_sequence;
+		if ((sequence_before == sequence_after) &&
+		    ((sequence_after & 1U) == 0U))
+		{
+			*sequence = sequence_after;
+			return 1U;
+		}
+	}
+}
+
+void IMU_ServicePoll(void)
+{
+	imudata_t sample;
+	uint32 published_sequence;
+	uint32 sequence_delta;
+
+	if (g_imu_ready == 0U)
+	{
+		return;
+	}
+
+	if (IMU_CopyRawSample(&sample, &published_sequence) == 0U)
+	{
+		return;
+	}
+
+	if (published_sequence == s_imu_calibration_serviced_sequence)
+	{
+		return;
+	}
+
+	sequence_delta = published_sequence - s_imu_calibration_serviced_sequence;
+	if (sequence_delta > 2U)
+	{
+		g_imu_calibration_sample_drop_count += (sequence_delta / 2U) - 1U;
+	}
+
+	IMUCalib_Update_1000HZ(&sample);
+	/* 只确认进入本次处理前捕获的序号；处理中到达的新帧留给下次轮询。 */
+	s_imu_calibration_serviced_sequence = published_sequence;
 }
 
 /* 重置 yaw 为 0，保留当前 roll/pitch 不变
@@ -277,9 +524,10 @@ void IMU_ResetYaw(void)
 	g_mahony_ahrs.q2 = cr * sp;
 	g_mahony_ahrs.q3 = -sr * sp;
 	g_euler = MahonyAhrs_GetEulerDegrees(&g_mahony_ahrs);
+	IMU_PublishRealtimeSnapshot();
 }
 
 uint8 IMU_Is_Ready(void)
 {
-	return g_imu_ready;
+	return IMU_RuntimeHealthy();
 }

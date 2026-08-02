@@ -4,11 +4,17 @@
 #include "../negative_pressure_motor.h"
 #include <math.h>
 
-volatile uint8_t timer_100HZ_flag = 0U;
-volatile uint16 g_tick_1000HZ = 0U;
 volatile uint32 tick_1000us_cnt = 0U;
+volatile uint32 g_car_background_100hz_generation = 0U;
+volatile car_realtime_diag_t g_car_realtime_diag = {0};
 
-static uint32 s_system_time_ms = 0U;
+static volatile uint32 s_system_time_ms = 0U;
+static uint32 s_background_100hz_processed_generation = 0U;
+static uint32 s_control_last_imu_tick = 0U;
+static uint32 s_control_last_imu_sample_count = 0U;
+static uint8 s_control_imu_stale_cycles = 0U;
+static crsf_control_snapshot_t s_car_control_input = {0};
+static imu_realtime_snapshot_t s_car_imu_snapshot = {0};
 /* static uint16 s_air_comm_beep_tick = 200U; */
 static uint8 s_air_menu_runtime_locked = 0U;
 static uint8 s_menu_runtime_was_locked = 0U;
@@ -27,11 +33,15 @@ static float s_car_speed_right_brake_direction = 0.0f;
 #define CAR_SPEED_ACCEL_TURN_DISABLE_RATIO (0.50f)
 #define CAR_SPEED_PLAN_MIN_STEP (1.0f)
 #define CAR_SPEED_SLEW_AND_ACCEL_FF_ENABLE (0U)
+#define CAR_SPEED_LOOP_TUNE_ENABLE (0U)
+#define CAR_SPEED_LOOP_TUNE_THRESHOLD (300)
+#define CAR_IMU_STALE_CONTROL_LIMIT (3U)
+#define CAR_PIT_TICKS_PER_US        (8U)
 
 #define CAR_WORLD_INPUT_DEADZONE (50.0f)
 #define CAR_WORLD_SPEED_LIMIT_LOW (200.0f)
 #define CAR_WORLD_SPEED_LIMIT_MID (400.0f)
-#define CAR_WORLD_SPEED_LIMIT_HIGH (700.0f)
+#define CAR_WORLD_SPEED_LIMIT_HIGH (500.0f)
 #define CAR_WORLD_ALIGNMENT_STOP_DEG (90.0f)
 #define CAR_WHEEL_TARGET_ABS_LIMIT (1000.0f)
 
@@ -51,32 +61,32 @@ static float s_car_speed_right_brake_direction = 0.0f;
 #define CAR_WHEEL_STOP_SPEED (5.0f)
 #define CAR_NEGATIVE_PRESSURE_FIXED_THROTTLE (4000U)
 
-float car_speed_left_kp = 3.00f;
-float car_speed_left_ki = 0.00f;
-float car_speed_left_kd = 0.00f;
-float car_speed_right_kp = 3.00f;
-float car_speed_right_ki = 0.00f;
-float car_speed_right_kd = 0.00f;
-float car_speed_filter_alpha = 0.557f;
-float car_speed_ff_slope = 3.00f;
-float car_speed_ff_static = 700.0f;
-float car_speed_ff_deadband = 10.0f;
-float car_speed_ff_transition = 100.0f;
-float car_speed_brake_static = 2200.0f;
-float car_speed_delta_output_limit = 3000.0f;
-float car_speed_accel_kff = 10.0f;
-float car_speed_accel_step_limit = 40.0f;
-float car_speed_decel_step_limit = 40.0f;
-float car_speed_accel_ff_limit = 800.0f;
-float car_gyroz_kff = 0.12f;
+volatile float car_speed_left_kp = 12.00f;
+volatile float car_speed_left_ki = 0.90f;
+volatile float car_speed_left_kd = 3.00f;
+volatile float car_speed_right_kp = 12.00f;
+volatile float car_speed_right_ki = 0.900f;
+volatile float car_speed_right_kd = 3.00f;
+volatile float car_speed_filter_alpha = 0.557f;
+volatile float car_speed_ff_slope = 0.00f;
+volatile float car_speed_ff_static = 600.0f;
+volatile float car_speed_ff_deadband = 10.0f;
+volatile float car_speed_ff_transition = 100.0f;
+volatile float car_speed_brake_static = 0.0f;
+volatile float car_speed_delta_output_limit = 6000.0f;
+volatile float car_speed_accel_kff = 10.0f;
+volatile float car_speed_accel_step_limit = 40.0f;
+volatile float car_speed_decel_step_limit = 40.0f;
+volatile float car_speed_accel_ff_limit = 800.0f;
+volatile float car_gyroz_kff = 0.12f;
 /* 角速度PI使用100 Hz每采样周期离散系数，数值已由原连续时间系数等效换算。 */
-float car_gyroz_kp = 1.20f;
-float car_gyroz_ki = 0.025f;
-float car_gyroz_k_turn = 1.0f;
-float car_yaw_kp = 7.50f;
-float car_yaw_kd = 2.00f;
-float car_yaw_rate_limit_dps = 800.0f;
-float car_yaw_control_mode = 1.0f;
+volatile float car_gyroz_kp = 1.35f;
+volatile float car_gyroz_ki = 0.025f;
+volatile float car_gyroz_k_turn = 1.0f;
+volatile float car_yaw_kp = 8.50f;
+volatile float car_yaw_kd = 4.00f;
+volatile float car_yaw_rate_limit_dps = 800.0f;
+volatile float car_yaw_control_mode = 1.0f;
 
 volatile float g_car_speed_left_filtered = 0.0f;
 volatile float g_car_speed_right_filtered = 0.0f;
@@ -299,15 +309,31 @@ static void car_yaw_outer_reset(void)
 
 static float car_world_speed_limit_get(void)
 {
-    if (CRSF_STD[6] == 0)
+    if (s_car_control_input.channel[6] == 0)
     {
         return CAR_WORLD_SPEED_LIMIT_LOW;
     }
-    if (CRSF_STD[6] == 1)
+    if (s_car_control_input.channel[6] == 1)
     {
         return CAR_WORLD_SPEED_LIMIT_MID;
     }
     return CAR_WORLD_SPEED_LIMIT_HIGH;
+}
+
+static float car_speed_tune_target_get(void)
+{
+    float target_abs = car_world_speed_limit_get();
+
+    if (s_car_control_input.channel[1] > CAR_SPEED_LOOP_TUNE_THRESHOLD)
+    {
+        return target_abs;
+    }
+    if (s_car_control_input.channel[1] < -CAR_SPEED_LOOP_TUNE_THRESHOLD)
+    {
+        return -target_abs;
+    }
+
+    return 0.0f;
 }
 
 static void car_world_control_state_reset(float yaw_target_deg)
@@ -350,15 +376,15 @@ static void car_world_command_update_100HZ(void)
         g_car_world_velocity_x_command = 0.0f;
         g_car_world_velocity_y_command = 0.0f;
         g_car_world_speed_magnitude = 0.0f;
-        g_car_world_heading_target_deg = g_euler.yaw;
+        g_car_world_heading_target_deg = s_car_imu_snapshot.euler.yaw;
         g_car_world_heading_error_deg = 0.0f;
         g_car_world_alignment_scale = 0.0f;
         g_car_world_reverse_active = 0.0f;
         return;
     }
 
-    raw_x = (float)CRSF_STD[1];
-    raw_y = (float)CRSF_STD[0];
+    raw_x = (float)s_car_control_input.channel[1];
+    raw_y = (float)s_car_control_input.channel[0];
     raw_magnitude = sqrtf(raw_x * raw_x + raw_y * raw_y);
 
     if (raw_magnitude <= CAR_WORLD_INPUT_DEADZONE)
@@ -366,7 +392,7 @@ static void car_world_command_update_100HZ(void)
         if (s_car_world_command_active != 0U)
         {
             s_car_world_command_active = 0U;
-            g_car_yaw_target_deg = g_euler.yaw;
+            g_car_yaw_target_deg = s_car_imu_snapshot.euler.yaw;
             car_yaw_outer_reset();
         }
 
@@ -376,7 +402,7 @@ static void car_world_command_update_100HZ(void)
         g_car_world_speed_magnitude = 0.0f;
         g_car_world_heading_target_deg = g_car_yaw_target_deg;
         g_car_world_heading_error_deg =
-            car_angle_wrap_deg(g_car_yaw_target_deg - g_euler.yaw);
+            car_angle_wrap_deg(g_car_yaw_target_deg - s_car_imu_snapshot.euler.yaw);
         g_car_world_alignment_scale = 0.0f;
         g_car_world_reverse_active = 0.0f;
         return;
@@ -398,7 +424,7 @@ static void car_world_command_update_100HZ(void)
                                g_car_world_velocity_x_command) *
                         CAR_GYROZ_RAD_TO_DEG;
     heading_error_deg =
-        car_angle_wrap_deg(world_heading_deg - g_euler.yaw);
+        car_angle_wrap_deg(world_heading_deg - s_car_imu_snapshot.euler.yaw);
 
     /* 始终让车头对准世界坐标指令方向，不再通过倒车缩短转向路径。 */
     if (fabsf(heading_error_deg) >=
@@ -667,7 +693,7 @@ static int16 car_speed_pid_update(pid_t *pid, float target, float feedback,
 
 static float car_yaw_get_error_deg(void)
 {
-    return car_angle_wrap_deg(g_car_yaw_target_deg - g_euler.yaw);
+    return car_angle_wrap_deg(g_car_yaw_target_deg - s_car_imu_snapshot.euler.yaw);
 }
 
 static uint8 car_yaw_command_is_within_stop_limit(float angle_limit_deg,
@@ -704,7 +730,7 @@ void car_yaw_control_100HZ(void)
 
 static void car_gyroz_debug_target_100HZ(void)
 {
-    int16 yaw_rate_command = CRSF_STD[3];
+    int16 yaw_rate_command = s_car_control_input.channel[3];
     float desired_rate_dps = 0.0f;
 
     if (yaw_rate_command > CAR_GYROZ_DEBUG_INPUT_HIGH_THRESHOLD)
@@ -725,7 +751,7 @@ static void car_gyroz_debug_target_100HZ(void)
     }
 
     g_car_gyroz_target_dps = -desired_rate_dps;
-    g_car_yaw_target_deg = g_euler.yaw;
+    g_car_yaw_target_deg = s_car_imu_snapshot.euler.yaw;
     g_car_yaw_p_term = 0.0f;
     g_car_yaw_d_term = 0.0f;
 }
@@ -739,7 +765,7 @@ static void car_yaw_mode_prepare_100HZ(void)
     {
         s_car_yaw_mode_initialized = 1U;
         s_car_yaw_angle_mode_active = angle_mode;
-        car_world_control_state_reset(g_euler.yaw);
+        car_world_control_state_reset(s_car_imu_snapshot.euler.yaw);
         car_yaw_outer_reset();
         g_car_gyroz_target_dps = 0.0f;
         g_car_gyroz_feedback_equivalent = 0.0f;
@@ -809,12 +835,31 @@ void car_gyroz_control_100HZ(void)
     }
 }
 
+static void car_pit_init_exact(pit_index_enum pit_index, uint32 period_us)
+{
+    volatile stc_TCPWM_GRP_CNT_t *counter =
+        (volatile stc_TCPWM_GRP_CNT_t *)&TCPWM0->GRP[2].CNT[pit_index];
+
+    pit_init(pit_index, period_us);
+    pit_disable(pit_index);
+    /* TCPWM 从 0 数到 PERIOD（含端点），精确 N tick 周期应写 N-1。 */
+    Cy_Tcpwm_Counter_SetPeriod(
+        counter, period_us * CAR_PIT_TICKS_PER_US - 1U);
+    pit_enable(pit_index);
+}
+
 void car_loop_init(void)
 {
-    timer_100HZ_flag = 0U;
-    g_tick_1000HZ = 0U;
     tick_1000us_cnt = 0U;
+    g_car_background_100hz_generation = 0U;
+    memset((void *)&g_car_realtime_diag, 0, sizeof(g_car_realtime_diag));
     s_system_time_ms = 0U;
+    s_background_100hz_processed_generation = 0U;
+    s_control_last_imu_tick = 0U;
+    s_control_last_imu_sample_count = 0U;
+    s_control_imu_stale_cycles = 0U;
+    memset(&s_car_control_input, 0, sizeof(s_car_control_input));
+    memset(&s_car_imu_snapshot, 0, sizeof(s_car_imu_snapshot));
     /* s_air_comm_beep_tick = 200U; */
     s_air_menu_runtime_locked = 0U;
     s_menu_runtime_was_locked = 0U;
@@ -859,31 +904,41 @@ void car_loop_init(void)
     AccelCalibration_Init();
     IMUCalib_Init();
     IMU_ResetYaw();
+    (void)IMU_GetRealtimeSnapshot(&s_car_imu_snapshot);
+    s_control_last_imu_sample_count = s_car_imu_snapshot.sample_count;
     car_world_control_state_reset(0.0f);
     wifi_core_Init();
     air_comm_car_init();
     air_comm_set_run_data_callback(on_air_data);
     crsf_init();
+    CRSF_GetControlSnapshot(&s_car_control_input);
     Beep_Init();
     //Beep_Play(100U, 0.2f, 1U);
-    pit_init(PIT_CH0, 1000U);
+    car_pit_init_exact(PIT_CH0, 1000U);
+    system_delay_us(500U);
+    car_pit_init_exact(PIT_CH1, 10000U);
+    car_safety_set_motion_scheduler_started();
 }
 
-static void car_loop_1000HZ(void)
+void car_loop_imu_1000HZ_isr(void)
 {
-    IMU_Update_1000HZ();
-    g_car_gyroz_feedback_dps += 0.06089863f *
-                                (g_imufilter_1000hz.gyroz - g_car_gyroz_feedback_dps);
+    g_car_realtime_diag.imu_tick_count++;
+    if (IMU_Update_1000HZ() != 0U)
+    {
+        g_car_gyroz_feedback_dps +=
+            0.06089863f *
+            (g_imufilter_1000hz.gyroz - g_car_gyroz_feedback_dps);
+    }
 }
 
 static uint8 car_run_command_is_neutral(void)
 {
-    return (((CRSF_STD[0] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
-             (CRSF_STD[0] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
-            ((CRSF_STD[1] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
-             (CRSF_STD[1] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
-            ((CRSF_STD[3] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
-             (CRSF_STD[3] <=  (int16)CAR_WORLD_INPUT_DEADZONE))) ? 1U : 0U;
+    return (((s_car_control_input.channel[0] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
+             (s_car_control_input.channel[0] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
+            ((s_car_control_input.channel[1] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
+             (s_car_control_input.channel[1] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
+            ((s_car_control_input.channel[3] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
+             (s_car_control_input.channel[3] <=  (int16)CAR_WORLD_INPUT_DEADZONE))) ? 1U : 0U;
 }
 
 static void car_total_emergency_stop(void)
@@ -894,7 +949,7 @@ static void car_total_emergency_stop(void)
     PID_Reset(&s_car_gyroz_pid);
     car_speed_plan_reset();
     car_speed_brake_state_clear();
-    car_world_control_state_reset(g_euler.yaw);
+    car_world_control_state_reset(s_car_imu_snapshot.euler.yaw);
 
     Left_Target_Speed = 0.0f;
     Right_Target_Speed = 0.0f;
@@ -942,8 +997,13 @@ static void car_speed_control_100HZ(void)
     g_car_speed_right_filtered += car_speed_filter_alpha *
                                   ((float)right_raw - g_car_speed_right_filtered);
 
-    safety_input.link_up = CRSF_LINK_UP;
-    safety_input.run_switch_on = (CRSF_STD[7] != 0) ? 1U : 0U;
+    safety_input.link_up = s_car_control_input.link_up;
+    safety_input.imu_healthy = s_car_imu_snapshot.healthy;
+    safety_input.maintenance_active =
+        ((IMUCalib_IsBusy() != 0U) ||
+         (car_safety_is_maintenance_requested() != 0U)) ? 1U : 0U;
+    safety_input.run_switch_on =
+        (s_car_control_input.channel[7] != 0) ? 1U : 0U;
     safety_input.command_neutral = car_run_command_is_neutral();
     safety_input.left_target_speed = Left_Target_Speed;
     safety_input.right_target_speed = Right_Target_Speed;
@@ -961,7 +1021,7 @@ static void car_speed_control_100HZ(void)
     }
 
     /* 遥控器CH5对应CRSF_STD[4]：CH8总使能有效时控制固定40%负压。 */
-    if (CRSF_STD[4] != 0)
+    if (s_car_control_input.channel[4] != 0)
     {
         if (negative_pressure_is_enabled() == 0U)
         {
@@ -975,12 +1035,33 @@ static void car_speed_control_100HZ(void)
         negative_pressure_disable();
     }
 
-    car_yaw_mode_prepare_100HZ();
-    car_world_command_update_100HZ();
-    car_speed_plan_update();
-    Left_Target_Speed = g_car_base_speed_target;
-    Right_Target_Speed = g_car_base_speed_target;
-    car_yaw_target_update_100HZ();
+    if (CAR_SPEED_LOOP_TUNE_ENABLE != 0U)
+    {
+        /* 单独调速度环：CH2触发正负阶跃，CH7选择200/400/700目标速度。 */
+        g_car_base_speed_command = car_speed_tune_target_get();
+        car_speed_plan_update();
+        Left_Target_Speed = g_car_base_speed_target;
+        Right_Target_Speed = g_car_base_speed_target;
+
+        g_car_yaw_target_deg = s_car_imu_snapshot.euler.yaw;
+        g_car_yaw_p_term = 0.0f;
+        g_car_yaw_d_term = 0.0f;
+        g_car_gyroz_target_dps = 0.0f;
+        g_car_gyroz_error = 0.0f;
+        g_car_gyroz_ff_term = 0.0f;
+        g_car_gyroz_p_term = 0.0f;
+        g_car_gyroz_i_term = 0.0f;
+        g_car_gyroz_output = 0.0f;
+    }
+    else
+    {
+        car_yaw_mode_prepare_100HZ();
+        car_world_command_update_100HZ();
+        car_speed_plan_update();
+        Left_Target_Speed = g_car_base_speed_target;
+        Right_Target_Speed = g_car_base_speed_target;
+        car_yaw_target_update_100HZ();
+    }
 
     if (s_car_yaw_stopped != 0U)
     {
@@ -1031,8 +1112,16 @@ static void car_speed_control_100HZ(void)
         return;
     }
 
-    car_gyroz_control_100HZ();
-    car_speed_brake_state_update(car_world_brake_requested());
+    if (CAR_SPEED_LOOP_TUNE_ENABLE != 0U)
+    {
+        /* 防止角速度混合和刹车前馈影响速度环阶跃响应。 */
+        car_speed_brake_state_clear();
+    }
+    else
+    {
+        car_gyroz_control_100HZ();
+        car_speed_brake_state_update(car_world_brake_requested());
+    }
 
     effective_accel_ff =
         car_speed_accel_ff_apply_turn_guard(g_car_base_speed_target,
@@ -1068,14 +1157,76 @@ static void car_speed_control_100HZ(void)
     motor_right_set_speed(right_motor_output);
 }
 
-static void car_loop_100HZ(void)
+void car_loop_motion_100HZ_isr(void)
+{
+    uint32 imu_tick_now = tick_1000us_cnt;
+
+    if ((g_car_realtime_diag.control_tick_count != 0U) &&
+        ((uint32)(imu_tick_now - s_control_last_imu_tick) != 10U))
+    {
+        g_car_realtime_diag.control_period_fault_count++;
+    }
+    s_control_last_imu_tick = imu_tick_now;
+    g_car_realtime_diag.control_tick_count++;
+    s_system_time_ms += 10U;
+
+    CRSF_GetControlSnapshot(&s_car_control_input);
+    if (s_car_control_input.link_up == 0U)
+    {
+        g_car_realtime_diag.command_stale_count++;
+    }
+
+    if (IMU_GetRealtimeSnapshot(&s_car_imu_snapshot) == 0U)
+    {
+        s_car_imu_snapshot.healthy = 0U;
+        g_car_realtime_diag.imu_snapshot_fault_count++;
+    }
+    else
+    {
+        if (s_car_imu_snapshot.sample_count ==
+            s_control_last_imu_sample_count)
+        {
+            if (s_control_imu_stale_cycles < CAR_IMU_STALE_CONTROL_LIMIT)
+            {
+                s_control_imu_stale_cycles++;
+                if (s_control_imu_stale_cycles ==
+                    CAR_IMU_STALE_CONTROL_LIMIT)
+                {
+                    g_car_realtime_diag.imu_stale_fault_count++;
+                }
+            }
+        }
+        else
+        {
+            s_control_last_imu_sample_count =
+                s_car_imu_snapshot.sample_count;
+            s_control_imu_stale_cycles = 0U;
+        }
+
+        if (s_control_imu_stale_cycles >= CAR_IMU_STALE_CONTROL_LIMIT)
+        {
+            s_car_imu_snapshot.healthy = 0U;
+        }
+        if (s_car_imu_snapshot.healthy == 0U)
+        {
+            g_car_realtime_diag.imu_snapshot_fault_count++;
+        }
+    }
+
+    car_speed_control_100HZ();
+}
+
+void car_loop_release_background_100HZ_isr(void)
+{
+    g_car_background_100hz_generation++;
+}
+
+static void car_loop_background_100HZ(void)
 {
     float car_data[11];
+    imu_realtime_snapshot_t telemetry_snapshot;
     uint8 menu_runtime_locked;
 
-    s_system_time_ms += 10U;
-    CRSF_Update_100HZ();
-    car_speed_control_100HZ();
     air_comm_car_update_100HZ();
 
     menu_runtime_locked = car_menu_is_runtime_locked();
@@ -1132,7 +1283,8 @@ static void car_loop_100HZ(void)
     car_data[0] = 0.0f;
     car_data[1] = 0.0f;
     car_data[2] = 0.0f;
-    car_data[3] = g_euler.yaw;
+    (void)IMU_GetRealtimeSnapshot(&telemetry_snapshot);
+    car_data[3] = telemetry_snapshot.euler.yaw;
     car_data[4] = g_car_gyroz_feedback_dps;
     car_data[5] = 0.0f;
     car_data[6] = 0.0f;
@@ -1145,21 +1297,25 @@ static void car_loop_100HZ(void)
 
 void car_loop_poll(void)
 {
-    uint16 imu_tick_guard = 0U;
+    uint32 background_generation;
+    uint32 generation_delta;
 
-    while ((g_tick_1000HZ > 0U) && (imu_tick_guard < 100U))
-    {
-        g_tick_1000HZ--;
-        car_loop_1000HZ();
-        imu_tick_guard++;
-    }
-
+    CRSF_Poll();
     air_comm_car_poll();
+    IMU_ServicePoll();
 
-    if (timer_100HZ_flag != 0U)
+    background_generation = g_car_background_100hz_generation;
+    generation_delta =
+        background_generation - s_background_100hz_processed_generation;
+    if (generation_delta != 0U)
     {
-        timer_100HZ_flag = 0U;
-        car_loop_100HZ();
+        s_background_100hz_processed_generation = background_generation;
+        if (generation_delta > 1U)
+        {
+            g_car_realtime_diag.background_coalesced_count +=
+                generation_delta - 1U;
+        }
+        car_loop_background_100HZ();
     }
 
     wifi_core_Poll();
