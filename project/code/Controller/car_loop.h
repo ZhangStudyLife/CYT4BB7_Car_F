@@ -4,6 +4,11 @@
 #include "zf_common_headfile.h"
 #include "pid_core.h"
 
+/* 遥控轴已标准化到[-1000, 1000]，使用径向迟滞死区抑制中心方向跳变。 */
+#define CAR_WORLD_INPUT_ENTER_DEADZONE (250.0f)
+#define CAR_WORLD_INPUT_EXIT_DEADZONE  (150.0f)
+#define CAR_WORLD_INPUT_CONFIRM_CYCLES (3U)
+
 extern volatile uint32 tick_1000us_cnt;
 
 typedef struct
@@ -59,6 +64,29 @@ extern volatile float car_yaw_kp;
 extern volatile float car_yaw_kd;
 extern volatile float car_yaw_rate_limit_dps;
 extern volatile float car_yaw_control_mode;
+extern volatile float car_negative_pressure_hold_throttle;
+extern volatile float car_negative_pressure_turn_throttle;
+extern volatile float car_negative_pressure_boost_throttle;
+extern volatile float car_negative_pressure_speed_error_abs;
+extern volatile float car_negative_pressure_speed_error_ratio;
+extern volatile float car_negative_pressure_stable_cycles;
+extern volatile float car_negative_pressure_speed_delta_threshold;
+extern volatile float car_negative_pressure_accel_timeout_cycles;
+extern volatile float car_negative_pressure_turn_enter_angle_deg;
+extern volatile float car_negative_pressure_turn_exit_angle_deg;
+extern volatile float car_negative_pressure_turn_enter_target_rate_dps;
+extern volatile float car_negative_pressure_turn_exit_target_rate_dps;
+extern volatile float car_negative_pressure_turn_enter_feedback_rate_dps;
+extern volatile float car_negative_pressure_turn_exit_feedback_rate_dps;
+extern volatile float car_large_turn_brake_speed;
+extern volatile float car_large_turn_brake_target_speed;
+extern volatile float car_large_turn_brake_ff;
+extern volatile float car_large_turn_brake_rate_limit_dps;
+extern volatile float car_large_turn_enter_angle_deg;
+extern volatile float car_large_turn_pivot_exit_angle_deg;
+extern volatile float car_large_turn_exit_speed_start_angle_deg;
+extern volatile float car_large_turn_finish_angle_deg;
+extern volatile float car_large_turn_brake_stable_cycles;
 extern volatile float g_car_gyroz_target_dps;
 extern volatile float g_car_gyroz_feedback_dps;
 extern volatile float g_car_gyroz_feedback_equivalent;
@@ -79,6 +107,11 @@ extern volatile float g_car_world_heading_error_deg;
 extern volatile float g_car_world_alignment_scale;
 extern volatile float g_car_world_body_speed_feedback;
 extern volatile float g_car_world_reverse_active;
+extern volatile float g_car_negative_pressure_throttle;
+extern volatile float g_car_negative_pressure_target;
+extern volatile float g_car_negative_pressure_boost;
+extern volatile float g_car_negative_pressure_state;
+extern volatile float g_car_large_turn_state;
 
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;

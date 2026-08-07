@@ -1,6 +1,11 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (24U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (47U)
+
+/* 原上升斜坡槽位复用为BRAKE保留速度；保留旧下降斜坡槽位，后续索引不变。 */
+static volatile float s_car_negative_pressure_legacy_fall_step = 100.0f;
+/* 高速转向已统一使用固定转向档，仅保留原Flash参数槽位。 */
+static volatile float s_car_negative_pressure_legacy_turn_high_speed = 300.0f;
 
 static void load_air_slot_0_function(void);
 static void load_air_slot_1_function(void);
@@ -70,6 +75,45 @@ static menu_item_t car_yaw_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
+static menu_item_t car_negative_pressure_turn_menu[] = {
+    {"In Angle", MENU_TYPE_PARAMETER, .param_index = 31U},
+    {"Out Angle", MENU_TYPE_PARAMETER, .param_index = 32U},
+    {"High Spd", MENU_TYPE_PARAMETER, .param_index = 37U},
+    {"In T Rate", MENU_TYPE_PARAMETER, .param_index = 41U},
+    {"Out T Rate", MENU_TYPE_PARAMETER, .param_index = 42U},
+    {"In F Rate", MENU_TYPE_PARAMETER, .param_index = 43U},
+    {"Out F Rate", MENU_TYPE_PARAMETER, .param_index = 33U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_large_turn_menu[] = {
+    {"Brake Spd", MENU_TYPE_PARAMETER, .param_index = 38U},
+    {"Turn In", MENU_TYPE_PARAMETER, .param_index = 39U},
+    {"Pivot Out", MENU_TYPE_PARAMETER, .param_index = 40U},
+    {"Finish", MENU_TYPE_PARAMETER, .param_index = 44U},
+    {"Brake N", MENU_TYPE_PARAMETER, .param_index = 45U},
+    {"Brake Rate", MENU_TYPE_PARAMETER, .param_index = 46U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_negative_pressure_speed_menu[] = {
+    {"Trig Delta", MENU_TYPE_PARAMETER, .param_index = 35U},
+    {"Spd Err", MENU_TYPE_PARAMETER, .param_index = 28U},
+    {"Err Ratio", MENU_TYPE_PARAMETER, .param_index = 29U},
+    {"Stable N", MENU_TYPE_PARAMETER, .param_index = 30U},
+    {"Acc Max N", MENU_TYPE_PARAMETER, .param_index = 36U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_negative_pressure_menu[] = {
+    {"Hold", MENU_TYPE_PARAMETER, .param_index = 24U},
+    {"Turn", MENU_TYPE_PARAMETER, .param_index = 34U},
+    {"Boost", MENU_TYPE_PARAMETER, .param_index = 25U},
+    {"Speed", MENU_TYPE_SUBMENU, .submenu = car_negative_pressure_speed_menu},
+    {"Turning", MENU_TYPE_SUBMENU, .submenu = car_negative_pressure_turn_menu},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
 static menu_item_t car_menu[] = {
     {"L_Speed", MENU_TYPE_SUBMENU, .submenu = car_left_speed_menu},
     {"R_Speed", MENU_TYPE_SUBMENU, .submenu = car_right_speed_menu},
@@ -77,6 +121,8 @@ static menu_item_t car_menu[] = {
     {"Yaw Mode", MENU_TYPE_PARAMETER, .param_index = 16U},
     {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_yaw_menu},
     {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_gyroz_menu},
+    {"Neg Press", MENU_TYPE_SUBMENU, .submenu = car_negative_pressure_menu},
+    {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_large_turn_menu},
     {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
@@ -437,7 +483,7 @@ void menu_config_init(void)
     menu_register_param(&car_yaw_kp, 0.1f, 0.0f, 20.0f);
     menu_register_param(&car_yaw_kd, 0.1f, 0.0f, 500.0f);
     menu_register_param(&car_yaw_rate_limit_dps, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&car_yaw_control_mode, 1.0f, 0.0f, 1.0f);
+    menu_register_param(&car_yaw_control_mode, 1.0f, 0.0f, 2.0f);
     menu_register_param(&car_speed_delta_output_limit, 100.0f, 0.0f, 8000.0f);
     menu_register_param(&car_speed_brake_static, 10.0f, 0.0f, 3000.0f);
     menu_register_param(&car_speed_accel_step_limit, 1.0f, 1.0f, 200.0f);
@@ -445,6 +491,55 @@ void menu_config_init(void)
     menu_register_param(&car_speed_ff_deadband, 1.0f, 0.0f, 50.0f);
     menu_register_param(&car_speed_ff_transition, 10.0f, 20.0f, 300.0f);
     menu_register_param(&car_speed_decel_step_limit, 1.0f, 1.0f, 200.0f);
+    menu_register_param(&car_negative_pressure_hold_throttle,
+                        100.0f, 1000.0f, 5000.0f);
+    menu_register_param(&car_negative_pressure_boost_throttle,
+                        100.0f, 1000.0f, 5000.0f);
+    /* 复用旧上升斜坡索引26，避免增加参数数量导致已有Flash存档失效。 */
+    menu_register_param(&car_large_turn_brake_target_speed,
+                        5.0f, 0.0f, 500.0f);
+    /* 保留索引27以兼容已有Flash存档；直接切档后不再参与控制。 */
+    menu_register_param(&s_car_negative_pressure_legacy_fall_step,
+                        10.0f, 1.0f, 1000.0f);
+    menu_register_param(&car_negative_pressure_speed_error_abs,
+                        5.0f, 0.0f, 200.0f);
+    menu_register_param(&car_negative_pressure_speed_error_ratio,
+                        0.01f, 0.0f, 1.0f);
+    menu_register_param(&car_negative_pressure_stable_cycles,
+                        1.0f, 1.0f, 100.0f);
+    menu_register_param(&car_negative_pressure_turn_enter_angle_deg,
+                        0.5f, 0.5f, 180.0f);
+    menu_register_param(&car_negative_pressure_turn_exit_angle_deg,
+                        0.5f, 0.5f, 180.0f);
+    menu_register_param(&car_negative_pressure_turn_exit_feedback_rate_dps,
+                        0.5f, 0.5f, 1000.0f);
+    menu_register_param(&car_negative_pressure_turn_throttle,
+                        100.0f, 1000.0f, 5000.0f);
+    menu_register_param(&car_negative_pressure_speed_delta_threshold,
+                        5.0f, 1.0f, 500.0f);
+    menu_register_param(&car_negative_pressure_accel_timeout_cycles,
+                        1.0f, 1.0f, 100.0f);
+    /* 保留原高速转向阈值索引；三档策略下不再参与控制。 */
+    menu_register_param(&s_car_negative_pressure_legacy_turn_high_speed,
+                        10.0f, 0.0f, 1000.0f);
+    menu_register_param(&car_large_turn_brake_speed,
+                        5.0f, 0.0f, 1000.0f);
+    menu_register_param(&car_large_turn_enter_angle_deg,
+                        1.0f, 0.5f, 180.0f);
+    menu_register_param(&car_large_turn_pivot_exit_angle_deg,
+                        1.0f, 0.5f, 180.0f);
+    menu_register_param(&car_negative_pressure_turn_enter_target_rate_dps,
+                        5.0f, 0.5f, 1000.0f);
+    menu_register_param(&car_negative_pressure_turn_exit_target_rate_dps,
+                        5.0f, 0.5f, 1000.0f);
+    menu_register_param(&car_negative_pressure_turn_enter_feedback_rate_dps,
+                        5.0f, 0.5f, 1000.0f);
+    menu_register_param(&car_large_turn_finish_angle_deg,
+                        1.0f, 0.5f, 180.0f);
+    menu_register_param(&car_large_turn_brake_stable_cycles,
+                        1.0f, 1.0f, 100.0f);
+    menu_register_param(&car_large_turn_brake_rate_limit_dps,
+                        10.0f, 0.0f, 1000.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {

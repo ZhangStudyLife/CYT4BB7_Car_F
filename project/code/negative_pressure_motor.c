@@ -5,11 +5,11 @@
 #define NEGATIVE_PRESSURE_DUTY_MIN    (4000U)
 #define NEGATIVE_PRESSURE_DUTY_MAX    (8000U)
 
-/* P05_0（50）为左电调，P05_1（51）为右电调。 */
+/* P05_0（P50）为左电调，P05_2（P52）为右电调。 */
 static const pwm_channel_enum s_negative_pressure_pwm[NEGATIVE_PRESSURE_MOTOR_COUNT] =
 {
     TCPWM_CH09_P05_0,
-    TCPWM_CH10_P05_1
+    TCPWM_CH11_P05_2
 };
 
 static uint8 s_negative_pressure_enabled = 0U;

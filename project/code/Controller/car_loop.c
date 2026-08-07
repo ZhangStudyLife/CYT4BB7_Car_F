@@ -22,11 +22,47 @@ volatile float g_car_gyroz_feedback_dps = 0.0f;
 static uint8 s_car_yaw_stopped = 0U;
 static uint8 s_car_speed_filter_initialized = 0U;
 static uint8 s_car_yaw_mode_initialized = 0U;
-static uint8 s_car_yaw_angle_mode_active = 1U;
+static uint8 s_car_yaw_control_mode_active = 1U;
 static uint8 s_car_speed_brake_active = 0U;
 static uint8 s_car_world_command_active = 0U;
+static uint8 s_car_world_input_confirm_cycles = 0U;
+static uint8 s_car_fixed_drive_active = 0U;
+static uint8 s_car_fixed_drive_confirm_cycles = 0U;
+static int8 s_car_fixed_drive_direction = 0;
+static uint8 s_car_fixed_turn_trigger_previous = 0U;
+static uint8 s_car_fixed_turn_active = 0U;
 static float s_car_speed_left_brake_direction = 0.0f;
 static float s_car_speed_right_brake_direction = 0.0f;
+static uint16 s_car_negative_pressure_throttle = 0U;
+static uint16 s_car_negative_pressure_longitudinal_stable_cycles = 0U;
+static uint16 s_car_negative_pressure_turn_exit_cycles = 0U;
+static uint16 s_car_negative_pressure_accel_cycles = 0U;
+static uint8 s_car_negative_pressure_longitudinal_state = 0U;
+static uint8 s_car_negative_pressure_turn_active = 0U;
+static float s_car_negative_pressure_previous_speed_target = 0.0f;
+/* 大角度掉头锁存的内部运行状态，均在100 Hz控制周期中更新。 */
+/* BRAKE阶段轮速连续达标计数，用于避免阈值附近抖动。 */
+static uint16 s_car_large_turn_brake_stable_cycles = 0U;
+/* NORMAL阶段大角度指令连续有效计数，达标后才正式锁存掉头。 */
+static uint16 s_car_large_turn_trigger_stable_cycles = 0U;
+/* EXIT阶段航向误差连续达标计数，达标后才确认掉头完成。 */
+static uint16 s_car_large_turn_finish_stable_cycles = 0U;
+/* 一次锁存掉头已经执行的控制周期数，用于动作总超时保护。 */
+static uint16 s_car_large_turn_elapsed_cycles = 0U;
+/* 当前掉头阶段：0正常、1制动、2原地转向、3退出收敛。 */
+static uint8 s_car_large_turn_state = 0U;
+/* 置1后忽略普通摇杆回中和方向抖动，直到完成或安全退出。 */
+static uint8 s_car_large_turn_latched = 0U;
+/* 超时退出后置1，要求摇杆先回中一次才能重新触发掉头。 */
+static uint8 s_car_large_turn_rearm_required = 0U;
+/* 已锁存掉头方向：1为正方向，-1为负方向，0为未锁存。 */
+static int8 s_car_large_turn_direction = 0;
+/* 触发确认期间的候选方向，用于拒绝正负方向来回跳变。 */
+static int8 s_car_large_turn_trigger_direction = 0;
+/* 掉头开始时锁存的绝对目标航向，回中后也不会被当前航向覆盖。 */
+static float s_car_large_turn_target_yaw_deg = 0.0f;
+/* 掉头开始时锁存的速度档，用于EXIT阶段恢复前进分量。 */
+static float s_car_large_turn_speed_limit = 0.0f;
 
 #define CAR_SPEED_I_LIMIT (2000.0f)
 #define CAR_SPEED_ACCEL_TURN_FULL_RATIO (0.20f)
@@ -38,7 +74,6 @@ static float s_car_speed_right_brake_direction = 0.0f;
 #define CAR_IMU_STALE_CONTROL_LIMIT (3U)
 #define CAR_PIT_TICKS_PER_US        (8U)
 
-#define CAR_WORLD_INPUT_DEADZONE (50.0f)
 #define CAR_WORLD_SPEED_LIMIT_LOW (200.0f)
 #define CAR_WORLD_SPEED_LIMIT_MID (400.0f)
 #define CAR_WORLD_SPEED_LIMIT_HIGH (500.0f)
@@ -49,44 +84,113 @@ static float s_car_speed_right_brake_direction = 0.0f;
 #define CAR_GYROZ_RAD_TO_DEG (57.29577951308232f)
 #define CAR_GYROZ_EQUIVALENT_SCALE (28.1448005f)
 #define CAR_GYROZ_DEBUG_INPUT_LOW_THRESHOLD (300)
-#define CAR_GYROZ_DEBUG_INPUT_HIGH_THRESHOLD (800)
 #define CAR_GYROZ_DEBUG_TARGET_LOW_DPS (400.0f)
+#define CAR_GYROZ_DEBUG_TARGET_MID_DPS (600.0f)
 #define CAR_GYROZ_DEBUG_TARGET_HIGH_DPS (800.0f)
-#define CAR_GYROZ_OUTPUT_LIMIT (500.0f)
+#define CAR_GYROZ_OUTPUT_LIMIT (600.0f)
 #define CAR_YAW_STOP_ANGLE_DEG (2.0f)
-#define CAR_YAW_WAKE_ANGLE_DEG (4.0f)
+#define CAR_YAW_WAKE_ANGLE_DEG (1.0f)
 #define CAR_GYROZ_STOP_TARGET_RATE_DPS (2.0f)
 #define CAR_GYROZ_WAKE_TARGET_RATE_DPS (4.0f)
-#define CAR_YAW_STOP_RATE_DPS (5.0f)
-#define CAR_WHEEL_STOP_SPEED (5.0f)
-#define CAR_NEGATIVE_PRESSURE_FIXED_THROTTLE (4000U)
+#define CAR_YAW_STOP_RATE_DPS (9.0f)
+#define CAR_WHEEL_STOP_SPEED (8.0f)
 
-volatile float car_speed_left_kp = 12.00f;
-volatile float car_speed_left_ki = 0.90f;
-volatile float car_speed_left_kd = 3.00f;
-volatile float car_speed_right_kp = 12.00f;
-volatile float car_speed_right_ki = 0.900f;
-volatile float car_speed_right_kd = 3.00f;
+#define CAR_NEGATIVE_PRESSURE_LONGITUDINAL_NONE (0U)
+#define CAR_NEGATIVE_PRESSURE_LONGITUDINAL_ACCEL (1U)
+#define CAR_NEGATIVE_PRESSURE_LONGITUDINAL_BRAKE (2U)
+
+/* 负压输出只保留关闭、平稳、动态加减速和转向四种状态（三个有效油门档）。 */
+#define CAR_NEGATIVE_PRESSURE_STATE_DISABLED (0U)
+#define CAR_NEGATIVE_PRESSURE_STATE_HOLD (1U)
+#define CAR_NEGATIVE_PRESSURE_STATE_DYNAMIC (2U)
+#define CAR_NEGATIVE_PRESSURE_STATE_TURN (3U)
+
+#define CAR_YAW_CONTROL_MODE_RATE_DEBUG (0U)
+#define CAR_YAW_CONTROL_MODE_WORLD      (1U)
+#define CAR_YAW_CONTROL_MODE_FIXED      (2U)
+
+#define CAR_FIXED_TURN_ANGLE_LOW_DEG  (45.0f)
+#define CAR_FIXED_TURN_ANGLE_MID_DEG  (90.0f)
+#define CAR_FIXED_TURN_ANGLE_HIGH_DEG (180.0f)
+#define CAR_FIXED_TURN_RIGHT_DIRECTION (1.0f)
+
+#define CAR_LARGE_TURN_STATE_NORMAL (0U)
+#define CAR_LARGE_TURN_STATE_BRAKE (1U)
+#define CAR_LARGE_TURN_STATE_PIVOT (2U)
+#define CAR_LARGE_TURN_STATE_EXIT (3U)
+/* 大角度指令在当前控制周期确认后立即锁存掉头。 */
+#define CAR_LARGE_TURN_TRIGGER_STABLE_CYCLES (1U)
+/* 航向误差连续2个周期（20 ms）小于Finish，才释放掉头锁存。 */
+#define CAR_LARGE_TURN_FINISH_STABLE_CYCLES (2U)
+/* 一次掉头最多执行500个周期（5 s），超时后安全停止并等待回中。 */
+#define CAR_LARGE_TURN_TIMEOUT_CYCLES (500U)
+/* EXIT仅接受与锁存航向相差不超过80°的实时摇杆指令恢复前进。 */
+#define CAR_LARGE_TURN_EXIT_COMMAND_MATCH_DEG (80.0f)
+/* BRAKE保留目标至少比公共平移速度阈值低5，避免参数相等时迟迟无法进入PIVOT。 */
+#define CAR_LARGE_TURN_BRAKE_TARGET_MARGIN (5.0f)
+/* BRAKE公共制动前馈从满幅衰减到零所对应的平移速度跨度。 */
+#define CAR_LARGE_TURN_BRAKE_FF_FADE_SPAN (40.0f)
+/* EXIT恢复起点与完成角之间至少保留1°，避免退化配置产生除零。 */
+#define CAR_LARGE_TURN_EXIT_RECOVERY_MIN_SPAN_DEG (1.0f)
+
+volatile float car_speed_left_kp = 10.80f;
+volatile float car_speed_left_ki = 0.52f;
+volatile float car_speed_left_kd = 1.00f;
+volatile float car_speed_right_kp = 10.80f;
+volatile float car_speed_right_ki = 0.52f;
+volatile float car_speed_right_kd = 1.00f;
 volatile float car_speed_filter_alpha = 0.557f;
 volatile float car_speed_ff_slope = 0.00f;
-volatile float car_speed_ff_static = 600.0f;
+volatile float car_speed_ff_static = 800.0f;
 volatile float car_speed_ff_deadband = 10.0f;
 volatile float car_speed_ff_transition = 100.0f;
-volatile float car_speed_brake_static = 0.0f;
+volatile float car_speed_brake_static = 800.0f;
 volatile float car_speed_delta_output_limit = 6000.0f;
 volatile float car_speed_accel_kff = 10.0f;
 volatile float car_speed_accel_step_limit = 40.0f;
-volatile float car_speed_decel_step_limit = 40.0f;
+volatile float car_speed_decel_step_limit = 600.0f;
 volatile float car_speed_accel_ff_limit = 800.0f;
 volatile float car_gyroz_kff = 0.12f;
 /* 角速度PI使用100 Hz每采样周期离散系数，数值已由原连续时间系数等效换算。 */
-volatile float car_gyroz_kp = 1.35f;
-volatile float car_gyroz_ki = 0.025f;
+volatile float car_gyroz_kp = 1.27f;
+volatile float car_gyroz_ki = 0.022f;
 volatile float car_gyroz_k_turn = 1.0f;
-volatile float car_yaw_kp = 8.50f;
-volatile float car_yaw_kd = 4.00f;
-volatile float car_yaw_rate_limit_dps = 800.0f;
+volatile float car_yaw_kp = 6.00f;
+volatile float car_yaw_kd = 0.50f;
+volatile float car_yaw_rate_limit_dps = 1000.0f;
 volatile float car_yaw_control_mode = 1.0f;
+volatile float car_negative_pressure_hold_throttle = 4000.0f;
+volatile float car_negative_pressure_turn_throttle = 4000.0f;
+volatile float car_negative_pressure_boost_throttle = 4000.0f;
+volatile float car_negative_pressure_speed_error_abs = 40.0f;
+volatile float car_negative_pressure_speed_error_ratio = 0.20f;
+volatile float car_negative_pressure_stable_cycles = 5.0f;
+volatile float car_negative_pressure_speed_delta_threshold = 50.0f;
+volatile float car_negative_pressure_accel_timeout_cycles = 50.0f;
+volatile float car_negative_pressure_turn_enter_angle_deg = 20.0f;
+volatile float car_negative_pressure_turn_exit_angle_deg = 10.0f;
+volatile float car_negative_pressure_turn_enter_target_rate_dps = 100.0f;
+volatile float car_negative_pressure_turn_exit_target_rate_dps = 40.0f;
+volatile float car_negative_pressure_turn_enter_feedback_rate_dps = 50.0f;
+volatile float car_negative_pressure_turn_exit_feedback_rate_dps = 40.0f;
+/* 车体公共平移速度低于该值后，BRAKE阶段才允许进入PIVOT。 */
+volatile float car_large_turn_brake_speed = 80.0f;
+/* BRAKE阶段固定保留的基础目标速度。 */
+volatile float car_large_turn_brake_target_speed = 20.0f;
+/* BRAKE阶段叠加到左右轮的公共平移制动前馈，不改变主动转向差速。 */
+volatile float car_large_turn_brake_ff = 1200.0f;
+/* BRAKE阶段限制目标角速度，兼顾快速减速与持续转向。 */
+volatile float car_large_turn_brake_rate_limit_dps = 300.0f;
+/* 航向误差达到该角度时开始大角度掉头流程。 */
+volatile float car_large_turn_enter_angle_deg = 90.0f;
+/* 剩余航向误差低于该角度时，从原地转向进入EXIT收敛阶段。 */
+volatile float car_large_turn_pivot_exit_angle_deg = 35.0f;
+/* EXIT阶段从该误差开始线性恢复前进速度，默认与PIVOT退出角一致。 */
+volatile float car_large_turn_exit_speed_start_angle_deg = 35.0f;
+/* EXIT阶段剩余航向误差低于该值并稳定后，确认掉头完成。 */
+volatile float car_large_turn_finish_angle_deg = 3.0f;
+/* BRAKE阶段轮速需要连续满足阈值的周期数，默认1表示立即切换。 */
+volatile float car_large_turn_brake_stable_cycles = 1.0f;
 
 volatile float g_car_speed_left_filtered = 0.0f;
 volatile float g_car_speed_right_filtered = 0.0f;
@@ -125,6 +229,11 @@ volatile float g_car_world_heading_error_deg = 0.0f;
 volatile float g_car_world_alignment_scale = 0.0f;
 volatile float g_car_world_body_speed_feedback = 0.0f;
 volatile float g_car_world_reverse_active = 0.0f;
+volatile float g_car_negative_pressure_throttle = 0.0f;
+volatile float g_car_negative_pressure_target = 0.0f;
+volatile float g_car_negative_pressure_boost = 0.0f;
+volatile float g_car_negative_pressure_state = 0.0f;
+volatile float g_car_large_turn_state = 0.0f;
 
 volatile float g_air_tof_fused_height_mm = 0.0f;
 volatile float g_air_euler_roll = 0.0f;
@@ -307,6 +416,62 @@ static void car_yaw_outer_reset(void)
     g_car_yaw_d_term = 0.0f;
 }
 
+static void car_gyroz_control_reset(void)
+{
+    PID_Reset(&s_car_gyroz_pid);
+    g_car_gyroz_target_dps = 0.0f;
+    g_car_gyroz_error = 0.0f;
+    g_car_gyroz_ff_term = 0.0f;
+    g_car_gyroz_p_term = 0.0f;
+    g_car_gyroz_i_term = 0.0f;
+    g_car_gyroz_output = 0.0f;
+}
+
+/*
+ * 清除一次掉头的全部内部状态，恢复为普通运动模式。
+ * 初始化、模式切换和安全急停都会调用；普通摇杆回中不再直接调用。
+ */
+static void car_large_turn_state_reset(void)
+{
+    s_car_large_turn_brake_stable_cycles = 0U;
+    s_car_large_turn_trigger_stable_cycles = 0U;
+    s_car_large_turn_finish_stable_cycles = 0U;
+    s_car_large_turn_elapsed_cycles = 0U;
+    s_car_large_turn_state = CAR_LARGE_TURN_STATE_NORMAL;
+    s_car_large_turn_latched = 0U;
+    s_car_large_turn_rearm_required = 0U;
+    s_car_large_turn_direction = 0;
+    s_car_large_turn_trigger_direction = 0;
+    s_car_large_turn_target_yaw_deg = 0.0f;
+    s_car_large_turn_speed_limit = 0.0f;
+    g_car_large_turn_state = (float)CAR_LARGE_TURN_STATE_NORMAL;
+}
+
+/* 正常掉头阶段共享锁存航向，阶段切换仅更新状态并保留控制器历史。 */
+static void car_large_turn_state_set(uint8 state)
+{
+    uint8 previous_state = s_car_large_turn_state;
+
+    if (state == previous_state)
+    {
+        return;
+    }
+
+    s_car_large_turn_state = state;
+    s_car_large_turn_brake_stable_cycles = 0U;
+    g_car_large_turn_state = (float)state;
+
+    if (state == CAR_LARGE_TURN_STATE_NORMAL)
+    {
+        s_car_large_turn_latched = 0U;
+        s_car_large_turn_elapsed_cycles = 0U;
+        s_car_large_turn_finish_stable_cycles = 0U;
+        s_car_large_turn_direction = 0;
+        s_car_large_turn_target_yaw_deg = 0.0f;
+        s_car_large_turn_speed_limit = 0.0f;
+    }
+}
+
 static float car_world_speed_limit_get(void)
 {
     if (s_car_control_input.channel[6] == 0)
@@ -318,6 +483,112 @@ static float car_world_speed_limit_get(void)
         return CAR_WORLD_SPEED_LIMIT_MID;
     }
     return CAR_WORLD_SPEED_LIMIT_HIGH;
+}
+
+/* 获取EXIT阶段有效摇杆方向与锁存方向的归一化夹角。 */
+static uint8 car_large_turn_exit_command_error_get(float *command_error_deg)
+{
+    float raw_x = (float)s_car_control_input.channel[1];
+    float raw_y = (float)s_car_control_input.channel[0];
+    float raw_magnitude = sqrtf(raw_x * raw_x + raw_y * raw_y);
+    float command_heading_deg;
+
+    if ((command_error_deg == NULL) ||
+        (raw_magnitude < CAR_WORLD_INPUT_ENTER_DEADZONE))
+    {
+        return 0U;
+    }
+
+    command_heading_deg = atan2f(raw_y, raw_x) * CAR_GYROZ_RAD_TO_DEG;
+    *command_error_deg = car_angle_wrap_deg(
+        command_heading_deg - s_car_large_turn_target_yaw_deg);
+    return 1U;
+}
+
+/* 摇杆仍指向锁存方向时，EXIT才允许恢复前进速度。 */
+static uint8 car_large_turn_exit_forward_requested(void)
+{
+    float command_error_deg;
+
+    if (car_large_turn_exit_command_error_get(&command_error_deg) == 0U)
+    {
+        return 0U;
+    }
+
+    return (fabsf(command_error_deg) <=
+            CAR_LARGE_TURN_EXIT_COMMAND_MATCH_DEG) ? 1U : 0U;
+}
+
+/*
+ * 将锁存的目标航向和速度档重新写回世界坐标控制量。
+ * 这样即使遥控摇杆回中，BRAKE/PIVOT/EXIT仍使用掉头开始时的目标；
+ * BRAKE和PIVOT保持基础速度为0；EXIT仅在实时摇杆仍指向锁存目标时
+ * 才按剩余误差逐渐恢复前进速度，回中或改向不会产生自动前冲。
+ */
+static void car_large_turn_apply_latched_command(void)
+{
+    float yaw_error_deg;
+    float yaw_error_abs;
+    float alignment_scale = 0.0f;
+    float recovery_start_angle_abs;
+    float pivot_exit_angle_abs;
+    float finish_angle_abs;
+    float recovery_progress;
+    float recovery_span;
+    float target_rad;
+
+    yaw_error_deg = car_angle_wrap_deg(
+        s_car_large_turn_target_yaw_deg - s_car_imu_snapshot.euler.yaw);
+    yaw_error_abs = fabsf(yaw_error_deg);
+    target_rad = s_car_large_turn_target_yaw_deg * CAR_GYROZ_DEG_TO_RAD;
+
+    recovery_start_angle_abs =
+        fabsf(car_large_turn_exit_speed_start_angle_deg);
+    pivot_exit_angle_abs = fabsf(car_large_turn_pivot_exit_angle_deg);
+    finish_angle_abs = fabsf(car_large_turn_finish_angle_deg);
+    if (finish_angle_abs > pivot_exit_angle_abs)
+    {
+        finish_angle_abs = pivot_exit_angle_abs;
+    }
+    if (recovery_start_angle_abs > pivot_exit_angle_abs)
+    {
+        recovery_start_angle_abs = pivot_exit_angle_abs;
+    }
+    if (recovery_start_angle_abs <
+        (finish_angle_abs + CAR_LARGE_TURN_EXIT_RECOVERY_MIN_SPAN_DEG))
+    {
+        recovery_start_angle_abs =
+            finish_angle_abs + CAR_LARGE_TURN_EXIT_RECOVERY_MIN_SPAN_DEG;
+    }
+
+    /*
+     * EXIT达到恢复阈值后按剩余角度线性恢复前进速度；默认恢复阈值
+     * 与PIVOT退出角一致，因此进入EXIT后的下一个控制周期开始恢复。
+     */
+    if ((s_car_large_turn_state == CAR_LARGE_TURN_STATE_EXIT) &&
+        (car_large_turn_exit_forward_requested() != 0U) &&
+        (yaw_error_abs < recovery_start_angle_abs))
+    {
+        recovery_span = recovery_start_angle_abs - finish_angle_abs;
+        recovery_progress =
+            (recovery_start_angle_abs - yaw_error_abs) / recovery_span;
+        recovery_progress = car_speed_clampf(recovery_progress, 0.0f, 1.0f);
+        alignment_scale = recovery_progress;
+    }
+
+    s_car_world_command_active = 1U;
+    g_car_yaw_target_deg = s_car_large_turn_target_yaw_deg;
+    g_car_base_speed_command = s_car_large_turn_speed_limit * alignment_scale;
+    g_car_world_velocity_x_command =
+        cosf(target_rad) * s_car_large_turn_speed_limit;
+    g_car_world_velocity_y_command =
+        sinf(target_rad) * s_car_large_turn_speed_limit;
+    g_car_world_speed_magnitude = s_car_large_turn_speed_limit;
+    g_car_world_speed_limit = s_car_large_turn_speed_limit;
+    g_car_world_heading_target_deg = s_car_large_turn_target_yaw_deg;
+    g_car_world_heading_error_deg = yaw_error_deg;
+    g_car_world_alignment_scale = alignment_scale;
+    g_car_world_reverse_active = 0.0f;
 }
 
 static float car_speed_tune_target_get(void)
@@ -339,6 +610,14 @@ static float car_speed_tune_target_get(void)
 static void car_world_control_state_reset(float yaw_target_deg)
 {
     s_car_world_command_active = 0U;
+    s_car_world_input_confirm_cycles = 0U;
+    s_car_fixed_drive_active = 0U;
+    s_car_fixed_drive_confirm_cycles = 0U;
+    s_car_fixed_drive_direction = 0;
+    s_car_fixed_turn_trigger_previous =
+        (s_car_control_input.channel[8] != 0) ? 1U : 0U;
+    s_car_fixed_turn_active = 0U;
+    car_large_turn_state_reset();
 
     g_car_base_speed_command = 0.0f;
     g_car_yaw_target_deg = car_angle_wrap_deg(yaw_target_deg);
@@ -353,25 +632,155 @@ static void car_world_control_state_reset(float yaw_target_deg)
     g_car_world_reverse_active = 0.0f;
 }
 
-static void car_world_command_update_100HZ(void)
+static float car_fixed_turn_angle_get(void)
 {
-    float raw_x;
-    float raw_y;
-    float raw_magnitude;
-    float direction_scale;
-    float world_heading_deg;
-    float heading_error_deg;
+    if (s_car_control_input.channel[5] == 0)
+    {
+        return CAR_FIXED_TURN_ANGLE_LOW_DEG;
+    }
+    if (s_car_control_input.channel[5] == 1)
+    {
+        return CAR_FIXED_TURN_ANGLE_MID_DEG;
+    }
+    return CAR_FIXED_TURN_ANGLE_HIGH_DEG;
+}
+
+static float car_fixed_drive_command_get(void)
+{
+    float input = (float)s_car_control_input.channel[1];
+    float input_abs = fabsf(input);
+    int8 direction = (input >= 0.0f) ? 1 : -1;
+
+    if (s_car_fixed_drive_active != 0U)
+    {
+        if (input_abs <= CAR_WORLD_INPUT_EXIT_DEADZONE)
+        {
+            s_car_fixed_drive_active = 0U;
+            s_car_fixed_drive_confirm_cycles = 0U;
+            s_car_fixed_drive_direction = 0;
+        }
+        else if (input_abs >= CAR_WORLD_INPUT_ENTER_DEADZONE)
+        {
+            s_car_fixed_drive_direction = direction;
+        }
+    }
+    else if (input_abs >= CAR_WORLD_INPUT_ENTER_DEADZONE)
+    {
+        if (direction != s_car_fixed_drive_direction)
+        {
+            s_car_fixed_drive_direction = direction;
+            s_car_fixed_drive_confirm_cycles = 1U;
+        }
+        else if (s_car_fixed_drive_confirm_cycles <
+                 CAR_WORLD_INPUT_CONFIRM_CYCLES)
+        {
+            s_car_fixed_drive_confirm_cycles++;
+        }
+
+        if (s_car_fixed_drive_confirm_cycles >=
+            CAR_WORLD_INPUT_CONFIRM_CYCLES)
+        {
+            s_car_fixed_drive_active = 1U;
+            s_car_fixed_drive_confirm_cycles = 0U;
+        }
+    }
+    else
+    {
+        s_car_fixed_drive_confirm_cycles = 0U;
+        s_car_fixed_drive_direction = 0;
+    }
+
+    if (s_car_fixed_drive_active == 0U)
+    {
+        return 0.0f;
+    }
+    return (float)s_car_fixed_drive_direction * car_world_speed_limit_get();
+}
+
+static void car_fixed_angle_command_update_100HZ(void)
+{
+    uint8 trigger_active =
+        (s_car_control_input.channel[8] != 0) ? 1U : 0U;
+    float speed_command;
+    float yaw_error_deg;
     float alignment_scale;
-    float desired_speed;
+    float target_rad;
 
     g_car_world_speed_limit = car_world_speed_limit_get();
     g_car_world_body_speed_feedback =
         0.5f * (g_car_speed_left_filtered + g_car_speed_right_filtered);
 
-    /* Yaw-rate debug mode is intentionally rotation-only. */
-    if (s_car_yaw_angle_mode_active == 0U)
+    if ((trigger_active != 0U) &&
+        (s_car_fixed_turn_trigger_previous == 0U))
+    {
+        g_car_yaw_target_deg = car_angle_wrap_deg(
+            s_car_imu_snapshot.euler.yaw +
+            CAR_FIXED_TURN_RIGHT_DIRECTION * car_fixed_turn_angle_get());
+        s_car_fixed_turn_active = 1U;
+    }
+    s_car_fixed_turn_trigger_previous = trigger_active;
+
+    yaw_error_deg = car_angle_wrap_deg(
+        g_car_yaw_target_deg - s_car_imu_snapshot.euler.yaw);
+    if (s_car_fixed_turn_active != 0U)
+    {
+        yaw_error_deg = CAR_FIXED_TURN_RIGHT_DIRECTION *
+                        fabsf(yaw_error_deg);
+        if (fabsf(yaw_error_deg) <= CAR_YAW_WAKE_ANGLE_DEG)
+        {
+            s_car_fixed_turn_active = 0U;
+        }
+    }
+
+    if (fabsf(yaw_error_deg) >= CAR_WORLD_ALIGNMENT_STOP_DEG)
+    {
+        alignment_scale = 0.0f;
+    }
+    else
+    {
+        alignment_scale = cosf(yaw_error_deg * CAR_GYROZ_DEG_TO_RAD);
+        alignment_scale = car_speed_clampf(alignment_scale, 0.0f, 1.0f);
+    }
+
+    speed_command = car_fixed_drive_command_get();
+    g_car_base_speed_command = speed_command * alignment_scale;
+    s_car_world_command_active =
+        ((s_car_fixed_drive_active != 0U) ||
+         (fabsf(yaw_error_deg) > CAR_YAW_STOP_ANGLE_DEG)) ? 1U : 0U;
+
+    target_rad = g_car_yaw_target_deg * CAR_GYROZ_DEG_TO_RAD;
+    g_car_world_velocity_x_command = cosf(target_rad) * speed_command;
+    g_car_world_velocity_y_command = sinf(target_rad) * speed_command;
+    g_car_world_speed_magnitude = fabsf(speed_command);
+    g_car_world_heading_target_deg = g_car_yaw_target_deg;
+    g_car_world_heading_error_deg = yaw_error_deg;
+    g_car_world_alignment_scale = alignment_scale;
+    g_car_world_reverse_active = (speed_command < 0.0f) ? 1.0f : 0.0f;
+}
+
+static void car_world_command_update_100HZ(void)
+{
+    float raw_x;
+    float raw_y;
+    float raw_magnitude;
+    float world_heading_deg;
+    float heading_error_deg;
+    float alignment_scale;
+    float desired_speed;
+    float target_rad;
+    float exit_command_error_deg;
+    uint8 input_ready = 0U;
+    uint8 heading_update_requested = 0U;
+
+    g_car_world_speed_limit = car_world_speed_limit_get();
+    g_car_world_body_speed_feedback =
+        0.5f * (g_car_speed_left_filtered + g_car_speed_right_filtered);
+
+    /* 世界坐标模式以外的目标由各自的上层生成器负责。 */
+    if (s_car_yaw_control_mode_active != CAR_YAW_CONTROL_MODE_WORLD)
     {
         s_car_world_command_active = 0U;
+        s_car_world_input_confirm_cycles = 0U;
         g_car_base_speed_command = 0.0f;
         g_car_world_velocity_x_command = 0.0f;
         g_car_world_velocity_y_command = 0.0f;
@@ -383,15 +792,86 @@ static void car_world_command_update_100HZ(void)
         return;
     }
 
+    /* EXIT收到明显的新方向时释放旧锁存，并在当前周期解析新目标。 */
+    if (s_car_large_turn_latched != 0U)
+    {
+        if ((s_car_large_turn_state == CAR_LARGE_TURN_STATE_EXIT) &&
+            (car_large_turn_exit_command_error_get(
+                 &exit_command_error_deg) != 0U) &&
+            (fabsf(exit_command_error_deg) >
+             CAR_LARGE_TURN_EXIT_COMMAND_MATCH_DEG))
+        {
+            car_large_turn_state_set(CAR_LARGE_TURN_STATE_NORMAL);
+        }
+        else
+        {
+            car_large_turn_apply_latched_command();
+            return;
+        }
+    }
+
     raw_x = (float)s_car_control_input.channel[1];
     raw_y = (float)s_car_control_input.channel[0];
     raw_magnitude = sqrtf(raw_x * raw_x + raw_y * raw_y);
 
-    if (raw_magnitude <= CAR_WORLD_INPUT_DEADZONE)
+    /* 掉头超时后必须先回中，防止持续故障时反复重新触发。 */
+    if (s_car_large_turn_rearm_required != 0U)
+    {
+        if (raw_magnitude <= CAR_WORLD_INPUT_EXIT_DEADZONE)
+        {
+            s_car_large_turn_rearm_required = 0U;
+        }
+        else
+        {
+            s_car_world_command_active = 0U;
+            s_car_world_input_confirm_cycles = 0U;
+            g_car_yaw_target_deg = s_car_imu_snapshot.euler.yaw;
+            g_car_base_speed_command = 0.0f;
+            g_car_world_velocity_x_command = 0.0f;
+            g_car_world_velocity_y_command = 0.0f;
+            g_car_world_speed_magnitude = 0.0f;
+            g_car_world_heading_target_deg = g_car_yaw_target_deg;
+            g_car_world_heading_error_deg = 0.0f;
+            g_car_world_alignment_scale = 0.0f;
+            g_car_world_reverse_active = 0.0f;
+            return;
+        }
+    }
+
+    if (s_car_world_command_active != 0U)
+    {
+        if (raw_magnitude > CAR_WORLD_INPUT_EXIT_DEADZONE)
+        {
+            input_ready = 1U;
+            heading_update_requested =
+                (raw_magnitude >= CAR_WORLD_INPUT_ENTER_DEADZONE) ? 1U : 0U;
+        }
+    }
+    else if (raw_magnitude >= CAR_WORLD_INPUT_ENTER_DEADZONE)
+    {
+        if (s_car_world_input_confirm_cycles <
+            CAR_WORLD_INPUT_CONFIRM_CYCLES)
+        {
+            s_car_world_input_confirm_cycles++;
+        }
+        if (s_car_world_input_confirm_cycles >=
+            CAR_WORLD_INPUT_CONFIRM_CYCLES)
+        {
+            input_ready = 1U;
+            heading_update_requested = 1U;
+        }
+    }
+    else
+    {
+        s_car_world_input_confirm_cycles = 0U;
+    }
+
+    if (input_ready == 0U)
     {
         if (s_car_world_command_active != 0U)
         {
             s_car_world_command_active = 0U;
+            s_car_world_input_confirm_cycles = 0U;
             g_car_yaw_target_deg = s_car_imu_snapshot.euler.yaw;
             car_yaw_outer_reset();
         }
@@ -413,16 +893,24 @@ static void car_world_command_update_100HZ(void)
         s_car_world_command_active = 1U;
         car_yaw_outer_reset();
     }
+    s_car_world_input_confirm_cycles = 0U;
+
+    /* 迟滞区间保持上一次有效方向，只在明确离开中心后更新atan2。 */
+    if (heading_update_requested != 0U)
+    {
+        world_heading_deg = atan2f(raw_y, raw_x) * CAR_GYROZ_RAD_TO_DEG;
+    }
+    else
+    {
+        world_heading_deg = g_car_yaw_target_deg;
+    }
 
     /* CH1/CH2 only define direction; CH7 selects the speed magnitude. */
-    direction_scale = g_car_world_speed_limit / raw_magnitude;
-    g_car_world_velocity_x_command = raw_x * direction_scale;
-    g_car_world_velocity_y_command = raw_y * direction_scale;
+    target_rad = world_heading_deg * CAR_GYROZ_DEG_TO_RAD;
+    g_car_world_velocity_x_command = cosf(target_rad) * g_car_world_speed_limit;
+    g_car_world_velocity_y_command = sinf(target_rad) * g_car_world_speed_limit;
     g_car_world_speed_magnitude = g_car_world_speed_limit;
 
-    world_heading_deg = atan2f(g_car_world_velocity_y_command,
-                               g_car_world_velocity_x_command) *
-                        CAR_GYROZ_RAD_TO_DEG;
     heading_error_deg =
         car_angle_wrap_deg(world_heading_deg - s_car_imu_snapshot.euler.yaw);
 
@@ -481,9 +969,47 @@ static void car_speed_plan_update(void)
 {
     float previous_target = g_car_base_speed_target;
     float intermediate_command = g_car_base_speed_command;
+    float brake_target;
+    float brake_target_max;
     float step;
     float command_delta;
     float accel_limit = fabsf(car_speed_accel_ff_limit);
+
+    /*
+     * 大角度转向制动阶段只允许左右轮使用同一个固定保留速度。
+     * 保留目标自动限制在公共平移速度判定阈值以下，防止错误菜单参数
+     * 使速度环稳定在判定阈值之上，导致BRAKE无法进入PIVOT。
+     */
+    if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE)
+    {
+        brake_target = fabsf(car_large_turn_brake_target_speed);
+        brake_target_max = fabsf(car_large_turn_brake_speed) -
+                           CAR_LARGE_TURN_BRAKE_TARGET_MARGIN;
+        if (brake_target_max < 0.0f)
+        {
+            brake_target_max = 0.0f;
+        }
+        if (brake_target > brake_target_max)
+        {
+            brake_target = brake_target_max;
+        }
+
+        step = car_speed_plan_step(car_speed_decel_step_limit);
+        command_delta = brake_target - previous_target;
+        if (command_delta > step)
+        {
+            command_delta = step;
+        }
+        else if (command_delta < -step)
+        {
+            command_delta = -step;
+        }
+
+        g_car_base_speed_target = previous_target + command_delta;
+        g_car_base_speed_delta = command_delta;
+        g_car_speed_accel_ff = 0.0f;
+        return;
+    }
 
     /* 调试速度环时直接传递阶跃目标，并停用加速度前馈。 */
     if (CAR_SPEED_SLEW_AND_ACCEL_FF_ENABLE == 0U)
@@ -666,6 +1192,46 @@ static float car_speed_brake_feedforward(float feedback, float direction)
     return -direction * fabsf(car_speed_brake_static) * brake_scale;
 }
 
+/*
+ * 大角度BRAKE只制动车体公共平移分量：左右轮叠加相同前馈，
+ * 保留角速度内环生成的差速；接近PIVOT切换阈值时线性退出，避免反冲。
+ */
+static float car_large_turn_brake_feedforward(void)
+{
+    float body_speed;
+    float body_speed_abs;
+    float brake_ff_abs = fabsf(car_large_turn_brake_ff);
+    float release_speed;
+    float brake_scale;
+
+    if ((s_car_large_turn_state != CAR_LARGE_TURN_STATE_BRAKE) ||
+        (brake_ff_abs <= 0.0f))
+    {
+        return 0.0f;
+    }
+
+    body_speed = 0.5f * (g_car_speed_left_filtered +
+                         g_car_speed_right_filtered);
+    body_speed_abs = fabsf(body_speed);
+    release_speed = fabsf(car_large_turn_brake_speed);
+    if (body_speed_abs <= release_speed)
+    {
+        return 0.0f;
+    }
+
+    if (release_speed < CAR_SPEED_PLAN_MIN_STEP)
+    {
+        release_speed = CAR_SPEED_PLAN_MIN_STEP;
+    }
+    brake_scale =
+        (body_speed_abs - release_speed) /
+        CAR_LARGE_TURN_BRAKE_FF_FADE_SPAN;
+    brake_scale = car_speed_clampf(brake_scale, 0.0f, 1.0f);
+
+    return -car_speed_direction(body_speed, 0.0f) *
+           brake_ff_abs * brake_scale;
+}
+
 static int16 car_speed_pid_update(pid_t *pid, float target, float feedback,
                                   float kp, float ki, float kd,
                                   float external_ff, float brake_ff)
@@ -699,7 +1265,7 @@ static float car_yaw_get_error_deg(void)
 static uint8 car_yaw_command_is_within_stop_limit(float angle_limit_deg,
                                                    float rate_limit_dps)
 {
-    if (s_car_yaw_angle_mode_active != 0U)
+    if (s_car_yaw_control_mode_active != CAR_YAW_CONTROL_MODE_RATE_DEBUG)
     {
         return (fabsf(car_yaw_get_error_deg()) < angle_limit_deg) ? 1U : 0U;
     }
@@ -707,12 +1273,552 @@ static uint8 car_yaw_command_is_within_stop_limit(float angle_limit_deg,
     return (fabsf(g_car_gyroz_target_dps) < rate_limit_dps) ? 1U : 0U;
 }
 
+static uint16 car_negative_pressure_float_to_u16(float value,
+                                                 uint16 min_value,
+                                                 uint16 max_value)
+{
+    value = car_speed_clampf(value, (float)min_value, (float)max_value);
+    return (uint16)(value + 0.5f);
+}
+
+static uint16 car_large_turn_brake_stable_cycles_get(void)
+{
+    return car_negative_pressure_float_to_u16(
+        car_large_turn_brake_stable_cycles, 1U, 100U);
+}
+
+/*
+ * 掉头执行超过2秒时进行安全退出：取消锁存、停止运动并清除控制器历史。
+ * 同时设置重新使能标志，必须检测到摇杆回中后才允许再次触发掉头。
+ */
+static void car_large_turn_timeout_abort(void)
+{
+    car_large_turn_state_reset();
+    s_car_large_turn_rearm_required = 1U;
+    s_car_world_command_active = 0U;
+    s_car_world_input_confirm_cycles = 0U;
+
+    g_car_base_speed_command = 0.0f;
+    g_car_yaw_target_deg = s_car_imu_snapshot.euler.yaw;
+    g_car_world_velocity_x_command = 0.0f;
+    g_car_world_velocity_y_command = 0.0f;
+    g_car_world_speed_magnitude = 0.0f;
+    g_car_world_heading_target_deg = g_car_yaw_target_deg;
+    g_car_world_heading_error_deg = 0.0f;
+    g_car_world_alignment_scale = 0.0f;
+    g_car_world_reverse_active = 0.0f;
+    car_yaw_outer_reset();
+    car_gyroz_control_reset();
+}
+
+/*
+ * 100 Hz大角度掉头状态机：
+ * NORMAL确认指令 -> BRAKE减速 -> PIVOT原地旋转 -> EXIT收敛 -> NORMAL。
+ * 一旦进入BRAKE或PIVOT，普通回中不再打断流程；只有完成、超时或安全急停退出。
+ */
+static void car_large_turn_state_update_100HZ(void)
+{
+    uint16 stable_cycles = car_large_turn_brake_stable_cycles_get();
+    float yaw_error_deg = car_yaw_get_error_deg();
+    float yaw_error_abs = fabsf(yaw_error_deg);
+    float enter_angle_abs = fabsf(car_large_turn_enter_angle_deg);
+    float pivot_exit_angle_abs =
+        fabsf(car_large_turn_pivot_exit_angle_deg);
+    float finish_angle_abs = fabsf(car_large_turn_finish_angle_deg);
+    float brake_speed_abs = fabsf(car_large_turn_brake_speed);
+    float body_speed_feedback;
+    uint8 translation_slow;
+    int8 trigger_direction;
+
+    if (s_car_yaw_control_mode_active != CAR_YAW_CONTROL_MODE_WORLD)
+    {
+        car_large_turn_state_reset();
+        return;
+    }
+
+    if ((s_car_large_turn_state == CAR_LARGE_TURN_STATE_NORMAL) &&
+        (s_car_world_command_active == 0U))
+    {
+        s_car_large_turn_trigger_stable_cycles = 0U;
+        s_car_large_turn_trigger_direction = 0;
+        return;
+    }
+
+    if (s_car_large_turn_latched != 0U)
+    {
+        if (s_car_large_turn_elapsed_cycles < CAR_LARGE_TURN_TIMEOUT_CYCLES)
+        {
+            s_car_large_turn_elapsed_cycles++;
+        }
+        if (s_car_large_turn_elapsed_cycles >= CAR_LARGE_TURN_TIMEOUT_CYCLES)
+        {
+            car_large_turn_timeout_abort();
+            return;
+        }
+    }
+
+    if (enter_angle_abs < pivot_exit_angle_abs)
+    {
+        enter_angle_abs = pivot_exit_angle_abs;
+    }
+    if (finish_angle_abs > pivot_exit_angle_abs)
+    {
+        finish_angle_abs = pivot_exit_angle_abs;
+    }
+
+    body_speed_feedback = 0.5f * (g_car_speed_left_filtered +
+                                  g_car_speed_right_filtered);
+    translation_slow = (fabsf(body_speed_feedback) <= brake_speed_abs)
+                           ? 1U : 0U;
+
+    if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_NORMAL)
+    {
+        /* 连续确认大角度指令及其方向，避免单帧抖动误触发。 */
+        if (yaw_error_abs >= enter_angle_abs)
+        {
+            trigger_direction = (yaw_error_deg >= 0.0f) ? 1 : -1;
+            if (trigger_direction != s_car_large_turn_trigger_direction)
+            {
+                s_car_large_turn_trigger_direction = trigger_direction;
+                s_car_large_turn_trigger_stable_cycles = 1U;
+            }
+            else if (s_car_large_turn_trigger_stable_cycles <
+                     CAR_LARGE_TURN_TRIGGER_STABLE_CYCLES)
+            {
+                s_car_large_turn_trigger_stable_cycles++;
+            }
+
+            if (s_car_large_turn_trigger_stable_cycles >=
+                CAR_LARGE_TURN_TRIGGER_STABLE_CYCLES)
+            {
+                s_car_large_turn_latched = 1U;
+                s_car_large_turn_direction = trigger_direction;
+                s_car_large_turn_target_yaw_deg = g_car_yaw_target_deg;
+                s_car_large_turn_speed_limit = fabsf(g_car_world_speed_limit);
+                if (s_car_large_turn_speed_limit < CAR_SPEED_PLAN_MIN_STEP)
+                {
+                    s_car_large_turn_speed_limit = car_world_speed_limit_get();
+                }
+                s_car_large_turn_elapsed_cycles = 0U;
+                s_car_large_turn_trigger_stable_cycles = 0U;
+                s_car_large_turn_trigger_direction = 0;
+                car_large_turn_state_set(
+                    (translation_slow != 0U) ? CAR_LARGE_TURN_STATE_PIVOT
+                                             : CAR_LARGE_TURN_STATE_BRAKE);
+            }
+        }
+        else
+        {
+            s_car_large_turn_trigger_stable_cycles = 0U;
+            s_car_large_turn_trigger_direction = 0;
+        }
+    }
+    else if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE)
+    {
+        /* 先降低车体公共平移速度，满足阈值后立即进入原地转向。 */
+        if (yaw_error_abs <= pivot_exit_angle_abs)
+        {
+            car_large_turn_state_set(CAR_LARGE_TURN_STATE_EXIT);
+        }
+        else if (translation_slow != 0U)
+        {
+            if (s_car_large_turn_brake_stable_cycles < stable_cycles)
+            {
+                s_car_large_turn_brake_stable_cycles++;
+            }
+            if (s_car_large_turn_brake_stable_cycles >= stable_cycles)
+            {
+                car_large_turn_state_set(CAR_LARGE_TURN_STATE_PIVOT);
+            }
+        }
+        else
+        {
+            s_car_large_turn_brake_stable_cycles = 0U;
+        }
+    }
+    else if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_PIVOT)
+    {
+        /* 使用锁存方向原地旋转，剩余误差足够小时进入EXIT。 */
+        if (yaw_error_abs <= pivot_exit_angle_abs)
+        {
+            car_large_turn_state_set(CAR_LARGE_TURN_STATE_EXIT);
+        }
+    }
+    else
+    {
+        /* EXIT允许恢复前进分量，连续达到Finish条件后释放锁存。 */
+        if (yaw_error_abs <= finish_angle_abs)
+        {
+            if (s_car_large_turn_finish_stable_cycles <
+                CAR_LARGE_TURN_FINISH_STABLE_CYCLES)
+            {
+                s_car_large_turn_finish_stable_cycles++;
+            }
+            if (s_car_large_turn_finish_stable_cycles >=
+                CAR_LARGE_TURN_FINISH_STABLE_CYCLES)
+            {
+                car_large_turn_state_set(CAR_LARGE_TURN_STATE_NORMAL);
+            }
+        }
+        else
+        {
+            s_car_large_turn_finish_stable_cycles = 0U;
+        }
+    }
+
+    if ((s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE) ||
+        (s_car_large_turn_state == CAR_LARGE_TURN_STATE_PIVOT))
+    {
+        g_car_base_speed_command = 0.0f;
+    }
+}
+
+static uint16 car_negative_pressure_stable_cycles_get(void)
+{
+    return car_negative_pressure_float_to_u16(
+        car_negative_pressure_stable_cycles, 1U, 1000U);
+}
+
+static uint16 car_negative_pressure_accel_timeout_cycles_get(void)
+{
+    return car_negative_pressure_float_to_u16(
+        car_negative_pressure_accel_timeout_cycles, 1U, 1000U);
+}
+
+static float car_negative_pressure_speed_error_limit_get(float target_abs)
+{
+    float error_limit = fabsf(car_negative_pressure_speed_error_abs);
+    float ratio_limit = fabsf(car_negative_pressure_speed_error_ratio) *
+                        target_abs;
+
+    return (ratio_limit > error_limit) ? ratio_limit : error_limit;
+}
+
+static void car_negative_pressure_state_reset(void)
+{
+    s_car_negative_pressure_throttle = 0U;
+    s_car_negative_pressure_longitudinal_stable_cycles = 0U;
+    s_car_negative_pressure_turn_exit_cycles = 0U;
+    s_car_negative_pressure_accel_cycles = 0U;
+    s_car_negative_pressure_longitudinal_state =
+        CAR_NEGATIVE_PRESSURE_LONGITUDINAL_NONE;
+    s_car_negative_pressure_turn_active = 0U;
+    s_car_negative_pressure_previous_speed_target = 0.0f;
+    g_car_negative_pressure_throttle = 0.0f;
+    g_car_negative_pressure_target = 0.0f;
+    g_car_negative_pressure_boost = 0.0f;
+    g_car_negative_pressure_state =
+        (float)CAR_NEGATIVE_PRESSURE_STATE_DISABLED;
+}
+
+static void car_negative_pressure_longitudinal_state_set(uint8 state)
+{
+    s_car_negative_pressure_longitudinal_state = state;
+    s_car_negative_pressure_longitudinal_stable_cycles = 0U;
+    s_car_negative_pressure_accel_cycles = 0U;
+}
+
+static void car_negative_pressure_turn_state_update(uint16 stable_cycles,
+                                                    float yaw_error_abs,
+                                                    float target_rate_abs,
+                                                    float feedback_rate_abs)
+{
+    float enter_angle_abs =
+        fabsf(car_negative_pressure_turn_enter_angle_deg);
+    float exit_angle_abs =
+        fabsf(car_negative_pressure_turn_exit_angle_deg);
+    float enter_target_rate_abs =
+        fabsf(car_negative_pressure_turn_enter_target_rate_dps);
+    float exit_target_rate_abs =
+        fabsf(car_negative_pressure_turn_exit_target_rate_dps);
+    float enter_feedback_rate_abs =
+        fabsf(car_negative_pressure_turn_enter_feedback_rate_dps);
+    float exit_feedback_rate_abs =
+        fabsf(car_negative_pressure_turn_exit_feedback_rate_dps);
+
+    if (enter_angle_abs < exit_angle_abs)
+    {
+        enter_angle_abs = exit_angle_abs;
+    }
+    if (enter_target_rate_abs < exit_target_rate_abs)
+    {
+        enter_target_rate_abs = exit_target_rate_abs;
+    }
+    if (enter_feedback_rate_abs < exit_feedback_rate_abs)
+    {
+        enter_feedback_rate_abs = exit_feedback_rate_abs;
+    }
+
+    if (s_car_negative_pressure_turn_active == 0U)
+    {
+        if ((((s_car_yaw_control_mode_active != CAR_YAW_CONTROL_MODE_RATE_DEBUG) &&
+              (yaw_error_abs >= enter_angle_abs))) ||
+            (target_rate_abs >= enter_target_rate_abs) ||
+            (feedback_rate_abs >= enter_feedback_rate_abs))
+        {
+            s_car_negative_pressure_turn_active = 1U;
+            s_car_negative_pressure_turn_exit_cycles = 0U;
+        }
+        return;
+    }
+
+    if ((((s_car_yaw_control_mode_active != CAR_YAW_CONTROL_MODE_RATE_DEBUG) &&
+          (yaw_error_abs >= exit_angle_abs))) ||
+        (target_rate_abs >= exit_target_rate_abs) ||
+        (feedback_rate_abs >= exit_feedback_rate_abs))
+    {
+        s_car_negative_pressure_turn_exit_cycles = 0U;
+        return;
+    }
+
+    if (s_car_negative_pressure_turn_exit_cycles < stable_cycles)
+    {
+        s_car_negative_pressure_turn_exit_cycles++;
+    }
+    if (s_car_negative_pressure_turn_exit_cycles >= stable_cycles)
+    {
+        s_car_negative_pressure_turn_active = 0U;
+        s_car_negative_pressure_turn_exit_cycles = 0U;
+    }
+}
+
+static uint8 car_negative_pressure_demand_update(void)
+{
+    uint16 stable_cycles = car_negative_pressure_stable_cycles_get();
+    uint16 accel_timeout_cycles =
+        car_negative_pressure_accel_timeout_cycles_get();
+    float target = g_car_base_speed_target;
+    float target_abs = fabsf(target);
+    float previous_target_abs =
+        fabsf(s_car_negative_pressure_previous_speed_target);
+    float target_delta = target_abs - previous_target_abs;
+    float feedback = 0.5f * (g_car_speed_left_filtered +
+                             g_car_speed_right_filtered);
+    float feedback_abs = fabsf(feedback);
+    float error_limit =
+        car_negative_pressure_speed_error_limit_get(target_abs);
+    float speed_delta_threshold =
+        fabsf(car_negative_pressure_speed_delta_threshold);
+    float yaw_error_abs =
+        (s_car_yaw_control_mode_active != CAR_YAW_CONTROL_MODE_RATE_DEBUG)
+                              ? fabsf(car_yaw_get_error_deg()) : 0.0f;
+    float target_rate_abs = fabsf(g_car_gyroz_target_dps);
+    float feedback_rate_abs = fabsf(g_car_gyroz_feedback_dps);
+    float accel_exit_speed;
+    uint8 demand_state = CAR_NEGATIVE_PRESSURE_STATE_HOLD;
+
+    if (speed_delta_threshold < CAR_SPEED_PLAN_MIN_STEP)
+    {
+        speed_delta_threshold = CAR_SPEED_PLAN_MIN_STEP;
+    }
+    car_negative_pressure_turn_state_update(stable_cycles,
+                                            yaw_error_abs,
+                                            target_rate_abs,
+                                            feedback_rate_abs);
+
+    /* 大角度转向由运动状态机唯一决定负压档位，避免重复阈值互相冲突。 */
+    if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE)
+    {
+        car_negative_pressure_longitudinal_state_set(
+            CAR_NEGATIVE_PRESSURE_LONGITUDINAL_NONE);
+        s_car_negative_pressure_previous_speed_target = target;
+        return CAR_NEGATIVE_PRESSURE_STATE_DYNAMIC;
+    }
+    if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_PIVOT)
+    {
+        car_negative_pressure_longitudinal_state_set(
+            CAR_NEGATIVE_PRESSURE_LONGITUDINAL_NONE);
+        s_car_negative_pressure_previous_speed_target = target;
+        return CAR_NEGATIVE_PRESSURE_STATE_TURN;
+    }
+    if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_EXIT)
+    {
+        car_negative_pressure_longitudinal_state_set(
+            CAR_NEGATIVE_PRESSURE_LONGITUDINAL_NONE);
+        s_car_negative_pressure_previous_speed_target = target;
+
+        /* EXIT仍在修正航向，统一使用固定转向档，不再按速度切换增压档。 */
+        return CAR_NEGATIVE_PRESSURE_STATE_TURN;
+    }
+
+    /* 只由新的速度目标变化进入纵向增压，普通稳态速度误差不再触发。 */
+    if ((target_delta <= -speed_delta_threshold) &&
+        (feedback_abs > (target_abs + CAR_WHEEL_STOP_SPEED)))
+    {
+        car_negative_pressure_longitudinal_state_set(
+            CAR_NEGATIVE_PRESSURE_LONGITUDINAL_BRAKE);
+    }
+    else if ((target_delta >= speed_delta_threshold) &&
+             (target_abs > (feedback_abs + CAR_WHEEL_STOP_SPEED)))
+    {
+        car_negative_pressure_longitudinal_state_set(
+            CAR_NEGATIVE_PRESSURE_LONGITUDINAL_ACCEL);
+    }
+
+    if (s_car_negative_pressure_longitudinal_state ==
+        CAR_NEGATIVE_PRESSURE_LONGITUDINAL_ACCEL)
+    {
+        if (s_car_negative_pressure_accel_cycles < accel_timeout_cycles)
+        {
+            s_car_negative_pressure_accel_cycles++;
+        }
+
+        accel_exit_speed = target_abs - error_limit;
+        if (accel_exit_speed < 0.0f)
+        {
+            accel_exit_speed = 0.0f;
+        }
+
+        if (feedback_abs >= accel_exit_speed)
+        {
+            if (s_car_negative_pressure_longitudinal_stable_cycles <
+                stable_cycles)
+            {
+                s_car_negative_pressure_longitudinal_stable_cycles++;
+            }
+        }
+        else
+        {
+            s_car_negative_pressure_longitudinal_stable_cycles = 0U;
+        }
+
+        if ((s_car_negative_pressure_longitudinal_stable_cycles >=
+             stable_cycles) ||
+            (s_car_negative_pressure_accel_cycles >=
+             accel_timeout_cycles))
+        {
+            car_negative_pressure_longitudinal_state_set(
+                CAR_NEGATIVE_PRESSURE_LONGITUDINAL_NONE);
+        }
+    }
+    else if (s_car_negative_pressure_longitudinal_state ==
+             CAR_NEGATIVE_PRESSURE_LONGITUDINAL_BRAKE)
+    {
+        if (feedback_abs <= (target_abs + error_limit))
+        {
+            if (s_car_negative_pressure_longitudinal_stable_cycles <
+                stable_cycles)
+            {
+                s_car_negative_pressure_longitudinal_stable_cycles++;
+            }
+        }
+        else
+        {
+            s_car_negative_pressure_longitudinal_stable_cycles = 0U;
+        }
+
+        if (s_car_negative_pressure_longitudinal_stable_cycles >=
+            stable_cycles)
+        {
+            car_negative_pressure_longitudinal_state_set(
+                CAR_NEGATIVE_PRESSURE_LONGITUDINAL_NONE);
+        }
+    }
+
+    /* 普通模式优先保障明显加减速，速度稳定后再切换到固定转向档。 */
+    if (s_car_negative_pressure_longitudinal_state ==
+        CAR_NEGATIVE_PRESSURE_LONGITUDINAL_ACCEL)
+    {
+        demand_state = CAR_NEGATIVE_PRESSURE_STATE_DYNAMIC;
+    }
+    else if (s_car_negative_pressure_longitudinal_state ==
+             CAR_NEGATIVE_PRESSURE_LONGITUDINAL_BRAKE)
+    {
+        demand_state = CAR_NEGATIVE_PRESSURE_STATE_DYNAMIC;
+    }
+    else if (s_car_negative_pressure_turn_active != 0U)
+    {
+        demand_state = CAR_NEGATIVE_PRESSURE_STATE_TURN;
+    }
+
+    s_car_negative_pressure_previous_speed_target = target;
+    return demand_state;
+}
+
+static void car_negative_pressure_control_100HZ(void)
+{
+    uint16 hold_throttle;
+    uint16 turn_throttle;
+    uint16 boost_throttle;
+    uint16 target_throttle;
+    uint8 demand_state;
+
+    if (s_car_control_input.channel[4] == 0)
+    {
+        negative_pressure_disable();
+        car_negative_pressure_state_reset();
+        return;
+    }
+
+    hold_throttle = car_negative_pressure_float_to_u16(
+        car_negative_pressure_hold_throttle,
+        0U,
+        NEGATIVE_PRESSURE_THROTTLE_LIMIT_MAX);
+    boost_throttle = car_negative_pressure_float_to_u16(
+        car_negative_pressure_boost_throttle,
+        hold_throttle,
+        NEGATIVE_PRESSURE_THROTTLE_LIMIT_MAX);
+    turn_throttle = car_negative_pressure_float_to_u16(
+        car_negative_pressure_turn_throttle,
+        hold_throttle,
+        boost_throttle);
+
+    if (negative_pressure_is_enabled() == 0U)
+    {
+        negative_pressure_enable();
+    }
+
+    demand_state = car_negative_pressure_demand_update();
+
+    if (demand_state == CAR_NEGATIVE_PRESSURE_STATE_DYNAMIC)
+    {
+        target_throttle = boost_throttle;
+    }
+    else if (demand_state == CAR_NEGATIVE_PRESSURE_STATE_TURN)
+    {
+        target_throttle = turn_throttle;
+    }
+    else
+    {
+        target_throttle = hold_throttle;
+    }
+
+    /* 档位差较小，直接到达目标，避免软件斜坡延迟负压建立。 */
+    s_car_negative_pressure_throttle = target_throttle;
+
+    negative_pressure_set_throttle(s_car_negative_pressure_throttle,
+                                   s_car_negative_pressure_throttle);
+    g_car_negative_pressure_throttle =
+        (float)s_car_negative_pressure_throttle;
+    g_car_negative_pressure_target = (float)target_throttle;
+    g_car_negative_pressure_boost =
+        (demand_state == CAR_NEGATIVE_PRESSURE_STATE_DYNAMIC) ? 1.0f : 0.0f;
+    g_car_negative_pressure_state = (float)demand_state;
+}
+
 void car_yaw_control_100HZ(void)
 {
     float desired_rate_dps;
     float yaw_error_deg;
+    float brake_rate_limit_abs;
 
     yaw_error_deg = car_yaw_get_error_deg();
+
+    /* 固定180度右转时锁存方向，接近目标后恢复普通误差符号。 */
+    if ((s_car_yaw_control_mode_active == CAR_YAW_CONTROL_MODE_FIXED) &&
+        (s_car_fixed_turn_active != 0U))
+    {
+        yaw_error_deg = CAR_FIXED_TURN_RIGHT_DIRECTION *
+                        fabsf(yaw_error_deg);
+    }
+    /* 大角度制动和原地转向阶段锁存方向，避免正负180度边界翻转。 */
+    else if (((s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE) ||
+         (s_car_large_turn_state == CAR_LARGE_TURN_STATE_PIVOT)) &&
+        (s_car_large_turn_direction != 0))
+    {
+        yaw_error_deg = (float)s_car_large_turn_direction *
+                        fabsf(yaw_error_deg);
+    }
 
     s_car_yaw_pid.kp = car_yaw_kp;
     s_car_yaw_pid.ki = 0.0f;
@@ -723,6 +1829,13 @@ void car_yaw_control_100HZ(void)
                         car_yaw_rate_limit_dps);
     /* 以已归一化角度误差作为位置式PID输入，避免跨越正负180度。 */
     desired_rate_dps = PID_Update(&s_car_yaw_pid, yaw_error_deg, 0.0f);
+    if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE)
+    {
+        brake_rate_limit_abs = fabsf(car_large_turn_brake_rate_limit_dps);
+        desired_rate_dps = car_speed_clampf(desired_rate_dps,
+                                            -brake_rate_limit_abs,
+                                             brake_rate_limit_abs);
+    }
     g_car_yaw_p_term = s_car_yaw_pid.p_term;
     g_car_yaw_d_term = s_car_yaw_pid.d_term;
     g_car_gyroz_target_dps = -desired_rate_dps;
@@ -731,23 +1844,29 @@ void car_yaw_control_100HZ(void)
 static void car_gyroz_debug_target_100HZ(void)
 {
     int16 yaw_rate_command = s_car_control_input.channel[3];
+    float selected_rate_dps;
     float desired_rate_dps = 0.0f;
 
-    if (yaw_rate_command > CAR_GYROZ_DEBUG_INPUT_HIGH_THRESHOLD)
+    if (s_car_control_input.channel[5] == 0)
     {
-        desired_rate_dps = CAR_GYROZ_DEBUG_TARGET_HIGH_DPS;
+        selected_rate_dps = CAR_GYROZ_DEBUG_TARGET_LOW_DPS;
     }
-    else if (yaw_rate_command > CAR_GYROZ_DEBUG_INPUT_LOW_THRESHOLD)
+    else if (s_car_control_input.channel[5] == 1)
     {
-        desired_rate_dps = CAR_GYROZ_DEBUG_TARGET_LOW_DPS;
+        selected_rate_dps = CAR_GYROZ_DEBUG_TARGET_MID_DPS;
     }
-    else if (yaw_rate_command < -CAR_GYROZ_DEBUG_INPUT_HIGH_THRESHOLD)
+    else
     {
-        desired_rate_dps = -CAR_GYROZ_DEBUG_TARGET_HIGH_DPS;
+        selected_rate_dps = CAR_GYROZ_DEBUG_TARGET_HIGH_DPS;
+    }
+
+    if (yaw_rate_command > CAR_GYROZ_DEBUG_INPUT_LOW_THRESHOLD)
+    {
+        desired_rate_dps = selected_rate_dps;
     }
     else if (yaw_rate_command < -CAR_GYROZ_DEBUG_INPUT_LOW_THRESHOLD)
     {
-        desired_rate_dps = -CAR_GYROZ_DEBUG_TARGET_LOW_DPS;
+        desired_rate_dps = -selected_rate_dps;
     }
 
     g_car_gyroz_target_dps = -desired_rate_dps;
@@ -758,13 +1877,26 @@ static void car_gyroz_debug_target_100HZ(void)
 
 static void car_yaw_mode_prepare_100HZ(void)
 {
-    uint8 angle_mode = (car_yaw_control_mode >= 0.5f) ? 1U : 0U;
+    uint8 control_mode;
+
+    if (car_yaw_control_mode < 0.5f)
+    {
+        control_mode = CAR_YAW_CONTROL_MODE_RATE_DEBUG;
+    }
+    else if (car_yaw_control_mode < 1.5f)
+    {
+        control_mode = CAR_YAW_CONTROL_MODE_WORLD;
+    }
+    else
+    {
+        control_mode = CAR_YAW_CONTROL_MODE_FIXED;
+    }
 
     if ((s_car_yaw_mode_initialized == 0U) ||
-        (angle_mode != s_car_yaw_angle_mode_active))
+        (control_mode != s_car_yaw_control_mode_active))
     {
         s_car_yaw_mode_initialized = 1U;
-        s_car_yaw_angle_mode_active = angle_mode;
+        s_car_yaw_control_mode_active = control_mode;
         car_world_control_state_reset(s_car_imu_snapshot.euler.yaw);
         car_yaw_outer_reset();
         g_car_gyroz_target_dps = 0.0f;
@@ -780,7 +1912,7 @@ static void car_yaw_mode_prepare_100HZ(void)
 
 static void car_yaw_target_update_100HZ(void)
 {
-    if (s_car_yaw_angle_mode_active != 0U)
+    if (s_car_yaw_control_mode_active != CAR_YAW_CONTROL_MODE_RATE_DEBUG)
     {
         car_yaw_control_100HZ();
     }
@@ -866,8 +1998,9 @@ void car_loop_init(void)
     g_car_gyroz_feedback_dps = 0.0f;
     s_car_yaw_stopped = 0U;
     s_car_yaw_mode_initialized = 0U;
-    s_car_yaw_angle_mode_active = 1U;
+    s_car_yaw_control_mode_active = CAR_YAW_CONTROL_MODE_WORLD;
     car_speed_plan_reset();
+    car_negative_pressure_state_reset();
     car_world_control_state_reset(0.0f);
     g_car_yaw_p_term = 0.0f;
     g_car_yaw_d_term = 0.0f;
@@ -933,12 +2066,16 @@ void car_loop_imu_1000HZ_isr(void)
 
 static uint8 car_run_command_is_neutral(void)
 {
-    return (((s_car_control_input.channel[0] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
-             (s_car_control_input.channel[0] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
-            ((s_car_control_input.channel[1] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
-             (s_car_control_input.channel[1] <=  (int16)CAR_WORLD_INPUT_DEADZONE)) &&
-            ((s_car_control_input.channel[3] >= -(int16)CAR_WORLD_INPUT_DEADZONE) &&
-             (s_car_control_input.channel[3] <=  (int16)CAR_WORLD_INPUT_DEADZONE))) ? 1U : 0U;
+    float raw_x = (float)s_car_control_input.channel[1];
+    float raw_y = (float)s_car_control_input.channel[0];
+    float deadzone_sq = CAR_WORLD_INPUT_EXIT_DEADZONE *
+                        CAR_WORLD_INPUT_EXIT_DEADZONE;
+
+    return (((raw_x * raw_x + raw_y * raw_y) <= deadzone_sq) &&
+            (s_car_control_input.channel[3] >=
+             -(int16)CAR_WORLD_INPUT_EXIT_DEADZONE) &&
+            (s_car_control_input.channel[3] <=
+              (int16)CAR_WORLD_INPUT_EXIT_DEADZONE)) ? 1U : 0U;
 }
 
 static void car_total_emergency_stop(void)
@@ -962,8 +2099,8 @@ static void car_total_emergency_stop(void)
     g_car_gyroz_i_term = 0.0f;
     g_car_gyroz_output = 0.0f;
     s_car_yaw_stopped = 0U;
-
     motor_stop();
+    car_negative_pressure_state_reset();
     negative_pressure_disable();
 }
 
@@ -977,6 +2114,7 @@ static void car_speed_control_100HZ(void)
     float right_accel_ff;
     float left_brake_ff;
     float right_brake_ff;
+    float large_turn_brake_ff;
     int16 left_motor_output;
     int16 right_motor_output;
 
@@ -1020,24 +2158,10 @@ static void car_speed_control_100HZ(void)
         return;
     }
 
-    /* 遥控器CH5对应CRSF_STD[4]：CH8总使能有效时控制固定40%负压。 */
-    if (s_car_control_input.channel[4] != 0)
-    {
-        if (negative_pressure_is_enabled() == 0U)
-        {
-            negative_pressure_enable();
-        }
-        negative_pressure_set_throttle(CAR_NEGATIVE_PRESSURE_FIXED_THROTTLE,
-                                       CAR_NEGATIVE_PRESSURE_FIXED_THROTTLE);
-    }
-    else
-    {
-        negative_pressure_disable();
-    }
-
     if (CAR_SPEED_LOOP_TUNE_ENABLE != 0U)
     {
         /* 单独调速度环：CH2触发正负阶跃，CH7选择200/400/700目标速度。 */
+        car_large_turn_state_reset();
         g_car_base_speed_command = car_speed_tune_target_get();
         car_speed_plan_update();
         Left_Target_Speed = g_car_base_speed_target;
@@ -1056,16 +2180,28 @@ static void car_speed_control_100HZ(void)
     else
     {
         car_yaw_mode_prepare_100HZ();
-        car_world_command_update_100HZ();
+        if (s_car_yaw_control_mode_active == CAR_YAW_CONTROL_MODE_FIXED)
+        {
+            car_fixed_angle_command_update_100HZ();
+        }
+        else
+        {
+            car_world_command_update_100HZ();
+        }
+        car_large_turn_state_update_100HZ();
         car_speed_plan_update();
         Left_Target_Speed = g_car_base_speed_target;
         Right_Target_Speed = g_car_base_speed_target;
         car_yaw_target_update_100HZ();
     }
 
+    /* CH5控制负压总使能；按加减速、行进转弯和原地转向选择压力档位。 */
+    car_negative_pressure_control_100HZ();
+
     if (s_car_yaw_stopped != 0U)
     {
         if ((Left_Target_Speed == 0.0f) &&
+            (Right_Target_Speed == 0.0f) &&
             (car_yaw_command_is_within_stop_limit(
                  CAR_YAW_WAKE_ANGLE_DEG,
                  CAR_GYROZ_WAKE_TARGET_RATE_DPS) != 0U) &&
@@ -1087,6 +2223,7 @@ static void car_speed_control_100HZ(void)
     }
 
     if ((Left_Target_Speed == 0.0f) &&
+        (Right_Target_Speed == 0.0f) &&
         (car_yaw_command_is_within_stop_limit(
              CAR_YAW_STOP_ANGLE_DEG,
              CAR_GYROZ_STOP_TARGET_RATE_DPS) != 0U) &&
@@ -1096,14 +2233,8 @@ static void car_speed_control_100HZ(void)
     {
         PID_Reset(&Left_Speed_PID);
         PID_Reset(&Right_Speed_PID);
-        PID_Reset(&s_car_yaw_pid);
-        PID_Reset(&s_car_gyroz_pid);
-        g_car_gyroz_target_dps = 0.0f;
-        g_car_gyroz_error = 0.0f;
-        g_car_gyroz_ff_term = 0.0f;
-        g_car_gyroz_p_term = 0.0f;
-        g_car_gyroz_i_term = 0.0f;
-        g_car_gyroz_output = 0.0f;
+        car_yaw_outer_reset();
+        car_gyroz_control_reset();
         car_speed_plan_reset();
         Left_Target_Speed = 0.0f;
         Right_Target_Speed = 0.0f;
@@ -1117,6 +2248,12 @@ static void car_speed_control_100HZ(void)
         /* 防止角速度混合和刹车前馈影响速度环阶跃响应。 */
         car_speed_brake_state_clear();
     }
+    else if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE)
+    {
+        /* BRAKE禁用普通分轮停车前馈，后续仅叠加公共平移制动前馈。 */
+        car_gyroz_control_100HZ();
+        car_speed_brake_state_clear();
+    }
     else
     {
         car_gyroz_control_100HZ();
@@ -1128,10 +2265,19 @@ static void car_speed_control_100HZ(void)
                                             g_car_base_speed_delta);
     left_accel_ff = effective_accel_ff;
     right_accel_ff = effective_accel_ff;
-    left_brake_ff = car_speed_brake_feedforward(
-        g_car_speed_left_filtered, s_car_speed_left_brake_direction);
-    right_brake_ff = car_speed_brake_feedforward(
-        g_car_speed_right_filtered, s_car_speed_right_brake_direction);
+    large_turn_brake_ff = car_large_turn_brake_feedforward();
+    if (s_car_large_turn_state == CAR_LARGE_TURN_STATE_BRAKE)
+    {
+        left_brake_ff = large_turn_brake_ff;
+        right_brake_ff = large_turn_brake_ff;
+    }
+    else
+    {
+        left_brake_ff = car_speed_brake_feedforward(
+            g_car_speed_left_filtered, s_car_speed_left_brake_direction);
+        right_brake_ff = car_speed_brake_feedforward(
+            g_car_speed_right_filtered, s_car_speed_right_brake_direction);
+    }
     g_car_speed_left_brake_ff = left_brake_ff;
     g_car_speed_right_brake_ff = right_brake_ff;
 
