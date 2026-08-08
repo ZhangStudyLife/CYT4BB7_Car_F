@@ -153,8 +153,6 @@ void uart4_isr (void)
     if(uart_isr_mask(UART_4))
     {
 
-        uart_receiver_handler();
-
     }
     else
     {

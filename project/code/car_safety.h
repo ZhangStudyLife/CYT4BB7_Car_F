@@ -26,7 +26,6 @@ typedef struct
     uint8 imu_healthy;
     uint8 maintenance_active;
     uint8 run_switch_on;
-    uint8 command_neutral;
     float left_target_speed;
     float right_target_speed;
     float left_feedback_speed;

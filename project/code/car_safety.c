@@ -310,7 +310,7 @@ void car_safety_update_100HZ(const car_safety_input_t *input)
                           (s_car_safety.previous_switch_on == 0U)) ? 1U : 0U;
     s_car_safety.previous_switch_on = input->run_switch_on;
 
-    /* 失联时CRSF会把开关值改为低位，不能把这个低位当作人工复位。 */
+    /* 失联时输入会被置低，不能把这个低位当作人工复位。 */
     if (input->link_up == 0U)
     {
         car_safety_trip(CAR_SAFETY_FAULT_REMOTE_LOSS);
@@ -341,8 +341,7 @@ void car_safety_update_100HZ(const car_safety_input_t *input)
     if (s_car_safety.output_allowed == 0U)
     {
         if ((switch_rising_edge != 0U) &&
-            (s_car_safety.rearm_ready != 0U) &&
-            (input->command_neutral != 0U))
+            (s_car_safety.rearm_ready != 0U))
         {
             s_car_safety.fault = CAR_SAFETY_FAULT_NONE;
             s_car_safety.output_allowed = 1U;

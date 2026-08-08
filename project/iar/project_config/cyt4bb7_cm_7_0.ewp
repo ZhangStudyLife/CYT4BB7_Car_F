@@ -1349,33 +1349,6 @@
                 </group>
             </group>
             <group>
-                <name>WirelessControl</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\WirelessControl\wireless_control.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\WirelessControl\wireless_control.h</name>
-                </file>
-            </group>
-            <group>
-                <name>SBUS</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\SBUS\sbus.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\SBUS\sbus.h</name>
-                </file>
-            </group>
-            <group>
-                <name>crsf</name>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\crsf\crsf.c</name>
-                </file>
-                <file>
-                    <name>$PROJ_DIR$\..\..\code\Protocols\crsf\crsf.h</name>
-                </file>
-            </group>
-            <group>
                 <name>AirComm</name>
                 <file>
                     <name>$PROJ_DIR$\..\..\code\Protocols\AirComm\air_comm_car.c</name>
@@ -2302,12 +2275,6 @@
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_type.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_uart_receiver.c</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_uart_receiver.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\libraries\zf_device\zf_device_wifi_spi.c</name>

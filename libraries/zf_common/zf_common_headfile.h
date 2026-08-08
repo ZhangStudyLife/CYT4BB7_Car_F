@@ -101,7 +101,6 @@
 #include "zf_device_tft180.h"
 #include "zf_device_tsl1401.h"
 #include "zf_device_type.h"
-#include "zf_device_uart_receiver.h"
 #include "zf_device_wifi_spi.h"
 #include "zf_device_wifi_uart.h"
 #include "zf_device_wireless_uart.h"
@@ -141,7 +140,5 @@
 #include "Protocols/Wifi/wifi_justfloat/wifi_justfloat.h"
 #include "Protocols/Wifi/wifi_cal_imu/wifi_cal_imu.h"
 #include "Protocols/Wifi/wifi_core.h"
-#include "Protocols/SBUS/sbus.h"
-#include "Protocols/WirelessControl/wireless_control.h"
 //=====================================================Project Code=====================================================
 #endif
