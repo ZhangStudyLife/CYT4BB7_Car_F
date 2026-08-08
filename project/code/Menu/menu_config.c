@@ -1,16 +1,7 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (31U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (14U)
 
-static void load_air_slot_0_function(void);
-static void load_air_slot_1_function(void);
-static void load_air_slot_2_function(void);
-static void load_air_slot_3_function(void);
-static void save_air_slot_0_function(void);
-static void save_air_slot_1_function(void);
-static void save_air_slot_2_function(void);
-static void save_air_slot_3_function(void);
-static void sync_air_function(void);
 static void diag_imu_function(void);
 static void diag_encoder_function(void);
 static void diag_air_state_function(void);
@@ -43,41 +34,21 @@ static menu_item_t car_right_speed_menu[] = {
 
 static menu_item_t car_speed_common_menu[] = {
     {"Filter", MENU_TYPE_PARAMETER, .param_index = 6U},
-    {"FF Slope", MENU_TYPE_PARAMETER, .param_index = 7U},
-    {"FF Static", MENU_TYPE_PARAMETER, .param_index = 11U},
-    {"Delta Max", MENU_TYPE_PARAMETER, .param_index = 17U},
-    {"Brake FF", MENU_TYPE_PARAMETER, .param_index = 18U},
-    {"Acc Step", MENU_TYPE_PARAMETER, .param_index = 19U},
-    {"Acc Limit", MENU_TYPE_PARAMETER, .param_index = 20U},
-    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 21U},
-    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 22U},
-    {"Dec Step", MENU_TYPE_PARAMETER, .param_index = 23U},
+    {"FF Static", MENU_TYPE_PARAMETER, .param_index = 7U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static menu_item_t car_gyroz_menu[] = {
     {"Kp", MENU_TYPE_PARAMETER, .param_index = 8U},
     {"Ki", MENU_TYPE_PARAMETER, .param_index = 9U},
-    {"Kff", MENU_TYPE_PARAMETER, .param_index = 12U},
-    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 10U},
+    {"Kff", MENU_TYPE_PARAMETER, .param_index = 10U},
+    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 11U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static menu_item_t car_yaw_menu[] = {
-    {"Kp", MENU_TYPE_PARAMETER, .param_index = 13U},
-    {"Kd", MENU_TYPE_PARAMETER, .param_index = 14U},
-    {"Rate Max", MENU_TYPE_PARAMETER, .param_index = 15U},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t car_large_turn_menu[] = {
-    {"Brake Target", MENU_TYPE_PARAMETER, .param_index = 24U},
-    {"Brake Spd", MENU_TYPE_PARAMETER, .param_index = 25U},
-    {"Turn In", MENU_TYPE_PARAMETER, .param_index = 26U},
-    {"Pivot Out", MENU_TYPE_PARAMETER, .param_index = 27U},
-    {"Finish", MENU_TYPE_PARAMETER, .param_index = 28U},
-    {"Brake N", MENU_TYPE_PARAMETER, .param_index = 29U},
-    {"Brake Rate", MENU_TYPE_PARAMETER, .param_index = 30U},
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 12U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 13U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -85,10 +56,8 @@ static menu_item_t car_menu[] = {
     {"L_Speed", MENU_TYPE_SUBMENU, .submenu = car_left_speed_menu},
     {"R_Speed", MENU_TYPE_SUBMENU, .submenu = car_right_speed_menu},
     {"Speed Com", MENU_TYPE_SUBMENU, .submenu = car_speed_common_menu},
-    {"Yaw Mode", MENU_TYPE_PARAMETER, .param_index = 16U},
     {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_yaw_menu},
     {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_gyroz_menu},
-    {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_large_turn_menu},
     {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
@@ -189,22 +158,6 @@ static menu_item_t *s_air_group_menus[AIR_PARAM_MENU_COUNT];
 static menu_item_t *s_core1_group_menus[CORE1_PARAM_MENU_COUNT];
 static menu_item_t *s_bl3_group_menus[BL3_PARAM_MENU_COUNT];
 
-static menu_item_t load_air_slot_menu[] = {
-    {"Load Air0", MENU_TYPE_FUNCTION, .function = load_air_slot_0_function},
-    {"Load Air1", MENU_TYPE_FUNCTION, .function = load_air_slot_1_function},
-    {"Load Air2", MENU_TYPE_FUNCTION, .function = load_air_slot_2_function},
-    {"Load Air3", MENU_TYPE_FUNCTION, .function = load_air_slot_3_function},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t save_air_slot_menu[] = {
-    {"Save Air0", MENU_TYPE_FUNCTION, .function = save_air_slot_0_function},
-    {"Save Air1", MENU_TYPE_FUNCTION, .function = save_air_slot_1_function},
-    {"Save Air2", MENU_TYPE_FUNCTION, .function = save_air_slot_2_function},
-    {"Save Air3", MENU_TYPE_FUNCTION, .function = save_air_slot_3_function},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
 static menu_item_t air_diag_menu[] = {
     {"A_State", MENU_TYPE_DIAG_VIEW, .function = diag_air_state_function},
     {"2BL3 Status", MENU_TYPE_DIAG_VIEW, .function = diag_2bl3_status_function},
@@ -217,11 +170,7 @@ static menu_item_t air_diag_menu[] = {
 };
 
 static menu_item_t air_menu[] = {
-    {"A_params", MENU_TYPE_SUBMENU, .submenu = air_param_menu},
     {"A_Diag", MENU_TYPE_SUBMENU, .submenu = air_diag_menu},
-    {"Sync Air", MENU_TYPE_FUNCTION, .function = sync_air_function},
-    {"A_Load", MENU_TYPE_SUBMENU, .submenu = load_air_slot_menu},
-    {"A_Save", MENU_TYPE_SUBMENU, .submenu = save_air_slot_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -440,37 +389,13 @@ void menu_config_init(void)
     menu_register_param(&car_speed_right_ki, 0.1f, 0.0f, 10.0f);
     menu_register_param(&car_speed_right_kd, 0.1f, 0.0f, 100.0f);
     menu_register_param(&car_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&car_speed_ff_slope, 0.1f, 0.0f, 20.0f);
+    menu_register_param(&car_speed_ff_static, 10.0f, 0.0f, 3000.0f);
     menu_register_param(&car_gyroz_kp, 0.01f, 0.0f, 10.0f);
     menu_register_param(&car_gyroz_ki, 0.001f, 0.0f, 10.0f);
-    menu_register_param(&car_gyroz_k_turn, 0.1f, 0.0f, 10.0f);
-    menu_register_param(&car_speed_ff_static, 10.0f, 0.0f, 3000.0f);
     menu_register_param(&car_gyroz_kff, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&car_gyroz_k_turn, 0.1f, 0.0f, 10.0f);
     menu_register_param(&car_yaw_kp, 0.1f, 0.0f, 20.0f);
     menu_register_param(&car_yaw_kd, 0.1f, 0.0f, 500.0f);
-    menu_register_param(&car_yaw_rate_limit_dps, 10.0f, 0.0f, 1000.0f);
-    menu_register_param(&car_yaw_control_mode, 1.0f, 0.0f, 2.0f);
-    menu_register_param(&car_speed_delta_output_limit, 100.0f, 0.0f, 8000.0f);
-    menu_register_param(&car_speed_brake_static, 10.0f, 0.0f, 3000.0f);
-    menu_register_param(&car_speed_accel_step_limit, 1.0f, 1.0f, 200.0f);
-    menu_register_param(&car_speed_accel_ff_limit, 50.0f, 0.0f, 3000.0f);
-    menu_register_param(&car_speed_ff_deadband, 1.0f, 0.0f, 50.0f);
-    menu_register_param(&car_speed_ff_transition, 10.0f, 20.0f, 300.0f);
-    menu_register_param(&car_speed_decel_step_limit, 1.0f, 1.0f, 200.0f);
-    menu_register_param(&car_large_turn_brake_target_speed,
-                        5.0f, 0.0f, 500.0f);
-    menu_register_param(&car_large_turn_brake_speed,
-                        5.0f, 0.0f, 1000.0f);
-    menu_register_param(&car_large_turn_enter_angle_deg,
-                        1.0f, 0.5f, 180.0f);
-    menu_register_param(&car_large_turn_pivot_exit_angle_deg,
-                        1.0f, 0.5f, 180.0f);
-    menu_register_param(&car_large_turn_finish_angle_deg,
-                        1.0f, 0.5f, 180.0f);
-    menu_register_param(&car_large_turn_brake_stable_cycles,
-                        1.0f, 1.0f, 100.0f);
-    menu_register_param(&car_large_turn_brake_rate_limit_dps,
-                        10.0f, 0.0f, 1000.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {
@@ -486,78 +411,6 @@ void menu_config_init(void)
     }
 
     menu_set_root(main_menu);
-}
-
-static void load_air_slot_0_function(void)
-{
-    if(menu_load_air_slot(0U) == 0U)
-    {
-        menu_show_progress("Air Loading");
-    }
-}
-
-static void load_air_slot_1_function(void)
-{
-    if(menu_load_air_slot(1U) == 0U)
-    {
-        menu_show_progress("Air Loading");
-    }
-}
-
-static void load_air_slot_2_function(void)
-{
-    if(menu_load_air_slot(2U) == 0U)
-    {
-        menu_show_progress("Air Loading");
-    }
-}
-
-static void load_air_slot_3_function(void)
-{
-    if(menu_load_air_slot(3U) == 0U)
-    {
-        menu_show_progress("Air Loading");
-    }
-}
-
-static void save_air_slot_0_function(void)
-{
-    if(menu_save_air_slot(0U) == 0U)
-    {
-        menu_show_success("Air Save OK");
-    }
-}
-
-static void save_air_slot_1_function(void)
-{
-    if(menu_save_air_slot(1U) == 0U)
-    {
-        menu_show_success("Air Save OK");
-    }
-}
-
-static void save_air_slot_2_function(void)
-{
-    if(menu_save_air_slot(2U) == 0U)
-    {
-        menu_show_success("Air Save OK");
-    }
-}
-
-static void save_air_slot_3_function(void)
-{
-    if(menu_save_air_slot(3U) == 0U)
-    {
-        menu_show_success("Air Save OK");
-    }
-}
-
-static void sync_air_function(void)
-{
-    if(menu_sync_all_air_params() == 0U)
-    {
-        menu_show_progress("Air Syncing");
-    }
 }
 
 static void diag_show_line(uint8 line, const char *text)

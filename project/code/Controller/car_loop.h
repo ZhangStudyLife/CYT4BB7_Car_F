@@ -4,10 +4,6 @@
 #include "zf_common_headfile.h"
 
 /* 遥控轴已标准化到[-1000, 1000]，使用径向迟滞死区抑制中心方向跳变。 */
-#define CAR_WORLD_INPUT_ENTER_DEADZONE (250.0f)
-#define CAR_WORLD_INPUT_EXIT_DEADZONE  (150.0f)
-#define CAR_WORLD_INPUT_CONFIRM_CYCLES (3U)
-
 extern volatile uint32 tick_1000us_cnt;
 
 typedef struct
@@ -28,13 +24,8 @@ extern volatile float g_car_speed_right_filtered;
 extern volatile float g_car_yaw_feedback_deg;
 extern volatile float g_car_base_speed_command;
 extern volatile float g_car_base_speed_target;
-extern volatile float g_car_base_speed_delta;
-extern volatile float g_car_speed_accel_ff;
-extern volatile float g_car_speed_left_brake_ff;
-extern volatile float g_car_speed_right_brake_ff;
 extern volatile float g_car_speed_left_motor_output;
 extern volatile float g_car_speed_right_motor_output;
-extern volatile float g_car_speed_brake_active;
 extern volatile float Left_Target_Speed;
 extern volatile float Right_Target_Speed;
 extern volatile float car_speed_left_kp;
@@ -44,54 +35,14 @@ extern volatile float car_speed_right_kp;
 extern volatile float car_speed_right_ki;
 extern volatile float car_speed_right_kd;
 extern volatile float car_speed_filter_alpha;
-extern volatile float car_speed_ff_slope;
 extern volatile float car_speed_ff_static;
-extern volatile float car_speed_ff_deadband;
-extern volatile float car_speed_ff_transition;
-extern volatile float car_speed_brake_static;
-extern volatile float car_speed_delta_output_limit;
-extern volatile float car_speed_accel_kff;
-extern volatile float car_speed_accel_step_limit;
-extern volatile float car_speed_decel_step_limit;
-extern volatile float car_speed_accel_ff_limit;
 extern volatile float car_gyroz_kff;
 extern volatile float car_gyroz_kp;
 extern volatile float car_gyroz_ki;
 extern volatile float car_gyroz_k_turn;
 extern volatile float car_yaw_kp;
 extern volatile float car_yaw_kd;
-extern volatile float car_yaw_rate_limit_dps;
-extern volatile float car_yaw_control_mode;
-extern volatile float car_large_turn_brake_speed;
-extern volatile float car_large_turn_brake_target_speed;
-extern volatile float car_large_turn_brake_ff;
-extern volatile float car_large_turn_brake_rate_limit_dps;
-extern volatile float car_large_turn_enter_angle_deg;
-extern volatile float car_large_turn_pivot_exit_angle_deg;
-extern volatile float car_large_turn_exit_speed_start_angle_deg;
-extern volatile float car_large_turn_finish_angle_deg;
-extern volatile float car_large_turn_brake_stable_cycles;
-extern volatile float g_car_gyroz_target_dps;
 extern volatile float g_car_gyroz_feedback_dps;
-extern volatile float g_car_gyroz_feedback_equivalent;
-extern volatile float g_car_gyroz_error;
-extern volatile float g_car_gyroz_ff_term;
-extern volatile float g_car_gyroz_p_term;
-extern volatile float g_car_gyroz_i_term;
-extern volatile float g_car_gyroz_output;
-extern volatile float g_car_yaw_target_deg;
-extern volatile float g_car_yaw_p_term;
-extern volatile float g_car_yaw_d_term;
-extern volatile float g_car_world_velocity_x_command;
-extern volatile float g_car_world_velocity_y_command;
-extern volatile float g_car_world_speed_magnitude;
-extern volatile float g_car_world_speed_limit;
-extern volatile float g_car_world_heading_target_deg;
-extern volatile float g_car_world_heading_error_deg;
-extern volatile float g_car_world_alignment_scale;
-extern volatile float g_car_world_body_speed_feedback;
-extern volatile float g_car_world_reverse_active;
-extern volatile float g_car_large_turn_state;
 
 extern volatile float g_air_tof_fused_height_mm;
 extern volatile float g_air_euler_roll;
