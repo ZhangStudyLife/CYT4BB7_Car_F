@@ -1,5 +1,6 @@
 #include "car_loop.h"
 #include "../car_safety.h"
+#include "../Common/car_math.h"
 #include "../negative_pressure_motor.h"
 
 #define CAR_IMU_STALE_CONTROL_LIMIT (3U) /* IMU连续未更新的控制周期上限 */
@@ -408,7 +409,8 @@ static void car_loop_background_100HZ(void)
     Beep_Update_100HZ();
 
     car_data[0] = 0.0f;
-    car_data[1] = 0.0f;
+    car_data[1] = car_speed_encoder_cnt_to_mps(
+        0.5f * (g_car_speed_left_filtered + g_car_speed_right_filtered));
     car_data[2] = 0.0f;
     car_data[3] = g_car_yaw_feedback_deg;
     car_data[4] = g_car_gyroz_feedback_dps;

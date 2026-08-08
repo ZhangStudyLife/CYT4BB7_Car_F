@@ -5,6 +5,7 @@
 
 #include "car_math.h"
 
+#define CAR_SPEED_ENCODER_CNT_PER_MPS (115.0f)
 
 float car_math_absf(float value)
 {
@@ -89,4 +90,14 @@ float car_math_map_linear(float value,
     }
 
     return out_min + ((value - in_min) * (out_max - out_min) / (in_max - in_min));
+}
+
+float car_speed_mps_to_encoder_cnt(float speed_mps)
+{
+    return speed_mps * CAR_SPEED_ENCODER_CNT_PER_MPS;
+}
+
+float car_speed_encoder_cnt_to_mps(float speed_cnt)
+{
+    return speed_cnt / CAR_SPEED_ENCODER_CNT_PER_MPS;
 }

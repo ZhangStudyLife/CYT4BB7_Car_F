@@ -49,4 +49,8 @@ float car_math_map_linear(float value,
                           float out_min,
                           float out_max);
 
+float car_speed_mps_to_encoder_cnt(float speed_mps);
+
+float car_speed_encoder_cnt_to_mps(float speed_cnt);
+
 #endif /* CAR_MATH_H */

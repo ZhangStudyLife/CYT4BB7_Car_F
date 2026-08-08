@@ -2,7 +2,7 @@
 #include "pid_core.h"
 #include <math.h>
 
-#define MODE2_TARGET_SPEED               (300.0f)
+#define MODE2_TARGET_SPEED_MPS           (2.3f)
 #define MODE2_INPUT_DEADZONE             (100.0f)
 #define MODE2_ALIGNMENT_STOP_DEG         (90.0f)
 #define MODE2_WHEEL_TARGET_LIMIT         (1000.0f)
@@ -160,7 +160,8 @@ static void mode2_apply_latched_command(void)
     }
 
     s_mode2_yaw_target_deg = s_mode2_large_turn_target_yaw_deg;
-    g_car_base_speed_command = MODE2_TARGET_SPEED * alignment;
+    g_car_base_speed_command =
+        car_speed_mps_to_encoder_cnt(MODE2_TARGET_SPEED_MPS) * alignment;
 }
 
 static uint8 mode2_world_command_update(void)
@@ -209,7 +210,8 @@ static uint8 mode2_world_command_update(void)
     g_car_base_speed_command =
         (fabsf(yaw_error) >= MODE2_ALIGNMENT_STOP_DEG)
             ? 0.0f
-            : MODE2_TARGET_SPEED * cosf(yaw_error * MODE2_DEG_TO_RAD);
+            : car_speed_mps_to_encoder_cnt(MODE2_TARGET_SPEED_MPS) *
+                  cosf(yaw_error * MODE2_DEG_TO_RAD);
     return 1U;
 }
 
