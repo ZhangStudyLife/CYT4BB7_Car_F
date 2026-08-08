@@ -2,7 +2,6 @@
 #define CAR_LOOP_H
 
 #include "zf_common_headfile.h"
-#include "pid_core.h"
 
 /* 遥控轴已标准化到[-1000, 1000]，使用径向迟滞死区抑制中心方向跳变。 */
 #define CAR_WORLD_INPUT_ENTER_DEADZONE (250.0f)
@@ -26,6 +25,7 @@ extern volatile uint32 g_car_background_100hz_generation;
 extern volatile car_realtime_diag_t g_car_realtime_diag;
 extern volatile float g_car_speed_left_filtered;
 extern volatile float g_car_speed_right_filtered;
+extern volatile float g_car_yaw_feedback_deg;
 extern volatile float g_car_base_speed_command;
 extern volatile float g_car_base_speed_target;
 extern volatile float g_car_base_speed_delta;
@@ -37,8 +37,6 @@ extern volatile float g_car_speed_right_motor_output;
 extern volatile float g_car_speed_brake_active;
 extern volatile float Left_Target_Speed;
 extern volatile float Right_Target_Speed;
-extern pid_t Left_Speed_PID;
-extern pid_t Right_Speed_PID;
 extern volatile float car_speed_left_kp;
 extern volatile float car_speed_left_ki;
 extern volatile float car_speed_left_kd;
@@ -142,8 +140,6 @@ extern volatile float g_air_car_plan_dist_px;
 extern volatile float g_air_beacon_lost_flag;
 
 uint8 car_menu_is_runtime_locked(void);
-void car_yaw_control_100HZ(void);
-void car_gyroz_control_100HZ(void);
 void car_loop_init(void);
 void car_loop_poll(void);
 void car_loop_imu_1000HZ_isr(void);
