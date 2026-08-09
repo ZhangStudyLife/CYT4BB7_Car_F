@@ -1,6 +1,6 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (47U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (57U)
 
 /* 原上升斜坡槽位复用为BRAKE保留速度；保留旧下降斜坡槽位，后续索引不变。 */
 static volatile float s_car_negative_pressure_legacy_fall_step = 100.0f;
@@ -75,6 +75,28 @@ static menu_item_t car_yaw_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
+static menu_item_t car_rear_gyroz_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 50U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 51U},
+    {"Kff", MENU_TYPE_PARAMETER, .param_index = 53U},
+    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 52U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_rear_yaw_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 54U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 55U},
+    {"Rate Max", MENU_TYPE_PARAMETER, .param_index = 56U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_world_drive_menu[] = {
+    {"Mode", MENU_TYPE_PARAMETER, .param_index = 47U},
+    {"Auto Hyst", MENU_TYPE_PARAMETER, .param_index = 48U},
+    {"Front Bias", MENU_TYPE_PARAMETER, .param_index = 49U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
 static menu_item_t car_negative_pressure_turn_menu[] = {
     {"In Angle", MENU_TYPE_PARAMETER, .param_index = 31U},
     {"Out Angle", MENU_TYPE_PARAMETER, .param_index = 32U},
@@ -119,8 +141,11 @@ static menu_item_t car_menu[] = {
     {"R_Speed", MENU_TYPE_SUBMENU, .submenu = car_right_speed_menu},
     {"Speed Com", MENU_TYPE_SUBMENU, .submenu = car_speed_common_menu},
     {"Yaw Mode", MENU_TYPE_PARAMETER, .param_index = 16U},
-    {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_yaw_menu},
-    {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_gyroz_menu},
+    {"Drive", MENU_TYPE_SUBMENU, .submenu = car_world_drive_menu},
+    {"F Angle", MENU_TYPE_SUBMENU, .submenu = car_yaw_menu},
+    {"F Rate", MENU_TYPE_SUBMENU, .submenu = car_gyroz_menu},
+    {"R Angle", MENU_TYPE_SUBMENU, .submenu = car_rear_yaw_menu},
+    {"R Rate", MENU_TYPE_SUBMENU, .submenu = car_rear_gyroz_menu},
     {"Neg Press", MENU_TYPE_SUBMENU, .submenu = car_negative_pressure_menu},
     {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_large_turn_menu},
     {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
@@ -539,6 +564,26 @@ void menu_config_init(void)
     menu_register_param(&car_large_turn_brake_stable_cycles,
                         1.0f, 1.0f, 100.0f);
     menu_register_param(&car_large_turn_brake_rate_limit_dps,
+                        10.0f, 0.0f, 1000.0f);
+    menu_register_param(&car_world_drive_mode,
+                        1.0f, 0.0f, 2.0f);
+    menu_register_param(&car_world_auto_hysteresis_deg,
+                        1.0f, 0.0f, 45.0f);
+    menu_register_param(&car_world_auto_front_bias_deg,
+                        1.0f, 0.0f, 45.0f);
+    menu_register_param(&car_gyroz_rear_kp,
+                        0.01f, 0.0f, 10.0f);
+    menu_register_param(&car_gyroz_rear_ki,
+                        0.001f, 0.0f, 10.0f);
+    menu_register_param(&car_gyroz_rear_k_turn,
+                        0.1f, 0.0f, 10.0f);
+    menu_register_param(&car_gyroz_rear_kff,
+                        0.01f, 0.0f, 1.0f);
+    menu_register_param(&car_yaw_rear_kp,
+                        0.1f, 0.0f, 20.0f);
+    menu_register_param(&car_yaw_rear_kd,
+                        0.1f, 0.0f, 500.0f);
+    menu_register_param(&car_yaw_rear_rate_limit_dps,
                         10.0f, 0.0f, 1000.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)

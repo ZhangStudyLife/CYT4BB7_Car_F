@@ -44,7 +44,7 @@ void menu_runtime_resume(void);
 #define MENU_SLOT_BASE_PAGE     72          // Car菜单存档使用72-79页，避开IMU page 95
 #define MENU_SLOT_SIZE          2           // 每个存档占用2页(4KB)
 #define MENU_MAGIC_NUMBER       0x5A5A5A5A  // 存档验证魔数
-#define MENU_VERSION            0x03        // 参数目录变化后使旧位置式存档失效
+#define MENU_VERSION            0x06        // 参数目录变化后使旧位置式存档失效
 
 // Flash安全边界检查 (CYT4BB7有96页，确保不超出限制)
 #define FLASH_SAFE_START_PAGE   MENU_SLOT_BASE_PAGE
