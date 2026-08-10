@@ -2,7 +2,7 @@
 #include "pid_core.h"
 #include <math.h>
 
-#define MODE2_TARGET_SPEED_MPS           (2.3f)
+#define MODE2_TARGET_SPEED_MPS           (2.0f)
 #define MODE2_INPUT_DEADZONE             (100.0f)
 #define MODE2_ALIGNMENT_STOP_DEG         (90.0f)
 #define MODE2_WHEEL_TARGET_LIMIT         (1000.0f)
@@ -63,6 +63,7 @@ static pid_t s_mode2_right_speed_pid;
 static pid_t s_mode2_yaw_pid;
 static pid_t s_mode2_gyroz_pid;
 static float s_mode2_yaw_target_deg;
+static float s_mode2_gyroz_target_dps;
 static float s_mode2_previous_base_target;
 static uint8 s_mode2_speed_brake_active;
 static float s_mode2_left_brake_direction;
@@ -502,6 +503,7 @@ void car_mode2_reset(void)
     PID_Reset(&s_mode2_yaw_pid);
     PID_Reset(&s_mode2_gyroz_pid);
     s_mode2_yaw_target_deg = g_car_yaw_feedback_deg;
+    s_mode2_gyroz_target_dps = 0.0f;
     s_mode2_previous_base_target = 0.0f;
     s_mode2_speed_brake_active = 0U;
     s_mode2_left_brake_direction = 0.0f;
@@ -530,6 +532,7 @@ void car_mode2_update_100HZ(uint32 now_ms)
     mode2_large_turn_update(command_active);
     mode2_speed_plan_update();
     gyroz_target = mode2_yaw_control();
+    s_mode2_gyroz_target_dps = -gyroz_target;
     mode2_gyroz_control(gyroz_target);
 
     if (s_mode2_large_turn_state == MODE2_LARGE_TURN_BRAKE)
@@ -567,4 +570,15 @@ void car_mode2_update_100HZ(uint32 now_ms)
     g_car_speed_right_motor_output = (float)right_output;
     motor_left_set_speed(left_output);
     motor_right_set_speed(right_output);
+}
+
+void car_mode2_get_diag(car_mode2_diag_t *diag)
+{
+    diag->yaw_target_deg = s_mode2_yaw_target_deg;
+    diag->yaw_error_deg = mode2_yaw_error_deg();
+    diag->gyroz_target_dps = s_mode2_gyroz_target_dps;
+    diag->gyroz_output = s_mode2_gyroz_pid.output;
+    diag->large_turn_state = s_mode2_large_turn_state;
+    diag->large_turn_rearm_required = s_mode2_large_turn_rearm_required;
+    diag->speed_brake_active = s_mode2_speed_brake_active;
 }

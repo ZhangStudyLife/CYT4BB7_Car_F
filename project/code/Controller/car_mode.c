@@ -142,7 +142,7 @@ uint8 car_mode_update_100HZ(uint32 now_ms)
             return 0U;
         case CAR_MODE_8:
             car_mode8_update_100HZ(now_ms);
-            return 0U;
+            return 1U;
         default:
             return 0U;
     }

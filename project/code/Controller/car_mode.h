@@ -16,6 +16,17 @@ typedef enum
     CAR_MODE_8
 } car_mode_e;
 
+typedef struct
+{
+    float yaw_target_deg;
+    float yaw_error_deg;
+    float gyroz_target_dps;
+    float gyroz_output;
+    uint8 large_turn_state;
+    uint8 large_turn_rearm_required;
+    uint8 speed_brake_active;
+} car_mode2_diag_t;
+
 void car_mode_init(void);
 void car_mode_reset(void);
 void car_mode_reset_control(void);
@@ -34,6 +45,7 @@ void car_mode1_update_100HZ(uint32 now_ms);
 void car_mode2_init(void);
 void car_mode2_reset(void);
 void car_mode2_update_100HZ(uint32 now_ms);
+void car_mode2_get_diag(car_mode2_diag_t *diag);
 
 void car_mode3_init(void);
 void car_mode3_reset(void);
