@@ -415,7 +415,7 @@ static void car_loop_background_100HZ(void)
     car_data[3] = g_car_yaw_feedback_deg;
     car_data[4] = g_car_gyroz_feedback_dps;
     car_data[5] = 0.0f;
-    car_data[6] = 0.0f;
+    car_data[6] = car_speed_encoder_cnt_to_mps(g_car_base_speed_target);
     car_data[7] = 0.0f;
     car_data[8] = 0.0f;
     car_data[9] = 0.0f;

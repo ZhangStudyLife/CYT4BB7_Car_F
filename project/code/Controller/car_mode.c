@@ -118,8 +118,7 @@ uint8 car_mode_update_100HZ(uint32 now_ms)
             car_mode2_update_100HZ(now_ms);
             return 1U;
         case CAR_MODE_1:
-            /* 8月9日临时使用 Mode1 挡位进入 Mode2 业务。 */
-            car_mode2_update_100HZ(now_ms);
+            car_mode1_update_100HZ(now_ms);
             return 1U;
         case CAR_MODE_2:
             car_mode2_update_100HZ(now_ms);
