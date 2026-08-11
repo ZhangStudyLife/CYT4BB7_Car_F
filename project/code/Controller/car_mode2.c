@@ -2,7 +2,7 @@
 #include "pid_core.h"
 #include <math.h>
 
-#define MODE2_TARGET_SPEED_MPS           (2.0f)
+#define MODE2_TARGET_SPEED_MPS           (2.3f)
 #define MODE2_INPUT_DEADZONE             (100.0f)
 #define MODE2_ALIGNMENT_STOP_DEG         (90.0f)
 #define MODE2_WHEEL_TARGET_LIMIT         (1000.0f)
