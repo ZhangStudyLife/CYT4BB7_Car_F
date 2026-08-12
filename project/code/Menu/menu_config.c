@@ -171,6 +171,7 @@ static menu_item_t air_diag_menu[] = {
 
 static menu_item_t air_menu[] = {
     {"A_Diag", MENU_TYPE_SUBMENU, .submenu = air_diag_menu},
+    {"A_Params", MENU_TYPE_SUBMENU, .submenu = air_param_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
