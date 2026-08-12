@@ -125,7 +125,6 @@ static menu_item_t air_param_menu[] = {
     {"Angle PID", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Estimation", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode2 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Mode2 Vel", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode3 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode3 Vel", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode4 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
@@ -268,7 +267,20 @@ static uint8 menu_build_air_param_menus(void)
             }
 
             item = &s_air_param_menu_storage[cursor++];
-            strncpy(item->name, config->name, sizeof(item->name) - 1U);
+            item_name = config->name;
+            if(strncmp(item_name, "mode2_", 6U) == 0)
+            {
+                item_name += 6U;
+                if(strcmp(item_name, "car_vel_error_lpf_hz") == 0)
+                {
+                    item_name = "car_vel_lpf_hz";
+                }
+                else if(strcmp(item_name, "car_turn_accel_lpf_hz") == 0)
+                {
+                    item_name = "turn_accel_lpf_hz";
+                }
+            }
+            strncpy(item->name, item_name, sizeof(item->name) - 1U);
             item->name[sizeof(item->name) - 1U] = '\0';
             item->type = MENU_TYPE_AIR_PARAMETER;
             item->param_index = index;
