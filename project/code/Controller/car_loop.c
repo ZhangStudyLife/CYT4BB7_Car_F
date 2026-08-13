@@ -1,4 +1,5 @@
 #include "car_loop.h"
+#include "car_mode.h"
 #include "../car_safety.h"
 #include "../Common/car_math.h"
 #include "../negative_pressure_motor.h"
@@ -354,6 +355,7 @@ void car_loop_release_background_100HZ_isr(void)
 
 static void car_loop_background_100HZ(void)
 {
+    car_mode2_diag_t car_mode2_diag;
     float car_data[11];
     uint8 menu_runtime_locked;
 
@@ -408,15 +410,16 @@ static void car_loop_background_100HZ(void)
     }
     Beep_Update_100HZ();
 
+    car_mode2_get_diag(&car_mode2_diag);
     car_data[0] = 0.0f;
     car_data[1] = car_speed_encoder_cnt_to_mps(
         0.5f * (g_car_speed_left_filtered + g_car_speed_right_filtered));
-    car_data[2] = 0.0f;
+    car_data[2] = car_mode2_diag.yaw_target_deg; /* 车yaw控制目标，供飞机验证"旋转由下发速度预知" */
     car_data[3] = g_car_yaw_feedback_deg;
     car_data[4] = g_car_gyroz_feedback_dps;
     car_data[5] = 0.0f;
     car_data[6] = car_speed_encoder_cnt_to_mps(g_car_base_speed_target);
-    car_data[7] = 0.0f;
+    car_data[7] = (float)car_mode2_diag.large_turn_state; /* 大角度状态: 0正常 1刹车 2原地转 3退出 */
     car_data[8] = 0.0f;
     car_data[9] = 0.0f;
     car_data[10] = (float)s_system_time_ms;
