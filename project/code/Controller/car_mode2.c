@@ -31,6 +31,7 @@
 #define MODE2_LARGE_TURN_PIVOT_EXIT_DEG  (35.0f)
 #define MODE2_LARGE_TURN_EXIT_START_DEG  (35.0f)
 #define MODE2_LARGE_TURN_FINISH_DEG      (3.0f)
+#define MODE2_LARGE_TURN_TRIGGER_CYCLES  (5U)
 #define MODE2_LARGE_TURN_FINISH_CYCLES   (2U)
 #define MODE2_LARGE_TURN_TIMEOUT_CYCLES  (500U)
 #define MODE2_EXIT_COMMAND_MATCH_DEG     (80.0f)
@@ -71,6 +72,7 @@ static float s_mode2_right_brake_direction;
 static uint8 s_mode2_large_turn_state;
 static uint8 s_mode2_large_turn_rearm_required;
 static int8 s_mode2_large_turn_direction;
+static uint16 s_mode2_large_turn_trigger_cycles;
 static uint16 s_mode2_large_turn_finish_cycles;
 static uint16 s_mode2_large_turn_elapsed_cycles;
 static float s_mode2_large_turn_target_yaw_deg;
@@ -112,6 +114,7 @@ static void mode2_large_turn_reset(void)
     s_mode2_large_turn_state = MODE2_LARGE_TURN_NORMAL;
     s_mode2_large_turn_rearm_required = 0U;
     s_mode2_large_turn_direction = 0;
+    s_mode2_large_turn_trigger_cycles = 0U;
     s_mode2_large_turn_finish_cycles = 0U;
     s_mode2_large_turn_elapsed_cycles = 0U;
     s_mode2_large_turn_target_yaw_deg = 0.0f;
@@ -124,6 +127,7 @@ static void mode2_large_turn_set(uint8 state)
     if (state == MODE2_LARGE_TURN_NORMAL)
     {
         s_mode2_large_turn_direction = 0;
+        s_mode2_large_turn_trigger_cycles = 0U;
         s_mode2_large_turn_finish_cycles = 0U;
         s_mode2_large_turn_elapsed_cycles = 0U;
         s_mode2_large_turn_target_yaw_deg = 0.0f;
@@ -192,11 +196,6 @@ static uint8 mode2_command_update(float heading_deg,
         if (command_active == 0U)
         {
             s_mode2_large_turn_rearm_required = 0U;
-        }
-        else
-        {
-            g_car_base_speed_command = 0.0f;
-            return 0U;
         }
     }
 
@@ -269,16 +268,32 @@ static void mode2_large_turn_update(uint8 command_active,
 
     if (s_mode2_large_turn_state == MODE2_LARGE_TURN_NORMAL)
     {
-        if ((command_active != 0U) &&
+        if ((s_mode2_large_turn_rearm_required == 0U) &&
+            (command_active != 0U) &&
             (yaw_error_abs >= MODE2_LARGE_TURN_ENTER_DEG))
         {
-            s_mode2_large_turn_direction = (yaw_error >= 0.0f) ? 1 : -1;
-            s_mode2_large_turn_target_yaw_deg = s_mode2_yaw_target_deg;
-            s_mode2_large_turn_target_speed_mps = command_speed_mps;
-            s_mode2_large_turn_elapsed_cycles = 0U;
-            mode2_large_turn_set((translation_slow != 0U)
-                                     ? MODE2_LARGE_TURN_PIVOT
-                                     : MODE2_LARGE_TURN_BRAKE);
+            if (s_mode2_large_turn_trigger_cycles <
+                MODE2_LARGE_TURN_TRIGGER_CYCLES)
+            {
+                s_mode2_large_turn_trigger_cycles++;
+            }
+
+            if (s_mode2_large_turn_trigger_cycles >=
+                MODE2_LARGE_TURN_TRIGGER_CYCLES)
+            {
+                s_mode2_large_turn_direction = (yaw_error >= 0.0f) ? 1 : -1;
+                s_mode2_large_turn_target_yaw_deg = s_mode2_yaw_target_deg;
+                s_mode2_large_turn_target_speed_mps = command_speed_mps;
+                s_mode2_large_turn_elapsed_cycles = 0U;
+                s_mode2_large_turn_trigger_cycles = 0U;
+                mode2_large_turn_set((translation_slow != 0U)
+                                         ? MODE2_LARGE_TURN_PIVOT
+                                         : MODE2_LARGE_TURN_BRAKE);
+            }
+        }
+        else
+        {
+            s_mode2_large_turn_trigger_cycles = 0U;
         }
     }
     else if (s_mode2_large_turn_state == MODE2_LARGE_TURN_BRAKE)
