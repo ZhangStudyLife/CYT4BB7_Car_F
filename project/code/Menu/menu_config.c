@@ -134,10 +134,8 @@ static menu_item_t air_param_menu[] = {
     {"Mode7 Vel", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode8 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode8 Vel", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Yaw Change", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Core1 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"2BL3 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Car Plan", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -149,7 +147,9 @@ enum
     BL3_PARAM_MENU_COUNT = (sizeof(bl3_image_param_menu) / sizeof(bl3_image_param_menu[0])) - 1U,
     AIR_PARAM_MENU_STORAGE_COUNT = MENU_AIR_MAX_PARAMS + AIR_PARAM_MENU_COUNT +
                                    CORE1_PARAM_MENU_COUNT +
-                                   BL3_PARAM_MENU_COUNT + 1U
+                                   BL3_PARAM_MENU_COUNT + 3U,
+    AIR_MENU_YAW_INDEX = 2U,
+    AIR_MENU_CAR_PLAN_INDEX = 3U
 };
 
 static menu_item_t s_air_param_menu_storage[AIR_PARAM_MENU_STORAGE_COUNT];
@@ -171,6 +171,8 @@ static menu_item_t air_diag_menu[] = {
 static menu_item_t air_menu[] = {
     {"A_Diag", MENU_TYPE_SUBMENU, .submenu = air_diag_menu},
     {"A_Params", MENU_TYPE_SUBMENU, .submenu = air_param_menu},
+    {"Yaw", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Car Plan", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -179,6 +181,65 @@ static menu_item_t main_menu[] = {
     {"Air", MENU_TYPE_SUBMENU, .submenu = air_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
+
+static uint8 menu_build_air_param_group(const char *group_name,
+                                        uint16 *cursor,
+                                        menu_item_t **menu)
+{
+    uint16 index;
+    uint8 group_count = 0U;
+    const menu_air_param_config_t *config;
+    const char *item_name;
+    menu_item_t *item;
+
+    *menu = &s_air_param_menu_storage[*cursor];
+    for(index = 0U; index < menu_get_air_param_count(); index++)
+    {
+        config = menu_get_air_param_config(index);
+        if((config == NULL) || (config->menu_name == NULL) ||
+           (config->visible == 0U) ||
+           (strcmp(config->menu_name, group_name) != 0))
+        {
+            continue;
+        }
+
+        if((group_count >= MENU_MAX_ITEMS) ||
+           (*cursor >= AIR_PARAM_MENU_STORAGE_COUNT))
+        {
+            return 1U;
+        }
+
+        item = &s_air_param_menu_storage[(*cursor)++];
+        item_name = config->name;
+        if(strncmp(item_name, "mode2_", 6U) == 0)
+        {
+            item_name += 6U;
+            if(strcmp(item_name, "car_vel_error_lpf_hz") == 0)
+            {
+                item_name = "car_vel_lpf_hz";
+            }
+            else if(strcmp(item_name, "car_turn_accel_lpf_hz") == 0)
+            {
+                item_name = "turn_accel_lpf_hz";
+            }
+        }
+        strncpy(item->name, item_name, sizeof(item->name) - 1U);
+        item->name[sizeof(item->name) - 1U] = '\0';
+        item->type = MENU_TYPE_AIR_PARAMETER;
+        item->param_index = index;
+        group_count++;
+    }
+
+    if(*cursor >= AIR_PARAM_MENU_STORAGE_COUNT)
+    {
+        return 1U;
+    }
+    item = &s_air_param_menu_storage[(*cursor)++];
+    item->name[0] = '\0';
+    item->type = MENU_TYPE_SUBMENU;
+    item->submenu = NULL;
+    return 0U;
+}
 
 static uint8 menu_build_air_param_menus(void)
 {
@@ -248,53 +309,12 @@ static uint8 menu_build_air_param_menus(void)
             continue;
         }
 
-        s_air_group_menus[group] = &s_air_param_menu_storage[cursor];
-        group_count = 0U;
-        for(index = 0U; index < menu_get_air_param_count(); index++)
-        {
-            config = menu_get_air_param_config(index);
-            if((config == NULL) || (config->menu_name == NULL) ||
-               (config->visible == 0U) ||
-               (strcmp(config->menu_name, air_param_menu[group].name) != 0))
-            {
-                continue;
-            }
-
-            if((group_count >= MENU_MAX_ITEMS) ||
-               (cursor >= AIR_PARAM_MENU_STORAGE_COUNT))
-            {
-                return 1U;
-            }
-
-            item = &s_air_param_menu_storage[cursor++];
-            item_name = config->name;
-            if(strncmp(item_name, "mode2_", 6U) == 0)
-            {
-                item_name += 6U;
-                if(strcmp(item_name, "car_vel_error_lpf_hz") == 0)
-                {
-                    item_name = "car_vel_lpf_hz";
-                }
-                else if(strcmp(item_name, "car_turn_accel_lpf_hz") == 0)
-                {
-                    item_name = "turn_accel_lpf_hz";
-                }
-            }
-            strncpy(item->name, item_name, sizeof(item->name) - 1U);
-            item->name[sizeof(item->name) - 1U] = '\0';
-            item->type = MENU_TYPE_AIR_PARAMETER;
-            item->param_index = index;
-            group_count++;
-        }
-
-        if(cursor >= AIR_PARAM_MENU_STORAGE_COUNT)
+        if(menu_build_air_param_group(air_param_menu[group].name,
+                                      &cursor,
+                                      &s_air_group_menus[group]) != 0U)
         {
             return 1U;
         }
-        item = &s_air_param_menu_storage[cursor++];
-        item->name[0] = '\0';
-        item->type = MENU_TYPE_SUBMENU;
-        item->submenu = NULL;
     }
 
     if((core1_top_found == 0U) || (bl3_top_found == 0U))
@@ -388,6 +408,14 @@ static uint8 menu_build_air_param_menus(void)
     for(group = 0U; group < AIR_PARAM_MENU_COUNT; group++)
     {
         air_param_menu[group].submenu = s_air_group_menus[group];
+    }
+
+    if((menu_build_air_param_group("Yaw", &cursor,
+                                   &air_menu[AIR_MENU_YAW_INDEX].submenu) != 0U) ||
+       (menu_build_air_param_group("Car Plan", &cursor,
+                                   &air_menu[AIR_MENU_CAR_PLAN_INDEX].submenu) != 0U))
+    {
+        return 1U;
     }
 
     return 0U;

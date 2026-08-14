@@ -324,6 +324,9 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_OPTIONAL_PARAM(bl3_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "2BL3 Tracking"),
     MENU_AIR_OPTIONAL_PARAM(bl3_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "2BL3 Tracking"),
 
+    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_stream_mode, 0.0f, 1.0f, 0.0f, 3.0f,
+                                 "2BL3 Stream", s_air_bl3_stream_mode_labels),
+
     MENU_AIR_OPTIONAL_PARAM(bl3_lamp_width, 3.5f, 0.1f, 0.0f, 224.0f, "2BL3 Car Lamp"),
     MENU_AIR_OPTIONAL_PARAM(bl3_narrow_width, 2.7f, 0.1f, 0.0f, 224.0f, "2BL3 Car Lamp"),
     MENU_AIR_OPTIONAL_PARAM(bl3_narrow_elong, 3.5f, 0.1f, 0.0f, 224.0f, "2BL3 Car Lamp"),
@@ -354,9 +357,6 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_OPTIONAL_PARAM(bl3_top_v_elong, 3.0f, 0.1f, 0.0f, 224.0f, "2BL3 Vertical Top"),
     MENU_AIR_OPTIONAL_PARAM(bl3_sat_t_gray, 240.0f, 1.0f, 0.0f, 255.0f, "2BL3 Saturated Top"),
 
-    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_stream_mode, 0.0f, 1.0f, 0.0f, 3.0f,
-                                 "2BL3 Stream", s_air_bl3_stream_mode_labels),
-
     MENU_AIR_PARAM(mode2_img_kp, 0.17f, 0.01f, 0.0f, 1.0f, "Mode2 Img"),
     MENU_AIR_PARAM(mode2_img_kd, 0.10f, 0.01f, 0.0f, 1.0f, "Mode2 Img"),
     MENU_AIR_PARAM(mode2_img_d_lpf_hz, 1.2f, 0.1f, 0.1f, 20.0f, "Mode2 Img"),
@@ -366,9 +366,9 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_PARAM(mode2_car_accel_ff, 4.5f, 0.1f, 0.0f, 15.0f, "Mode2 Img"),
     MENU_AIR_PARAM(mode2_car_turn_accel_ff, 3.5f, 0.1f, 0.0f, 15.0f, "Mode2 Img"),
     MENU_AIR_PARAM(mode2_car_turn_accel_lpf_hz, 1.8f, 0.1f, 0.1f, 20.0f, "Mode2 Img"),
-    MENU_AIR_PARAM(Car_Speed, 1.5f, 0.1f, 0.0f, 3.0f, "Car Plan"),
-    MENU_AIR_PARAM(Car_Speed_Fast, 1.8f, 0.1f, 0.0f, 4.0f, "Car Plan"),
-    MENU_AIR_PARAM(Car_Plan_Mode, 2.0f, 1.0f, 1.0f, 2.0f, "Car Plan"),
+    MENU_AIR_PARAM(Car_Speed, 2.0f, 0.05f, 0.1f, 3.0f, "Car Plan"),
+    MENU_AIR_PARAM(Car_Speed_Fast, 2.0f, 0.05f, 0.1f, 3.0f, "Car Plan"),
+    MENU_AIR_PARAM(Car_Plan_Mode, 3.0f, 1.0f, 1.0f, 3.0f, "Car Plan"),
 
     MENU_AIR_PARAM(mode4_img_x_kp, 2.4f,      0.1f, 0.0f, 10.0f, "Mode4 Img"),
     MENU_AIR_PARAM(mode4_img_x_kp2, 0.1f,     0.1f, 0.0f, 6.0f, "Mode4 Img"),
@@ -435,10 +435,12 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_PARAM(mode3_turn_accel_ff_gain_y, 0.30f, 0.05f, 0.0f, 3.0f, "Mode3 Vel"),
     MENU_AIR_PARAM(mode3_turn_accel_ff_limit_x_deg, 18.0f, 2.0f, 0.0f, 20.0f, "Mode3 Vel"),
     MENU_AIR_PARAM(mode3_turn_accel_ff_limit_y_deg, 14.0f, 2.0f, 0.0f, 20.0f, "Mode3 Vel"),
-    MENU_AIR_PARAM(yaw_change_mode3, 1.0f, 1.0f, 0.0f, 1.0f, "Yaw Change"),
-    MENU_AIR_PARAM(yaw_change_mode4, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw Change"),
-    MENU_AIR_PARAM(yaw_change_mode5, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw Change"),
-    MENU_AIR_PARAM(yaw_change_mode8, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw Change")
+    MENU_AIR_PARAM(yaw_change_mode1, 1.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode2, 1.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode3, 1.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode4, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode5, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode8, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw")
 };
 
 typedef char menu_air_param_count_must_match[
