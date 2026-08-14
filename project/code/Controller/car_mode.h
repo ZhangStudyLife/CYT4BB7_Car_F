@@ -25,7 +25,7 @@ typedef struct
     uint8 large_turn_state;
     uint8 large_turn_rearm_required;
     uint8 speed_brake_active;
-} car_mode2_diag_t;
+} car_drive_diag_t;
 
 void car_mode_init(void);
 void car_mode_reset(void);
@@ -33,6 +33,7 @@ void car_mode_reset_control(void);
 car_mode_e car_mode_get(void);
 uint8 car_mode_is_control_enabled(void);
 uint8 car_mode_update_100HZ(uint32 now_ms);
+void car_mode_get_diag(car_drive_diag_t *diag);
 
 void car_mode0_init(void);
 void car_mode0_reset(void);
@@ -41,15 +42,12 @@ void car_mode0_update_100HZ(uint32 now_ms);
 void car_mode1_init(void);
 void car_mode1_reset(void);
 void car_mode1_update_100HZ(uint32 now_ms);
+void car_mode1_get_diag(car_drive_diag_t *diag);
 
 void car_mode2_init(void);
 void car_mode2_reset(void);
 void car_mode2_update_100HZ(uint32 now_ms);
-void car_mode2_update_body_100HZ(uint32 now_ms,
-                                 float strafe_mps,
-                                 float forward_mps,
-                                 uint8 valid);
-void car_mode2_get_diag(car_mode2_diag_t *diag);
+void car_mode2_get_diag(car_drive_diag_t *diag);
 
 void car_mode3_init(void);
 void car_mode3_reset(void);
@@ -58,13 +56,13 @@ void car_mode3_update_100HZ(uint32 now_ms);
 
 void car_mode4_init(void);
 void car_mode4_reset(void);
-void car_mode4_update_25HZ(uint32 now_ms);
 void car_mode4_update_100HZ(uint32 now_ms);
+void car_mode4_get_diag(car_drive_diag_t *diag);
 
 void car_mode5_init(void);
 void car_mode5_reset(void);
-void car_mode5_update_25HZ(uint32 now_ms);
 void car_mode5_update_100HZ(uint32 now_ms);
+void car_mode5_get_diag(car_drive_diag_t *diag);
 
 void car_mode6_init(void);
 void car_mode6_reset(void);

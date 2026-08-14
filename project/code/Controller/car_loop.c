@@ -16,11 +16,16 @@
 volatile uint32 tick_1000us_cnt = 0U;
 volatile uint32 g_car_background_100hz_generation = 0U;
 volatile car_realtime_diag_t g_car_realtime_diag = {0};
-volatile float car_speed_filter_alpha = 0.557f;
 volatile float g_car_speed_left_filtered = 0.0f;
 volatile float g_car_speed_right_filtered = 0.0f;
 volatile float g_car_yaw_feedback_deg = 0.0f;
 volatile float g_car_gyroz_feedback_dps = 0.0f;
+volatile float g_car_base_speed_command = 0.0f;
+volatile float g_car_base_speed_target = 0.0f;
+volatile float g_car_speed_left_motor_output = 0.0f;
+volatile float g_car_speed_right_motor_output = 0.0f;
+volatile float Left_Target_Speed = 0.0f;
+volatile float Right_Target_Speed = 0.0f;
 
 volatile float g_air_tof_fused_height_mm = 0.0f;
 volatile float g_air_euler_roll = 0.0f;
@@ -188,6 +193,7 @@ static void car_loop_update_encoder_feedback_100HZ(void)
 {
     int16 left_raw;
     int16 right_raw;
+    float filter_alpha;
 
     encoder_update_100HZ();
     left_raw = encoder_get_left_count();
@@ -199,9 +205,31 @@ static void car_loop_update_encoder_feedback_100HZ(void)
         s_car_speed_filter_initialized = 1U;
         return;
     }
-    g_car_speed_left_filtered += car_speed_filter_alpha *
+    switch (car_mode_get())
+    {
+        case CAR_MODE_1:
+            filter_alpha = mode1_speed_filter_alpha;
+            break;
+        case CAR_MODE_2:
+            filter_alpha = mode2_speed_filter_alpha;
+            break;
+        case CAR_MODE_4:
+            filter_alpha = mode4_speed_filter_alpha;
+            break;
+        case CAR_MODE_5:
+            filter_alpha = mode5_speed_filter_alpha;
+            break;
+        case CAR_MODE_8:
+            filter_alpha = mode8_speed_filter_alpha;
+            break;
+        default:
+            filter_alpha = 0.557f;
+            break;
+    }
+    filter_alpha = car_math_clampf(filter_alpha, 0.0f, 1.0f);
+    g_car_speed_left_filtered += filter_alpha *
         ((float)left_raw - g_car_speed_left_filtered);
-    g_car_speed_right_filtered += car_speed_filter_alpha *
+    g_car_speed_right_filtered += filter_alpha *
         ((float)right_raw - g_car_speed_right_filtered);
 }
 
@@ -355,7 +383,7 @@ void car_loop_release_background_100HZ_isr(void)
 
 static void car_loop_background_100HZ(void)
 {
-    car_mode2_diag_t car_mode2_diag;
+    car_drive_diag_t car_diag;
     float car_data[11];
     uint8 menu_runtime_locked;
 
@@ -410,16 +438,16 @@ static void car_loop_background_100HZ(void)
     }
     Beep_Update_100HZ();
 
-    car_mode2_get_diag(&car_mode2_diag);
+    car_mode_get_diag(&car_diag);
     car_data[0] = 0.0f;
     car_data[1] = car_speed_encoder_cnt_to_mps(
         0.5f * (g_car_speed_left_filtered + g_car_speed_right_filtered));
-    car_data[2] = car_mode2_diag.yaw_target_deg; /* 车yaw控制目标，供飞机验证"旋转由下发速度预知" */
+    car_data[2] = car_diag.yaw_target_deg; /* 当前模式yaw控制目标 */
     car_data[3] = g_car_yaw_feedback_deg;
     car_data[4] = g_car_gyroz_feedback_dps;
     car_data[5] = 0.0f;
     car_data[6] = car_speed_encoder_cnt_to_mps(g_car_base_speed_target);
-    car_data[7] = (float)car_mode2_diag.large_turn_state; /* 大角度状态: 0正常 1刹车 2原地转 3退出 */
+    car_data[7] = (float)car_diag.large_turn_state; /* 0正常 1刹车 2原地转 3退出 */
     car_data[8] = 0.0f;
     car_data[9] = 0.0f;
     car_data[10] = (float)s_system_time_ms;

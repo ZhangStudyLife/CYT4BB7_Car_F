@@ -1,6 +1,6 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (14U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (179U)
 
 static void diag_imu_function(void);
 static void diag_encoder_function(void);
@@ -18,46 +18,391 @@ static menu_item_t car_diag_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-static menu_item_t car_left_speed_menu[] = {
+static menu_item_t car_mode1_input_menu[] = {
+    {"Plan Limit", MENU_TYPE_PARAMETER, .param_index = 14U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode1_left_speed_menu[] = {
     {"Kp", MENU_TYPE_PARAMETER, .param_index = 0U},
     {"Ki", MENU_TYPE_PARAMETER, .param_index = 1U},
     {"Kd", MENU_TYPE_PARAMETER, .param_index = 2U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-static menu_item_t car_right_speed_menu[] = {
+static menu_item_t car_mode1_right_speed_menu[] = {
     {"Kp", MENU_TYPE_PARAMETER, .param_index = 3U},
     {"Ki", MENU_TYPE_PARAMETER, .param_index = 4U},
     {"Kd", MENU_TYPE_PARAMETER, .param_index = 5U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-static menu_item_t car_speed_common_menu[] = {
+static menu_item_t car_mode1_speed_menu[] = {
     {"Filter", MENU_TYPE_PARAMETER, .param_index = 6U},
     {"FF Static", MENU_TYPE_PARAMETER, .param_index = 7U},
+    {"Wheel Limit", MENU_TYPE_PARAMETER, .param_index = 16U},
+    {"I Limit", MENU_TYPE_PARAMETER, .param_index = 17U},
+    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 18U},
+    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 19U},
+    {"Inc Limit", MENU_TYPE_PARAMETER, .param_index = 20U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-static menu_item_t car_gyroz_menu[] = {
+static menu_item_t car_mode1_yaw_rate_menu[] = {
     {"Kp", MENU_TYPE_PARAMETER, .param_index = 8U},
     {"Ki", MENU_TYPE_PARAMETER, .param_index = 9U},
     {"Kff", MENU_TYPE_PARAMETER, .param_index = 10U},
     {"K Turn", MENU_TYPE_PARAMETER, .param_index = 11U},
+    {"Out Limit", MENU_TYPE_PARAMETER, .param_index = 23U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
-static menu_item_t car_yaw_menu[] = {
+static menu_item_t car_mode1_yaw_angle_menu[] = {
     {"Kp", MENU_TYPE_PARAMETER, .param_index = 12U},
     {"Kd", MENU_TYPE_PARAMETER, .param_index = 13U},
+    {"Stop Angle", MENU_TYPE_PARAMETER, .param_index = 15U},
+    {"Rate Limit", MENU_TYPE_PARAMETER, .param_index = 24U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode1_brake_menu[] = {
+    {"Static FF", MENU_TYPE_PARAMETER, .param_index = 21U},
+    {"Decel Step", MENU_TYPE_PARAMETER, .param_index = 22U},
+    {"Gz Stop", MENU_TYPE_PARAMETER, .param_index = 25U},
+    {"Wheel Stop", MENU_TYPE_PARAMETER, .param_index = 26U},
+    {"Target Margin", MENU_TYPE_PARAMETER, .param_index = 39U},
+    {"FF Fade", MENU_TYPE_PARAMETER, .param_index = 40U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode1_large_turn_menu[] = {
+    {"Brake Speed", MENU_TYPE_PARAMETER, .param_index = 27U},
+    {"Brake Target", MENU_TYPE_PARAMETER, .param_index = 28U},
+    {"Brake FF", MENU_TYPE_PARAMETER, .param_index = 29U},
+    {"Brake Rate", MENU_TYPE_PARAMETER, .param_index = 30U},
+    {"Enter Deg", MENU_TYPE_PARAMETER, .param_index = 31U},
+    {"Pivot Exit", MENU_TYPE_PARAMETER, .param_index = 32U},
+    {"Exit Start", MENU_TYPE_PARAMETER, .param_index = 33U},
+    {"Finish Deg", MENU_TYPE_PARAMETER, .param_index = 34U},
+    {"Trigger Cyc", MENU_TYPE_PARAMETER, .param_index = 35U},
+    {"Finish Cyc", MENU_TYPE_PARAMETER, .param_index = 36U},
+    {"Timeout Cyc", MENU_TYPE_PARAMETER, .param_index = 37U},
+    {"Cmd Match", MENU_TYPE_PARAMETER, .param_index = 38U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode1_menu[] = {
+    {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode1_input_menu},
+    {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode1_left_speed_menu},
+    {"R Speed", MENU_TYPE_SUBMENU, .submenu = car_mode1_right_speed_menu},
+    {"Speed", MENU_TYPE_SUBMENU, .submenu = car_mode1_speed_menu},
+    {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_mode1_yaw_rate_menu},
+    {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_mode1_yaw_angle_menu},
+    {"Brake", MENU_TYPE_SUBMENU, .submenu = car_mode1_brake_menu},
+    {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_mode1_large_turn_menu},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_input_menu[] = {
+    {"Target m/s", MENU_TYPE_PARAMETER, .param_index = 55U},
+    {"Deadzone", MENU_TYPE_PARAMETER, .param_index = 56U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_left_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 41U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 42U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 43U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_right_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 44U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 45U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 46U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_speed_menu[] = {
+    {"Filter", MENU_TYPE_PARAMETER, .param_index = 47U},
+    {"FF Static", MENU_TYPE_PARAMETER, .param_index = 48U},
+    {"Wheel Limit", MENU_TYPE_PARAMETER, .param_index = 58U},
+    {"I Limit", MENU_TYPE_PARAMETER, .param_index = 59U},
+    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 60U},
+    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 61U},
+    {"Inc Limit", MENU_TYPE_PARAMETER, .param_index = 62U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_yaw_rate_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 49U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 50U},
+    {"Kff", MENU_TYPE_PARAMETER, .param_index = 51U},
+    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 52U},
+    {"Out Limit", MENU_TYPE_PARAMETER, .param_index = 65U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_yaw_angle_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 53U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 54U},
+    {"Stop Angle", MENU_TYPE_PARAMETER, .param_index = 57U},
+    {"Rate Limit", MENU_TYPE_PARAMETER, .param_index = 66U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_brake_menu[] = {
+    {"Static FF", MENU_TYPE_PARAMETER, .param_index = 63U},
+    {"Decel Step", MENU_TYPE_PARAMETER, .param_index = 64U},
+    {"Gz Stop", MENU_TYPE_PARAMETER, .param_index = 67U},
+    {"Wheel Stop", MENU_TYPE_PARAMETER, .param_index = 68U},
+    {"Target Margin", MENU_TYPE_PARAMETER, .param_index = 81U},
+    {"FF Fade", MENU_TYPE_PARAMETER, .param_index = 82U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_large_turn_menu[] = {
+    {"Brake Speed", MENU_TYPE_PARAMETER, .param_index = 69U},
+    {"Brake Target", MENU_TYPE_PARAMETER, .param_index = 70U},
+    {"Brake FF", MENU_TYPE_PARAMETER, .param_index = 71U},
+    {"Brake Rate", MENU_TYPE_PARAMETER, .param_index = 72U},
+    {"Enter Deg", MENU_TYPE_PARAMETER, .param_index = 73U},
+    {"Pivot Exit", MENU_TYPE_PARAMETER, .param_index = 74U},
+    {"Exit Start", MENU_TYPE_PARAMETER, .param_index = 75U},
+    {"Finish Deg", MENU_TYPE_PARAMETER, .param_index = 76U},
+    {"Trigger Cyc", MENU_TYPE_PARAMETER, .param_index = 77U},
+    {"Finish Cyc", MENU_TYPE_PARAMETER, .param_index = 78U},
+    {"Timeout Cyc", MENU_TYPE_PARAMETER, .param_index = 79U},
+    {"Cmd Match", MENU_TYPE_PARAMETER, .param_index = 80U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode2_menu[] = {
+    {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode2_input_menu},
+    {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode2_left_speed_menu},
+    {"R Speed", MENU_TYPE_SUBMENU, .submenu = car_mode2_right_speed_menu},
+    {"Speed", MENU_TYPE_SUBMENU, .submenu = car_mode2_speed_menu},
+    {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_mode2_yaw_rate_menu},
+    {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_mode2_yaw_angle_menu},
+    {"Brake", MENU_TYPE_SUBMENU, .submenu = car_mode2_brake_menu},
+    {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_mode2_large_turn_menu},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_input_menu[] = {
+    {"Plan Limit", MENU_TYPE_PARAMETER, .param_index = 97U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_left_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 83U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 84U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 85U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_right_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 86U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 87U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 88U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_speed_menu[] = {
+    {"Filter", MENU_TYPE_PARAMETER, .param_index = 89U},
+    {"FF Static", MENU_TYPE_PARAMETER, .param_index = 90U},
+    {"Wheel Limit", MENU_TYPE_PARAMETER, .param_index = 99U},
+    {"I Limit", MENU_TYPE_PARAMETER, .param_index = 100U},
+    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 101U},
+    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 102U},
+    {"Inc Limit", MENU_TYPE_PARAMETER, .param_index = 103U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_yaw_rate_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 91U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 92U},
+    {"Kff", MENU_TYPE_PARAMETER, .param_index = 93U},
+    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 94U},
+    {"Out Limit", MENU_TYPE_PARAMETER, .param_index = 106U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_yaw_angle_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 95U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 96U},
+    {"Stop Angle", MENU_TYPE_PARAMETER, .param_index = 98U},
+    {"Rate Limit", MENU_TYPE_PARAMETER, .param_index = 107U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_brake_menu[] = {
+    {"Static FF", MENU_TYPE_PARAMETER, .param_index = 104U},
+    {"Decel Step", MENU_TYPE_PARAMETER, .param_index = 105U},
+    {"Gz Stop", MENU_TYPE_PARAMETER, .param_index = 108U},
+    {"Wheel Stop", MENU_TYPE_PARAMETER, .param_index = 109U},
+    {"Target Margin", MENU_TYPE_PARAMETER, .param_index = 122U},
+    {"FF Fade", MENU_TYPE_PARAMETER, .param_index = 123U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_large_turn_menu[] = {
+    {"Brake Speed", MENU_TYPE_PARAMETER, .param_index = 110U},
+    {"Brake Target", MENU_TYPE_PARAMETER, .param_index = 111U},
+    {"Brake FF", MENU_TYPE_PARAMETER, .param_index = 112U},
+    {"Brake Rate", MENU_TYPE_PARAMETER, .param_index = 113U},
+    {"Enter Deg", MENU_TYPE_PARAMETER, .param_index = 114U},
+    {"Pivot Exit", MENU_TYPE_PARAMETER, .param_index = 115U},
+    {"Exit Start", MENU_TYPE_PARAMETER, .param_index = 116U},
+    {"Finish Deg", MENU_TYPE_PARAMETER, .param_index = 117U},
+    {"Trigger Cyc", MENU_TYPE_PARAMETER, .param_index = 118U},
+    {"Finish Cyc", MENU_TYPE_PARAMETER, .param_index = 119U},
+    {"Timeout Cyc", MENU_TYPE_PARAMETER, .param_index = 120U},
+    {"Cmd Match", MENU_TYPE_PARAMETER, .param_index = 121U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode4_menu[] = {
+    {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode4_input_menu},
+    {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode4_left_speed_menu},
+    {"R Speed", MENU_TYPE_SUBMENU, .submenu = car_mode4_right_speed_menu},
+    {"Speed", MENU_TYPE_SUBMENU, .submenu = car_mode4_speed_menu},
+    {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_mode4_yaw_rate_menu},
+    {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_mode4_yaw_angle_menu},
+    {"Brake", MENU_TYPE_SUBMENU, .submenu = car_mode4_brake_menu},
+    {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_mode4_large_turn_menu},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_input_menu[] = {
+    {"Target m/s", MENU_TYPE_PARAMETER, .param_index = 138U},
+    {"Deadzone", MENU_TYPE_PARAMETER, .param_index = 139U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_left_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 124U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 125U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 126U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_right_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 127U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 128U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 129U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_speed_menu[] = {
+    {"Filter", MENU_TYPE_PARAMETER, .param_index = 130U},
+    {"FF Static", MENU_TYPE_PARAMETER, .param_index = 131U},
+    {"Wheel Limit", MENU_TYPE_PARAMETER, .param_index = 141U},
+    {"I Limit", MENU_TYPE_PARAMETER, .param_index = 142U},
+    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 143U},
+    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 144U},
+    {"Inc Limit", MENU_TYPE_PARAMETER, .param_index = 145U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_yaw_rate_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 132U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 133U},
+    {"Kff", MENU_TYPE_PARAMETER, .param_index = 134U},
+    {"K Turn", MENU_TYPE_PARAMETER, .param_index = 135U},
+    {"Out Limit", MENU_TYPE_PARAMETER, .param_index = 148U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_yaw_angle_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 136U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 137U},
+    {"Stop Angle", MENU_TYPE_PARAMETER, .param_index = 140U},
+    {"Rate Limit", MENU_TYPE_PARAMETER, .param_index = 149U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_brake_menu[] = {
+    {"Static FF", MENU_TYPE_PARAMETER, .param_index = 146U},
+    {"Decel Step", MENU_TYPE_PARAMETER, .param_index = 147U},
+    {"Gz Stop", MENU_TYPE_PARAMETER, .param_index = 150U},
+    {"Wheel Stop", MENU_TYPE_PARAMETER, .param_index = 151U},
+    {"Target Margin", MENU_TYPE_PARAMETER, .param_index = 164U},
+    {"FF Fade", MENU_TYPE_PARAMETER, .param_index = 165U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_large_turn_menu[] = {
+    {"Brake Speed", MENU_TYPE_PARAMETER, .param_index = 152U},
+    {"Brake Target", MENU_TYPE_PARAMETER, .param_index = 153U},
+    {"Brake FF", MENU_TYPE_PARAMETER, .param_index = 154U},
+    {"Brake Rate", MENU_TYPE_PARAMETER, .param_index = 155U},
+    {"Enter Deg", MENU_TYPE_PARAMETER, .param_index = 156U},
+    {"Pivot Exit", MENU_TYPE_PARAMETER, .param_index = 157U},
+    {"Exit Start", MENU_TYPE_PARAMETER, .param_index = 158U},
+    {"Finish Deg", MENU_TYPE_PARAMETER, .param_index = 159U},
+    {"Trigger Cyc", MENU_TYPE_PARAMETER, .param_index = 160U},
+    {"Finish Cyc", MENU_TYPE_PARAMETER, .param_index = 161U},
+    {"Timeout Cyc", MENU_TYPE_PARAMETER, .param_index = 162U},
+    {"Cmd Match", MENU_TYPE_PARAMETER, .param_index = 163U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode5_menu[] = {
+    {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode5_input_menu},
+    {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode5_left_speed_menu},
+    {"R Speed", MENU_TYPE_SUBMENU, .submenu = car_mode5_right_speed_menu},
+    {"Speed", MENU_TYPE_SUBMENU, .submenu = car_mode5_speed_menu},
+    {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_mode5_yaw_rate_menu},
+    {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_mode5_yaw_angle_menu},
+    {"Brake", MENU_TYPE_SUBMENU, .submenu = car_mode5_brake_menu},
+    {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_mode5_large_turn_menu},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode8_input_menu[] = {
+    {"Target m/s", MENU_TYPE_PARAMETER, .param_index = 174U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode8_left_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 166U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 167U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 168U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode8_right_speed_menu[] = {
+    {"Kp", MENU_TYPE_PARAMETER, .param_index = 169U},
+    {"Ki", MENU_TYPE_PARAMETER, .param_index = 170U},
+    {"Kd", MENU_TYPE_PARAMETER, .param_index = 171U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode8_speed_menu[] = {
+    {"Filter", MENU_TYPE_PARAMETER, .param_index = 172U},
+    {"FF Static", MENU_TYPE_PARAMETER, .param_index = 173U},
+    {"I Limit", MENU_TYPE_PARAMETER, .param_index = 175U},
+    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 176U},
+    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 177U},
+    {"Inc Limit", MENU_TYPE_PARAMETER, .param_index = 178U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
+static menu_item_t car_mode8_menu[] = {
+    {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode8_input_menu},
+    {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode8_left_speed_menu},
+    {"R Speed", MENU_TYPE_SUBMENU, .submenu = car_mode8_right_speed_menu},
+    {"Speed", MENU_TYPE_SUBMENU, .submenu = car_mode8_speed_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static menu_item_t car_menu[] = {
-    {"L_Speed", MENU_TYPE_SUBMENU, .submenu = car_left_speed_menu},
-    {"R_Speed", MENU_TYPE_SUBMENU, .submenu = car_right_speed_menu},
-    {"Speed Com", MENU_TYPE_SUBMENU, .submenu = car_speed_common_menu},
-    {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_yaw_menu},
-    {"Yaw Rate", MENU_TYPE_SUBMENU, .submenu = car_gyroz_menu},
+    {"Mode1", MENU_TYPE_SUBMENU, .submenu = car_mode1_menu},
+    {"Mode2", MENU_TYPE_SUBMENU, .submenu = car_mode2_menu},
+    {"Mode4", MENU_TYPE_SUBMENU, .submenu = car_mode4_menu},
+    {"Mode5", MENU_TYPE_SUBMENU, .submenu = car_mode5_menu},
+    {"Mode8", MENU_TYPE_SUBMENU, .submenu = car_mode8_menu},
     {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
@@ -425,20 +770,185 @@ static uint8 menu_build_air_param_menus(void)
 
 void menu_config_init(void)
 {
-    menu_register_param(&car_speed_left_kp, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_left_ki, 0.1f, 0.0f, 10.0f);
-    menu_register_param(&car_speed_left_kd, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_right_kp, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_right_ki, 0.1f, 0.0f, 10.0f);
-    menu_register_param(&car_speed_right_kd, 0.1f, 0.0f, 100.0f);
-    menu_register_param(&car_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&car_speed_ff_static, 10.0f, 0.0f, 3000.0f);
-    menu_register_param(&car_gyroz_kp, 0.01f, 0.0f, 10.0f);
-    menu_register_param(&car_gyroz_ki, 0.001f, 0.0f, 10.0f);
-    menu_register_param(&car_gyroz_kff, 0.01f, 0.0f, 1.0f);
-    menu_register_param(&car_gyroz_k_turn, 0.1f, 0.0f, 10.0f);
-    menu_register_param(&car_yaw_kp, 0.1f, 0.0f, 20.0f);
-    menu_register_param(&car_yaw_kd, 0.1f, 0.0f, 500.0f);
+    menu_register_param(&mode1_speed_left_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode1_speed_left_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode1_speed_left_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode1_speed_right_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode1_speed_right_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode1_speed_right_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode1_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode1_speed_ff_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode1_gyroz_kp, 0.05f, 0.0f, 10.0f);
+    menu_register_param(&mode1_gyroz_ki, 0.002f, 0.0f, 1.0f);
+    menu_register_param(&mode1_gyroz_kff, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode1_gyroz_k_turn, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode1_yaw_kp, 0.25f, 0.0f, 20.0f);
+    menu_register_param(&mode1_yaw_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode1_plan_speed_limit_mps, 0.1f, 0.0f, 5.0f);
+    menu_register_param(&mode1_alignment_stop_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode1_wheel_target_limit, 50.0f, 100.0f, 3000.0f);
+    menu_register_param(&mode1_speed_i_limit, 100.0f, 0.0f, 10000.0f);
+    menu_register_param(&mode1_speed_ff_deadband, 1.0f, 0.0f, 200.0f);
+    menu_register_param(&mode1_speed_ff_transition, 10.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode1_speed_increment_limit, 250.0f, 0.0f, 20000.0f);
+    menu_register_param(&mode1_speed_brake_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode1_speed_decel_step, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode1_gyroz_output_limit, 25.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode1_yaw_rate_limit_dps, 50.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode1_gyroz_stop_target_dps, 0.5f, 0.0f, 20.0f);
+    menu_register_param(&mode1_wheel_stop_speed, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode1_large_turn_brake_speed, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode1_large_turn_brake_target, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode1_large_turn_brake_ff, 50.0f, 0.0f, 5000.0f);
+    menu_register_param(&mode1_large_turn_brake_rate_dps, 25.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode1_large_turn_enter_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode1_large_turn_pivot_exit_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode1_large_turn_exit_start_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode1_large_turn_finish_deg, 0.5f, 0.0f, 30.0f);
+    menu_register_param(&mode1_large_turn_trigger_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode1_large_turn_finish_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode1_large_turn_timeout_cycles, 50.0f, 10.0f, 5000.0f);
+    menu_register_param(&mode1_exit_command_match_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode1_brake_target_margin, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode1_brake_ff_fade_span, 5.0f, 1.0f, 500.0f);
+    menu_register_param(&mode2_speed_left_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode2_speed_left_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode2_speed_left_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode2_speed_right_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode2_speed_right_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode2_speed_right_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode2_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode2_speed_ff_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode2_gyroz_kp, 0.05f, 0.0f, 10.0f);
+    menu_register_param(&mode2_gyroz_ki, 0.002f, 0.0f, 1.0f);
+    menu_register_param(&mode2_gyroz_kff, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode2_gyroz_k_turn, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode2_yaw_kp, 0.25f, 0.0f, 20.0f);
+    menu_register_param(&mode2_yaw_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode2_target_speed_mps, 0.1f, 0.0f, 5.0f);
+    menu_register_param(&mode2_input_deadzone, 10.0f, 0.0f, 500.0f);
+    menu_register_param(&mode2_alignment_stop_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode2_wheel_target_limit, 50.0f, 100.0f, 3000.0f);
+    menu_register_param(&mode2_speed_i_limit, 100.0f, 0.0f, 10000.0f);
+    menu_register_param(&mode2_speed_ff_deadband, 1.0f, 0.0f, 200.0f);
+    menu_register_param(&mode2_speed_ff_transition, 10.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode2_speed_increment_limit, 250.0f, 0.0f, 20000.0f);
+    menu_register_param(&mode2_speed_brake_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode2_speed_decel_step, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode2_gyroz_output_limit, 25.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode2_yaw_rate_limit_dps, 50.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode2_gyroz_stop_target_dps, 0.5f, 0.0f, 20.0f);
+    menu_register_param(&mode2_wheel_stop_speed, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode2_large_turn_brake_speed, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode2_large_turn_brake_target, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode2_large_turn_brake_ff, 50.0f, 0.0f, 5000.0f);
+    menu_register_param(&mode2_large_turn_brake_rate_dps, 25.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode2_large_turn_enter_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode2_large_turn_pivot_exit_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode2_large_turn_exit_start_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode2_large_turn_finish_deg, 0.5f, 0.0f, 30.0f);
+    menu_register_param(&mode2_large_turn_trigger_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode2_large_turn_finish_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode2_large_turn_timeout_cycles, 50.0f, 10.0f, 5000.0f);
+    menu_register_param(&mode2_exit_command_match_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode2_brake_target_margin, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode2_brake_ff_fade_span, 5.0f, 1.0f, 500.0f);
+    menu_register_param(&mode4_speed_left_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode4_speed_left_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode4_speed_left_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode4_speed_right_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode4_speed_right_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode4_speed_right_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode4_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode4_speed_ff_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode4_gyroz_kp, 0.05f, 0.0f, 10.0f);
+    menu_register_param(&mode4_gyroz_ki, 0.002f, 0.0f, 1.0f);
+    menu_register_param(&mode4_gyroz_kff, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode4_gyroz_k_turn, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode4_yaw_kp, 0.25f, 0.0f, 20.0f);
+    menu_register_param(&mode4_yaw_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode4_plan_speed_limit_mps, 0.1f, 0.0f, 5.0f);
+    menu_register_param(&mode4_alignment_stop_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode4_wheel_target_limit, 50.0f, 100.0f, 3000.0f);
+    menu_register_param(&mode4_speed_i_limit, 100.0f, 0.0f, 10000.0f);
+    menu_register_param(&mode4_speed_ff_deadband, 1.0f, 0.0f, 200.0f);
+    menu_register_param(&mode4_speed_ff_transition, 10.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode4_speed_increment_limit, 250.0f, 0.0f, 20000.0f);
+    menu_register_param(&mode4_speed_brake_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode4_speed_decel_step, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode4_gyroz_output_limit, 25.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode4_yaw_rate_limit_dps, 50.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode4_gyroz_stop_target_dps, 0.5f, 0.0f, 20.0f);
+    menu_register_param(&mode4_wheel_stop_speed, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode4_large_turn_brake_speed, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode4_large_turn_brake_target, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode4_large_turn_brake_ff, 50.0f, 0.0f, 5000.0f);
+    menu_register_param(&mode4_large_turn_brake_rate_dps, 25.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode4_large_turn_enter_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode4_large_turn_pivot_exit_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode4_large_turn_exit_start_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode4_large_turn_finish_deg, 0.5f, 0.0f, 30.0f);
+    menu_register_param(&mode4_large_turn_trigger_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode4_large_turn_finish_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode4_large_turn_timeout_cycles, 50.0f, 10.0f, 5000.0f);
+    menu_register_param(&mode4_exit_command_match_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode4_brake_target_margin, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode4_brake_ff_fade_span, 5.0f, 1.0f, 500.0f);
+    menu_register_param(&mode5_speed_left_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode5_speed_left_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode5_speed_left_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode5_speed_right_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode5_speed_right_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode5_speed_right_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode5_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode5_speed_ff_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode5_gyroz_kp, 0.05f, 0.0f, 10.0f);
+    menu_register_param(&mode5_gyroz_ki, 0.002f, 0.0f, 1.0f);
+    menu_register_param(&mode5_gyroz_kff, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode5_gyroz_k_turn, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode5_yaw_kp, 0.25f, 0.0f, 20.0f);
+    menu_register_param(&mode5_yaw_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode5_target_speed_mps, 0.1f, 0.0f, 5.0f);
+    menu_register_param(&mode5_input_deadzone, 10.0f, 0.0f, 500.0f);
+    menu_register_param(&mode5_alignment_stop_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode5_wheel_target_limit, 50.0f, 100.0f, 3000.0f);
+    menu_register_param(&mode5_speed_i_limit, 100.0f, 0.0f, 10000.0f);
+    menu_register_param(&mode5_speed_ff_deadband, 1.0f, 0.0f, 200.0f);
+    menu_register_param(&mode5_speed_ff_transition, 10.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode5_speed_increment_limit, 250.0f, 0.0f, 20000.0f);
+    menu_register_param(&mode5_speed_brake_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode5_speed_decel_step, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode5_gyroz_output_limit, 25.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode5_yaw_rate_limit_dps, 50.0f, 0.0f, 2000.0f);
+    menu_register_param(&mode5_gyroz_stop_target_dps, 0.5f, 0.0f, 20.0f);
+    menu_register_param(&mode5_wheel_stop_speed, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode5_large_turn_brake_speed, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode5_large_turn_brake_target, 5.0f, 0.0f, 500.0f);
+    menu_register_param(&mode5_large_turn_brake_ff, 50.0f, 0.0f, 5000.0f);
+    menu_register_param(&mode5_large_turn_brake_rate_dps, 25.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode5_large_turn_enter_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode5_large_turn_pivot_exit_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode5_large_turn_exit_start_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode5_large_turn_finish_deg, 0.5f, 0.0f, 30.0f);
+    menu_register_param(&mode5_large_turn_trigger_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode5_large_turn_finish_cycles, 1.0f, 1.0f, 100.0f);
+    menu_register_param(&mode5_large_turn_timeout_cycles, 50.0f, 10.0f, 5000.0f);
+    menu_register_param(&mode5_exit_command_match_deg, 5.0f, 0.0f, 180.0f);
+    menu_register_param(&mode5_brake_target_margin, 1.0f, 0.0f, 100.0f);
+    menu_register_param(&mode5_brake_ff_fade_span, 5.0f, 1.0f, 500.0f);
+    menu_register_param(&mode8_speed_left_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode8_speed_left_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode8_speed_left_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode8_speed_right_kp, 0.5f, 0.0f, 50.0f);
+    menu_register_param(&mode8_speed_right_ki, 0.05f, 0.0f, 5.0f);
+    menu_register_param(&mode8_speed_right_kd, 0.05f, 0.0f, 20.0f);
+    menu_register_param(&mode8_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
+    menu_register_param(&mode8_speed_ff_static, 50.0f, 0.0f, 3000.0f);
+    menu_register_param(&mode8_target_speed_mps, 0.1f, 0.0f, 5.0f);
+    menu_register_param(&mode8_speed_i_limit, 100.0f, 0.0f, 10000.0f);
+    menu_register_param(&mode8_speed_ff_deadband, 1.0f, 0.0f, 200.0f);
+    menu_register_param(&mode8_speed_ff_transition, 10.0f, 0.0f, 1000.0f);
+    menu_register_param(&mode8_speed_increment_limit, 250.0f, 0.0f, 20000.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {
