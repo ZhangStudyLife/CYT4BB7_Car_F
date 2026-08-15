@@ -8,7 +8,6 @@
 #define MODE4_LARGE_TURN_NORMAL          (0U)
 #define MODE4_LARGE_TURN_BRAKE           (1U)
 #define MODE4_LARGE_TURN_PIVOT           (2U)
-#define MODE4_LARGE_TURN_EXIT            (3U)
 volatile float mode4_speed_left_kp = 10.80f;
 volatile float mode4_speed_left_ki = 0.52f;
 volatile float mode4_speed_left_kd = 1.00f;
@@ -41,7 +40,7 @@ volatile float mode4_large_turn_brake_target = 20.0f;
 volatile float mode4_large_turn_brake_ff = 1200.0f;
 volatile float mode4_large_turn_brake_rate_dps = 300.0f;
 volatile float mode4_large_turn_enter_deg = 90.0f;
-volatile float mode4_large_turn_pivot_exit_deg = 35.0f;
+volatile float mode4_large_turn_pivot_exit_deg = 45.0f;
 volatile float mode4_large_turn_exit_start_deg = 35.0f;
 volatile float mode4_large_turn_finish_deg = 3.0f;
 volatile float mode4_large_turn_trigger_cycles = 5.0f;
@@ -65,10 +64,8 @@ static uint8 s_mode4_large_turn_state;
 static uint8 s_mode4_large_turn_rearm_required;
 static int8 s_mode4_large_turn_direction;
 static uint16 s_mode4_large_turn_trigger_cycles;
-static uint16 s_mode4_large_turn_finish_cycles;
 static uint16 s_mode4_large_turn_elapsed_cycles;
 static float s_mode4_large_turn_target_yaw_deg;
-static float s_mode4_large_turn_target_speed_mps;
 
 static float mode4_clampf(float value, float min_value, float max_value)
 {
@@ -114,10 +111,8 @@ static void mode4_large_turn_reset(void)
     s_mode4_large_turn_rearm_required = 0U;
     s_mode4_large_turn_direction = 0;
     s_mode4_large_turn_trigger_cycles = 0U;
-    s_mode4_large_turn_finish_cycles = 0U;
     s_mode4_large_turn_elapsed_cycles = 0U;
     s_mode4_large_turn_target_yaw_deg = 0.0f;
-    s_mode4_large_turn_target_speed_mps = 0.0f;
 }
 
 static void mode4_large_turn_set(uint8 state)
@@ -127,69 +122,20 @@ static void mode4_large_turn_set(uint8 state)
     {
         s_mode4_large_turn_direction = 0;
         s_mode4_large_turn_trigger_cycles = 0U;
-        s_mode4_large_turn_finish_cycles = 0U;
         s_mode4_large_turn_elapsed_cycles = 0U;
         s_mode4_large_turn_target_yaw_deg = 0.0f;
-        s_mode4_large_turn_target_speed_mps = 0.0f;
     }
-}
-
-static uint8 mode4_exit_command_matches(float heading_deg,
-                                        uint8 command_active)
-{
-    if (command_active == 0U)
-    {
-        return 0U;
-    }
-    return (fabsf(mode4_wrap_deg(
-                heading_deg - s_mode4_large_turn_target_yaw_deg)) <=
-            mode4_exit_command_match_deg) ? 1U : 0U;
-}
-
-static void mode4_apply_latched_command(float heading_deg,
-                                        uint8 command_active)
-{
-    float yaw_error = mode4_wrap_deg(
-        s_mode4_large_turn_target_yaw_deg - g_car_yaw_feedback_deg);
-    float exit_start_deg = fmaxf(mode4_large_turn_exit_start_deg,
-                                 mode4_large_turn_finish_deg + 0.5f);
-    float alignment = 0.0f;
-
-    if ((s_mode4_large_turn_state == MODE4_LARGE_TURN_EXIT) &&
-        (mode4_exit_command_matches(heading_deg, command_active) != 0U) &&
-        (fabsf(yaw_error) < exit_start_deg))
-    {
-        alignment = (exit_start_deg - fabsf(yaw_error)) /
-                    (exit_start_deg -
-                     mode4_large_turn_finish_deg);
-        alignment = mode4_clampf(alignment, 0.0f, 1.0f);
-    }
-
-    s_mode4_yaw_target_deg = s_mode4_large_turn_target_yaw_deg;
-    g_car_base_speed_command =
-        car_speed_mps_to_encoder_cnt(s_mode4_large_turn_target_speed_mps) *
-        alignment;
 }
 
 static uint8 mode4_command_update(float heading_deg,
                                   float speed_mps,
                                   uint8 command_active)
 {
-    float yaw_error;
-
     if (s_mode4_large_turn_state != MODE4_LARGE_TURN_NORMAL)
     {
-        if ((s_mode4_large_turn_state == MODE4_LARGE_TURN_EXIT) &&
-            (command_active != 0U) &&
-            (mode4_exit_command_matches(heading_deg, command_active) == 0U))
-        {
-            mode4_large_turn_set(MODE4_LARGE_TURN_NORMAL);
-        }
-        else
-        {
-            mode4_apply_latched_command(heading_deg, command_active);
-            return 1U;
-        }
+        s_mode4_yaw_target_deg = s_mode4_large_turn_target_yaw_deg;
+        g_car_base_speed_command = 0.0f;
+        return command_active;
     }
 
     if (s_mode4_large_turn_rearm_required != 0U)
@@ -207,12 +153,7 @@ static uint8 mode4_command_update(float heading_deg,
     }
 
     s_mode4_yaw_target_deg = mode4_wrap_deg(heading_deg);
-    yaw_error = mode4_yaw_error_deg();
-    g_car_base_speed_command =
-        (fabsf(yaw_error) >= mode4_alignment_stop_deg)
-            ? 0.0f
-            : car_speed_mps_to_encoder_cnt(speed_mps) *
-                  cosf(yaw_error * MODE4_DEG_TO_RAD);
+    g_car_base_speed_command = car_speed_mps_to_encoder_cnt(speed_mps);
     return 1U;
 }
 
@@ -275,8 +216,6 @@ static void mode4_large_turn_update(uint8 command_active,
         (fabsf(body_speed) <= mode4_large_turn_brake_speed) ? 1U : 0U;
     uint16 trigger_cycles = mode4_cycle_count(
         mode4_large_turn_trigger_cycles, 1U, 100U);
-    uint16 finish_cycles = mode4_cycle_count(
-        mode4_large_turn_finish_cycles, 1U, 100U);
     uint16 timeout_cycles = mode4_cycle_count(
         mode4_large_turn_timeout_cycles, 10U, 5000U);
 
@@ -307,7 +246,6 @@ static void mode4_large_turn_update(uint8 command_active,
             {
                 s_mode4_large_turn_direction = (yaw_error >= 0.0f) ? 1 : -1;
                 s_mode4_large_turn_target_yaw_deg = s_mode4_yaw_target_deg;
-                s_mode4_large_turn_target_speed_mps = command_speed_mps;
                 s_mode4_large_turn_elapsed_cycles = 0U;
                 s_mode4_large_turn_trigger_cycles = 0U;
                 mode4_large_turn_set((translation_slow != 0U)
@@ -324,7 +262,11 @@ static void mode4_large_turn_update(uint8 command_active,
     {
         if (yaw_error_abs <= mode4_large_turn_pivot_exit_deg)
         {
-            mode4_large_turn_set(MODE4_LARGE_TURN_EXIT);
+            mode4_large_turn_set(MODE4_LARGE_TURN_NORMAL);
+            g_car_base_speed_command =
+                (command_active != 0U)
+                    ? car_speed_mps_to_encoder_cnt(command_speed_mps)
+                    : 0.0f;
         }
         else if (translation_slow != 0U)
         {
@@ -335,20 +277,12 @@ static void mode4_large_turn_update(uint8 command_active,
     {
         if (yaw_error_abs <= mode4_large_turn_pivot_exit_deg)
         {
-            mode4_large_turn_set(MODE4_LARGE_TURN_EXIT);
-        }
-    }
-    else if (yaw_error_abs <= mode4_large_turn_finish_deg)
-    {
-        if (++s_mode4_large_turn_finish_cycles >=
-            finish_cycles)
-        {
             mode4_large_turn_set(MODE4_LARGE_TURN_NORMAL);
+            g_car_base_speed_command =
+                (command_active != 0U)
+                    ? car_speed_mps_to_encoder_cnt(command_speed_mps)
+                    : 0.0f;
         }
-    }
-    else
-    {
-        s_mode4_large_turn_finish_cycles = 0U;
     }
 
     if ((s_mode4_large_turn_state == MODE4_LARGE_TURN_BRAKE) ||
