@@ -586,6 +586,30 @@ void car_mode4_get_diag(car_drive_diag_t *diag)
     diag->yaw_error_deg = mode4_yaw_error_deg();
     diag->gyroz_target_dps = s_mode4_gyroz_target_dps;
     diag->gyroz_output = s_mode4_gyroz_pid.output;
+    diag->yaw_p_term = s_mode4_yaw_pid.p_term;
+    diag->yaw_d_term = s_mode4_yaw_pid.d_term;
+    diag->yaw_output = s_mode4_yaw_pid.output;
+    diag->gyroz_p_term = s_mode4_gyroz_pid.p_term;
+    diag->gyroz_i_term = s_mode4_gyroz_pid.i_term;
+    diag->gyroz_ff_term = s_mode4_gyroz_pid.ff_term;
+    diag->left_speed_p_term = s_mode4_left_speed_pid.p_term;
+    diag->left_speed_i_term = s_mode4_left_speed_pid.i_term;
+    diag->left_speed_d_term = s_mode4_left_speed_pid.d_term;
+    diag->left_speed_ff_term = s_mode4_left_speed_pid.ff_term;
+    diag->left_brake_ff = g_car_speed_left_motor_output -
+                          s_mode4_left_speed_pid.output;
+    diag->right_speed_p_term = s_mode4_right_speed_pid.p_term;
+    diag->right_speed_i_term = s_mode4_right_speed_pid.i_term;
+    diag->right_speed_d_term = s_mode4_right_speed_pid.d_term;
+    diag->right_speed_ff_term = s_mode4_right_speed_pid.ff_term;
+    diag->right_brake_ff = g_car_speed_right_motor_output -
+                           s_mode4_right_speed_pid.output;
+    diag->large_turn_target_yaw_deg = s_mode4_large_turn_target_yaw_deg;
+    diag->large_turn_target_speed_mps = 0.0f;
+    diag->large_turn_trigger_cycles = s_mode4_large_turn_trigger_cycles;
+    diag->large_turn_finish_cycles = 0U;
+    diag->large_turn_elapsed_cycles = s_mode4_large_turn_elapsed_cycles;
+    diag->large_turn_direction = s_mode4_large_turn_direction;
     diag->large_turn_state = s_mode4_large_turn_state;
     diag->large_turn_rearm_required = s_mode4_large_turn_rearm_required;
     diag->speed_brake_active = s_mode4_speed_brake_active;

@@ -6,7 +6,7 @@
 
 #define CAR_IMU_STALE_CONTROL_LIMIT (3U) /* IMU连续未更新的控制周期上限 */
 #define CAR_PIT_TICKS_PER_US        (8U) /* PIT每微秒计数值 */
-#define AIR_RUN_DATA_CRITICAL_COUNT          (15U) /* 飞行关键数据数量 */
+#define AIR_RUN_DATA_CRITICAL_COUNT          (16U) /* 飞行关键数据数量 */
 #define AIR_RUN_DATA_DIAGNOSTIC_LEGACY_COUNT (45U) /* 旧诊断数据数量 */
 #define AIR_RUN_DATA_DIAGNOSTIC_V1_COUNT     (48U) /* V1诊断数据数量 */
 #define AIR_RUN_DATA_DIAGNOSTIC_COUNT        (52U) /* 当前诊断数据数量 */
@@ -95,6 +95,7 @@ static void on_air_data(const float *data, uint8 count)
         g_air_car_plan_strafe_mps = data[12];
         g_air_car_plan_forward_mps = data[13];
         g_air_beacon_lost_flag = data[14];
+        g_air_sync_time_ms = data[15];
         return;
     }
 
