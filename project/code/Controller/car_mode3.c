@@ -17,11 +17,6 @@ void car_mode3_reset(void)
     motor_right_set_speed(0);
 }
 
-void car_mode3_update_25HZ(uint32 now_ms)
-{
-    (void)now_ms;
-}
-
 void car_mode3_update_100HZ(uint32 now_ms)
 {
     (void)now_ms;
