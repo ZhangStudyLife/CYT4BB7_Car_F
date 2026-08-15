@@ -31,12 +31,6 @@ int main(void)
         {
             last_log_control_tick = g_car_realtime_diag.control_tick_count;
             mode = car_mode_get();
-            if ((mode != CAR_MODE_1) && (mode != CAR_MODE_2) &&
-                (mode != CAR_MODE_4) && (mode != CAR_MODE_5))
-            {
-                continue;
-            }
-
             memset(&car_diag, 0, sizeof(car_diag));
             car_mode_get_diag(&car_diag);
 

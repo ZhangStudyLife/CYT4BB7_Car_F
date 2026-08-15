@@ -771,10 +771,6 @@ void wifi_spi_send_poll (void)
         {
             if (0 == gpio_get_level(WIFI_SPI_INT_PIN))
             {
-                wifi_spi_tx_pending = 0;
-                wifi_spi_tx_length = 0;
-                wifi_spi_tx_step = WIFI_SPI_TX_STEP_IDLE;
-                wifi_spi_mutex = WIFI_SPI_IDLE;
                 return;
             }
             temp_packets.head.command = WIFI_SPI_DATA;
