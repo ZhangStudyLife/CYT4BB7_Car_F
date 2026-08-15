@@ -505,7 +505,8 @@ static void mode5_control_update(uint8 command_active,
     int16 left_output;
     int16 right_output;
 
-    mode5_large_turn_update(command_active, command_speed_mps);
+    /* Temporary pure-yaw test: keep the large-turn state machine inactive. */
+    mode5_large_turn_update(0U, command_speed_mps);
     mode5_speed_plan_update();
     gyroz_target = mode5_yaw_control();
     s_mode5_gyroz_target_dps = -gyroz_target;
