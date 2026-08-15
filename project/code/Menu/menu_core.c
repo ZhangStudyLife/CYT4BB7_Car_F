@@ -1508,6 +1508,11 @@ void menu_key_handler(menu_key_t key)
             break;
 
         case MENU_STATE_EXTERNAL_VIEW:
+            if((external_view_config.on_key != NULL) &&
+               (external_view_config.on_key((uint8_t)key) != 0U))
+            {
+                break;
+            }
             if((key == KEY_BACK) &&
                (external_view_config.long_back_only == 0U))
             {

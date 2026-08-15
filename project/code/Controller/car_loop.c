@@ -64,6 +64,9 @@ static imu_realtime_snapshot_t s_car_imu_snapshot = {0};
 static uint16 s_air_comm_beep_tick = 200U;
 static uint8 s_air_menu_runtime_locked = 0U;
 static uint8 s_menu_runtime_was_locked = 0U;
+static volatile uint8 s_car_pwm_test_active = 0U;
+static volatile int16 s_car_pwm_test_left_pwm = 0;
+static volatile int16 s_car_pwm_test_right_pwm = 0;
 
 static void car_loop_update_air_runtime_state(float air_state)
 {
@@ -177,6 +180,40 @@ uint8 car_menu_is_runtime_locked(void)
     return s_air_menu_runtime_locked;
 }
 
+void car_pwm_test_control(uint8 active, int16 left_pwm, int16 right_pwm)
+{
+    if ((active != 0U) && (car_menu_is_runtime_locked() != 0U))
+    {
+        active = 0U;
+    }
+    if (active == 0U)
+    {
+        s_car_pwm_test_active = 0U;
+        left_pwm = 0;
+        right_pwm = 0;
+    }
+    else if (s_car_pwm_test_active == 0U)
+    {
+        s_car_pwm_test_active = 1U;
+        car_mode_reset_control();
+    }
+
+    s_car_pwm_test_left_pwm = left_pwm;
+    s_car_pwm_test_right_pwm = right_pwm;
+    g_car_base_speed_command = 0.0f;
+    g_car_base_speed_target = 0.0f;
+    Left_Target_Speed = 0.0f;
+    Right_Target_Speed = 0.0f;
+    g_car_speed_left_motor_output = (float)left_pwm;
+    g_car_speed_right_motor_output = (float)right_pwm;
+    motor_left_set_speed(left_pwm);
+    motor_right_set_speed(right_pwm);
+    if (active == 0U)
+    {
+        car_mode_reset_control();
+    }
+}
+
 static void car_pit_init_exact(pit_index_enum pit_index, uint32 period_us)
 {
     volatile stc_TCPWM_GRP_CNT_t *counter =
@@ -277,6 +314,9 @@ void car_loop_init(void)
     s_air_comm_beep_tick = 200U;
     s_air_menu_runtime_locked = 0U;
     s_menu_runtime_was_locked = 0U;
+    s_car_pwm_test_active = 0U;
+    s_car_pwm_test_left_pwm = 0;
+    s_car_pwm_test_right_pwm = 0;
     g_car_speed_left_filtered = 0.0f;
     g_car_speed_right_filtered = 0.0f;
     g_car_yaw_feedback_deg = 0.0f;
@@ -365,6 +405,13 @@ void car_loop_motion_100HZ_isr(void)
 
     car_loop_update_encoder_feedback_100HZ();
     negative_pressure_disable();
+    if (s_car_pwm_test_active != 0U)
+    {
+        car_pwm_test_control(1U,
+                             s_car_pwm_test_left_pwm,
+                             s_car_pwm_test_right_pwm);
+        return;
+    }
     if (car_loop_safety_allows_output_100HZ() == 0U)
     {
         car_total_emergency_stop();

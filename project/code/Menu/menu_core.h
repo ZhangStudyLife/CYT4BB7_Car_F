@@ -86,6 +86,7 @@ typedef struct
 {
     void (*render)(void);
     void (*on_exit)(void);
+    uint8_t (*on_key)(uint8_t key);
     uint8_t refresh_periodic;
     uint8_t long_back_only;
     uint8_t allow_runtime_locked;

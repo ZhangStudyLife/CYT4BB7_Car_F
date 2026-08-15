@@ -256,6 +256,7 @@ extern volatile float g_air_car_plan_dist_px;
 extern volatile float g_air_beacon_lost_flag;
 
 uint8 car_menu_is_runtime_locked(void);
+void car_pwm_test_control(uint8 active, int16 left_pwm, int16 right_pwm);
 void car_loop_init(void);
 void car_loop_poll(void);
 void car_loop_imu_1000HZ_isr(void);

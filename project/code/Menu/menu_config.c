@@ -11,6 +11,11 @@ static void diag_air_imu_function(void);
 static void diag_air_attitude_function(void);
 static void diag_air_rc_function(void);
 static void diag_2bl3_status_function(void);
+static void pwm_test_function(void);
+
+static int16 s_pwm_test_left = 0;
+static int16 s_pwm_test_right = 0;
+static uint8 s_pwm_test_state = 0U;
 
 static menu_item_t car_diag_menu[] = {
     {"IMU", MENU_TYPE_DIAG_VIEW, .function = diag_imu_function},
@@ -403,6 +408,7 @@ static menu_item_t car_menu[] = {
     {"Mode4", MENU_TYPE_SUBMENU, .submenu = car_mode4_menu},
     {"Mode5", MENU_TYPE_SUBMENU, .submenu = car_mode5_menu},
     {"Mode8", MENU_TYPE_SUBMENU, .submenu = car_mode8_menu},
+    {"PWM Test", MENU_TYPE_FUNCTION, .function = pwm_test_function},
     {"C_Diag", MENU_TYPE_SUBMENU, .submenu = car_diag_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
@@ -988,6 +994,112 @@ static void diag_begin(void)
 {
     ips114_set_color(UI_COLOR_NORMAL, UI_COLOR_BG);
     ips114_set_font(UI_FONT_NORMAL);
+}
+
+static void pwm_test_render(void)
+{
+    char text[32];
+    uint8 selected_right = s_pwm_test_state & 1U;
+    uint8 editing = (s_pwm_test_state >= 2U) ? 1U : 0U;
+
+    diag_begin();
+    diag_show_line(0U, "PWM Test");
+    snprintf(text, sizeof(text), "Left :%6d", (int)s_pwm_test_left);
+    menu_show_text_line(1U, text,
+                        (selected_right == 0U) ?
+                        (editing != 0U ? UI_COLOR_EDITING : UI_COLOR_SELECTED) :
+                        UI_COLOR_NORMAL);
+    snprintf(text, sizeof(text), "Right:%6d", (int)s_pwm_test_right);
+    menu_show_text_line(2U, text,
+                        (selected_right != 0U) ?
+                        (editing != 0U ? UI_COLOR_EDITING : UI_COLOR_SELECTED) :
+                        UI_COLOR_NORMAL);
+    diag_show_line(3U, (selected_right != 0U) ?
+                   "Selected: Right" : "Selected: Left");
+    diag_show_line(4U, (editing != 0U) ?
+                   "State: Edit" : "State: Select");
+    diag_clear_lines(5U, 7U);
+}
+
+static uint8_t pwm_test_on_key(uint8_t key)
+{
+    int16 *pwm;
+    int32 value;
+
+    switch ((menu_key_t)key)
+    {
+        case KEY_ENTER:
+            if (s_pwm_test_state < 2U)
+            {
+                s_pwm_test_state += 2U;
+                pwm_test_render();
+            }
+            return 1U;
+
+        case KEY_BACK:
+            if (s_pwm_test_state >= 2U)
+            {
+                s_pwm_test_state -= 2U;
+                pwm_test_render();
+                return 1U;
+            }
+            return 0U;
+
+        case KEY_UP:
+        case KEY_DOWN:
+            if (s_pwm_test_state < 2U)
+            {
+                s_pwm_test_state = (key == (uint8_t)KEY_DOWN) ? 1U : 0U;
+            }
+            else
+            {
+                pwm = ((s_pwm_test_state & 1U) != 0U) ?
+                      &s_pwm_test_right : &s_pwm_test_left;
+                value = (int32)(*pwm) +
+                        ((key == (uint8_t)KEY_UP) ? 500 : -500);
+                if (value > 5000)
+                {
+                    value = 5000;
+                }
+                else if (value < -5000)
+                {
+                    value = -5000;
+                }
+                *pwm = (int16)value;
+                car_pwm_test_control(1U, s_pwm_test_left, s_pwm_test_right);
+            }
+            pwm_test_render();
+            return 1U;
+
+        default:
+            return 0U;
+    }
+}
+
+static void pwm_test_exit(void)
+{
+    car_pwm_test_control(0U, 0, 0);
+}
+
+static void pwm_test_function(void)
+{
+    static const menu_external_view_config_t config = {
+        .render = pwm_test_render,
+        .on_exit = pwm_test_exit,
+        .on_key = pwm_test_on_key,
+        .refresh_periodic = 1U,
+        .long_back_only = 0U,
+        .allow_runtime_locked = 0U
+    };
+
+    s_pwm_test_left = 0;
+    s_pwm_test_right = 0;
+    s_pwm_test_state = 0U;
+    car_pwm_test_control(1U, 0, 0);
+    if (menu_enter_external_view(&config) != 0U)
+    {
+        car_pwm_test_control(0U, 0, 0);
+    }
 }
 
 static void diag_imu_function(void)
