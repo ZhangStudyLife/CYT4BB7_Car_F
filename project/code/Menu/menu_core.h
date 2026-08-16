@@ -23,7 +23,7 @@ void menu_runtime_resume(void);
 // 菜单系统配置
 #define MENU_MAX_ITEMS          32          // 每个菜单最大选项数
 #define MENU_MAX_DEPTH          8           // 最大菜单嵌套层级
-#define MENU_MAX_PARAMS         179         // 最大参数数量
+#define MENU_MAX_PARAMS         181         // 最大参数数量
 #define MENU_MAX_VISIBLE_LINES  8          // 屏幕最大可显示菜单行数
 
 // UI显示配置 (纯净设计，无状态栏标题栏)

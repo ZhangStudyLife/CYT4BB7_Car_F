@@ -28,6 +28,8 @@ extern volatile float g_car_speed_left_motor_output;
 extern volatile float g_car_speed_right_motor_output;
 extern volatile float Left_Target_Speed;
 extern volatile float Right_Target_Speed;
+extern volatile float mode4_fuya_enable;
+extern volatile float mode4_fuya_target;
 extern volatile float mode1_speed_left_kp;
 extern volatile float mode1_speed_left_ki;
 extern volatile float mode1_speed_left_kd;

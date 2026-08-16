@@ -26,6 +26,8 @@ volatile float g_car_speed_left_motor_output = 0.0f;
 volatile float g_car_speed_right_motor_output = 0.0f;
 volatile float Left_Target_Speed = 0.0f;
 volatile float Right_Target_Speed = 0.0f;
+volatile float mode4_fuya_enable = 1.0f;
+volatile float mode4_fuya_target = 5000.0f;
 
 volatile float g_air_tof_fused_height_mm = 0.0f;
 volatile float g_air_euler_roll = 0.0f;
@@ -423,8 +425,9 @@ void car_loop_motion_100HZ_isr(void)
     {
         car_total_emergency_stop();
     }
-    else if (car_mode_get() == CAR_MODE_4)
+    else if ((car_mode_get() == CAR_MODE_4) && (mode4_fuya_enable >= 0.5f))
     {
+        uint16 target = (uint16)mode4_fuya_target;
         uint16 throttle;
 
         if (negative_pressure_is_enabled() == 0U)
@@ -433,15 +436,17 @@ void car_loop_motion_100HZ_isr(void)
             negative_pressure_enable();
         }
         throttle = (uint16)(2000U +
-                   ((uint32)s_mode4_negative_pressure_ramp_tick * 3000U) / 300U);
+                   ((uint32)s_mode4_negative_pressure_ramp_tick *
+                    (target - 2000U)) / 200U);
         negative_pressure_set_throttle(throttle, throttle);
-        if (s_mode4_negative_pressure_ramp_tick < 300U)
+        if (s_mode4_negative_pressure_ramp_tick < 200U)
         {
             s_mode4_negative_pressure_ramp_tick++;
         }
     }
     else
     {
+        s_mode4_negative_pressure_ramp_tick = 0U;
         negative_pressure_disable();
     }
 }

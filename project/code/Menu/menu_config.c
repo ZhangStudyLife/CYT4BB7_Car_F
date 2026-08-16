@@ -1,6 +1,6 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (179U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (181U)
 
 static void diag_imu_function(void);
 static void diag_encoder_function(void);
@@ -267,6 +267,12 @@ static menu_item_t car_mode4_large_turn_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
+static menu_item_t car_mode4_fuya_menu[] = {
+    {"Enable", MENU_TYPE_PARAMETER, .param_index = 179U},
+    {"Target", MENU_TYPE_PARAMETER, .param_index = 180U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
 static menu_item_t car_mode4_menu[] = {
     {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode4_input_menu},
     {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode4_left_speed_menu},
@@ -276,6 +282,7 @@ static menu_item_t car_mode4_menu[] = {
     {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_mode4_yaw_angle_menu},
     {"Brake", MENU_TYPE_SUBMENU, .submenu = car_mode4_brake_menu},
     {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_mode4_large_turn_menu},
+    {"Fuya", MENU_TYPE_SUBMENU, .submenu = car_mode4_fuya_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -953,6 +960,8 @@ void menu_config_init(void)
     menu_register_param(&mode8_speed_ff_deadband, 1.0f, 0.0f, 200.0f);
     menu_register_param(&mode8_speed_ff_transition, 10.0f, 0.0f, 1000.0f);
     menu_register_param(&mode8_speed_increment_limit, 250.0f, 0.0f, 20000.0f);
+    menu_register_param(&mode4_fuya_enable, 1.0f, 0.0f, 1.0f);
+    menu_register_param(&mode4_fuya_target, 500.0f, 2000.0f, 6000.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {
