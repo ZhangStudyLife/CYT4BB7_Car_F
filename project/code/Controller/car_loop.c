@@ -67,6 +67,7 @@ static uint8 s_menu_runtime_was_locked = 0U;
 static volatile uint8 s_car_pwm_test_active = 0U;
 static volatile int16 s_car_pwm_test_left_pwm = 0;
 static volatile int16 s_car_pwm_test_right_pwm = 0;
+static uint16 s_mode4_negative_pressure_ramp_tick = 0U;
 
 static void car_loop_update_air_runtime_state(float air_state)
 {
@@ -405,9 +406,9 @@ void car_loop_motion_100HZ_isr(void)
     }
 
     car_loop_update_encoder_feedback_100HZ();
-    negative_pressure_disable();
     if (s_car_pwm_test_active != 0U)
     {
+        negative_pressure_disable();
         car_pwm_test_control(1U,
                              s_car_pwm_test_left_pwm,
                              s_car_pwm_test_right_pwm);
@@ -421,6 +422,27 @@ void car_loop_motion_100HZ_isr(void)
     if (car_mode_update_100HZ(s_system_time_ms) == 0U)
     {
         car_total_emergency_stop();
+    }
+    else if (car_mode_get() == CAR_MODE_4)
+    {
+        uint16 throttle;
+
+        if (negative_pressure_is_enabled() == 0U)
+        {
+            s_mode4_negative_pressure_ramp_tick = 0U;
+            negative_pressure_enable();
+        }
+        throttle = (uint16)(2000U +
+                   ((uint32)s_mode4_negative_pressure_ramp_tick * 3000U) / 300U);
+        negative_pressure_set_throttle(throttle, throttle);
+        if (s_mode4_negative_pressure_ramp_tick < 300U)
+        {
+            s_mode4_negative_pressure_ramp_tick++;
+        }
+    }
+    else
+    {
+        negative_pressure_disable();
     }
 }
 
