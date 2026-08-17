@@ -415,60 +415,54 @@ static menu_item_t car_menu[] = {
 
 static menu_item_t core1_image_param_menu[] = {
     {"Camera", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Beacon", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Car Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Beacon Detect", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Beacon Track", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp Detect", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp Track", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp Recover", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Near Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Tracking", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static const char * const s_core1_param_group_names[] = {
-    "Core1 Camera",
-    "Core1 Beacon",
-    "Core1 Car Lamp",
-    "Core1 Near Lamp",
-    "Core1 Tracking"
+    "Down Camera",
+    "Down Beacon Detect",
+    "Down Beacon Track",
+    "Down Lamp Detect",
+    "Down Lamp Track",
+    "Down Lamp Recover",
+    "Down Near Lamp"
 };
 
 typedef char core1_param_group_count_must_match[
     ((sizeof(s_core1_param_group_names) /
-      sizeof(s_core1_param_group_names[0])) == 5U) ? 1 : -1];
+      sizeof(s_core1_param_group_names[0])) == 7U) ? 1 : -1];
 
 static menu_item_t bl3_image_param_menu[] = {
-    {"Stream", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Camera", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Threshold", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Beacon Area", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Car Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Reflection", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Weak Center", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Shape Filter", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Vertical Top", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Saturated Top", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Background", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Beacon Detect", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Beacon Track", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp Detect", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp Track", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Near Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Tracking", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Calibration", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static const char * const s_bl3_param_group_names[] = {
-    "2BL3 Stream",
-    "2BL3 Threshold",
-    "2BL3 Beacon Area",
-    "2BL3 Car Lamp",
-    "2BL3 Reflection",
-    "2BL3 Weak Center",
-    "2BL3 Shape Filter",
-    "2BL3 Vertical Top",
-    "2BL3 Saturated Top",
-    "2BL3 Background",
-    "2BL3 Near Lamp",
-    "2BL3 Tracking",
-    "2BL3 Calibration"
+    "FR Camera",
+    "FR Threshold",
+    "FR Beacon Detect",
+    "FR Beacon Track",
+    "FR Lamp Detect",
+    "FR Lamp Track",
+    "FR Near Lamp",
+    "FR Calibration"
 };
 
 typedef char bl3_param_group_count_must_match[
-    ((sizeof(s_bl3_param_group_names) / sizeof(s_bl3_param_group_names[0])) == 13U) ? 1 : -1];
+    ((sizeof(s_bl3_param_group_names) / sizeof(s_bl3_param_group_names[0])) == 8U) ? 1 : -1];
 
 static menu_item_t air_param_menu[] = {
     {"Basic", MENU_TYPE_SUBMENU, .submenu = NULL},
@@ -482,8 +476,8 @@ static menu_item_t air_param_menu[] = {
     {"Mode7 Vel", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode8 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Mode8 Vel", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Core1 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"2BL3 Img", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Down Camera", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Front / Rear", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -647,13 +641,13 @@ static uint8 menu_build_air_param_menus(void)
 
     for(group = 0U; group < AIR_PARAM_MENU_COUNT; group++)
     {
-        if(strcmp(air_param_menu[group].name, "Core1 Img") == 0)
+        if(strcmp(air_param_menu[group].name, "Down Camera") == 0)
         {
             s_air_group_menus[group] = core1_image_param_menu;
             core1_top_found = 1U;
             continue;
         }
-        if(strcmp(air_param_menu[group].name, "2BL3 Img") == 0)
+        if(strcmp(air_param_menu[group].name, "Front / Rear") == 0)
         {
             s_air_group_menus[group] = bl3_image_param_menu;
             bl3_top_found = 1U;

@@ -140,6 +140,17 @@ static const char * const s_air_full_ring_names[] =
     MENU_AIR_BL3_RING_OUT_NAME
 };
 
+/* 全量同步时必须保持左值不大于右值的新增参数对。 */
+static const char * const s_air_full_ordered_pair_names[][2] =
+{
+    {"c1_recover_min_core", "c1_recover_max_core"},
+    {"bl3_angle_min_len_ratio", "bl3_angle_max_len_ratio"},
+    {"bl3_angle_min_width_ratio", "bl3_angle_max_width_ratio"},
+    {"bl3_b0_reacquire_min_ratio", "bl3_b0_reacquire_max_ratio"},
+    {"bl3_b0_direct_min_ratio", "bl3_b0_direct_max_ratio"},
+    {"bl3_center_lower_hard_min", "bl3_center_lower_min_area"}
+};
+
 static const menu_air_param_definition_t s_air_param_definitions[] =
 {
     MENU_AIR_PARAM(gyro_dt, 0.001f, 0.0001f, 0.0005f, 0.002f, "Basic"),
@@ -246,99 +257,155 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_PARAM(mode8_vel_y_kff, 0.0f, 0.001f, 0.0f, 1.0f, "Mode8 Vel"),
     MENU_AIR_PARAM(mode8_vel_y_i_limit, 3.0f, 0.1f, 0.0f, 20.0f, "Mode8 Vel"),
     MENU_AIR_PARAM(mode8_vel_y_d_lpf, 10.0f, 0.5f, 0.0f, 50.0f, "Mode8 Vel"),
-    MENU_AIR_OPTIONAL_PARAM(c1_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Core1 Camera"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(c1_exp_time, 400.0f, 10.0f, 1.0f, 636.0f, "Core1 Camera"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_exp_time, 500.0f, 10.0f, 1.0f, 636.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_ENUM_PARAM(c1_screen_mode, 0.0f, 1.0f, 0.0f, 4.0f, "Core1 Camera",
+    MENU_AIR_OPTIONAL_PARAM(c1_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Down Camera"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "FR Threshold"),
+    MENU_AIR_OPTIONAL_PARAM(c1_exp_time, 400.0f, 10.0f, 1.0f, 636.0f, "Down Camera"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_exp_time, 500.0f, 10.0f, 1.0f, 636.0f, "FR Calibration"),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(c1_screen_mode, 0.0f, 1.0f, 0.0f, 4.0f, "Down Camera",
                                  s_air_screen_mode_labels),
-    MENU_AIR_OPTIONAL_PARAM(c1_beacon_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Core1 Beacon"),
-    MENU_AIR_OPTIONAL_PARAM(c1_edge_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Core1 Beacon"),
-    MENU_AIR_OPTIONAL_PARAM(c1_edge_thr, 100.0f, 1.0f, 0.0f, 255.0f, "Core1 Beacon"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_min, 24.0f, 1.0f, 0.0f, 1000.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_max, 1200.0f, 50.0f, 100.0f, 5000.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_elong, 1.6f, 0.1f, 1.0f, 20.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_len, 8.0f, 0.5f, 1.0f, 100.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_pad, 8.0f, 0.5f, 0.0f, 50.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_min, 45.0f, 2.0f, 0.0f, 2000.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_iso_min, 18.0f, 1.0f, 0.0f, 2000.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_bg, 40.0f, 1.0f, 0.0f, 255.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_match_dist, 18.0f, 0.5f, 0.0f, 100.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_gate_dist, 24.0f, 1.0f, 0.0f, 100.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_new_dist, 36.0f, 2.0f, 0.0f, 100.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_confirm, 2.0f, 1.0f, 1.0f, 20.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_misses, 3.0f, 1.0f, 0.0f, 20.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "Core1 Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(c1_beacon_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Down Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_edge_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Down Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_edge_thr, 100.0f, 1.0f, 0.0f, 255.0f, "Down Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "Down Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_min, 24.0f, 1.0f, 0.0f, 1000.0f, "Down Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_max, 1200.0f, 50.0f, 100.0f, 5000.0f, "Down Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_elong, 1.6f, 0.1f, 1.0f, 20.0f, "Down Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_len, 8.0f, 0.5f, 1.0f, 100.0f, "Down Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(c1_near_pad, 8.0f, 1.0f, 0.0f, 50.0f, "Down Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_near_min, 45.0f, 2.0f, 0.0f, 2000.0f, "Down Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_near_iso_min, 18.0f, 1.0f, 0.0f, 2000.0f, "Down Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_near_bg, 40.0f, 1.0f, 0.0f, 255.0f, "Down Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_match_dist, 18.0f, 0.5f, 0.0f, 100.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gate_dist, 24.0f, 1.0f, 0.0f, 100.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_new_dist, 36.0f, 2.0f, 0.0f, 100.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_confirm, 2.0f, 1.0f, 1.0f, 20.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_misses, 3.0f, 1.0f, 0.0f, 20.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "Down Beacon Track"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_edge_thr, 80.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_track_thr, 105.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_thr, 150.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_y, 64.0f, 2.0f, 0.0f, 224.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_bridge_gap, 4.0f, 0.25f, 0.0f, 30.0f, "2BL3 Threshold"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_edge_thr, 80.0f, 1.0f, 0.0f, 255.0f, "FR Threshold"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_track_thr, 105.0f, 1.0f, 0.0f, 255.0f, "FR Threshold"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "FR Threshold"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_thr, 150.0f, 1.0f, 0.0f, 255.0f, "FR Threshold"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_y, 64.0f, 2.0f, 0.0f, 224.0f, "FR Threshold"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_bridge_gap, 4.0f, 0.25f, 0.0f, 30.0f, "FR Threshold"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_min, 6.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_edge_min, 2.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_top_max, 50.0f, 2.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_edge_max, 60.0f, 2.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_min, 6.0f, 1.0f, 0.0f, 1000.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_edge_min, 2.0f, 1.0f, 0.0f, 1000.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_top_max, 50.0f, 2.0f, 0.0f, 1000.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_edge_max, 60.0f, 2.0f, 0.0f, 1000.0f, "FR Beacon Detect"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_min, 24.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_max, 230.0f, 10.0f, 50.0f, 5000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_elong, 1.6f, 0.1f, 1.0f, 20.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_back_len, 12.0f, 0.5f, 0.0f, 100.0f, "2BL3 Car Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_min, 24.0f, 1.0f, 0.0f, 1000.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_max, 230.0f, 10.0f, 50.0f, 5000.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_elong, 1.6f, 0.1f, 1.0f, 20.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_back_len, 12.0f, 0.5f, 0.0f, 100.0f, "FR Lamp Detect"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_iso_gray, 120.0f, 1.0f, 0.0f, 255.0f, "2BL3 Background"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_iso_bg, 2.0f, 1.0f, 0.0f, 255.0f, "2BL3 Background"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_ring_in, 3.0f, 0.25f, 0.0f, 50.0f, "2BL3 Background"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_ring_out, 8.0f, 0.5f, 0.0f, 50.0f, "2BL3 Background"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_iso_gray, 120.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_iso_bg, 2.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_ring_in, 3.0f, 0.25f, 0.0f, 50.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_ring_out, 8.0f, 0.5f, 0.0f, 50.0f, "FR Beacon Detect"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_pad, 8.0f, 0.5f, 0.0f, 50.0f, "2BL3 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_min, 21.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_gray, 150.0f, 1.0f, 0.0f, 255.0f, "2BL3 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_bg, 20.0f, 1.0f, 0.0f, 255.0f, "2BL3 Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_pad, 8.0f, 0.5f, 0.0f, 50.0f, "FR Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_min, 21.0f, 1.0f, 0.0f, 1000.0f, "FR Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_gray, 150.0f, 1.0f, 0.0f, 255.0f, "FR Near Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_bg, 20.0f, 1.0f, 0.0f, 255.0f, "FR Near Lamp"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_match_dist, 18.0f, 0.5f, 0.0f, 100.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_gate_dist, 24.0f, 1.0f, 0.0f, 100.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_new_dist, 36.0f, 2.0f, 0.0f, 100.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_confirm, 2.0f, 1.0f, 1.0f, 20.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_misses, 3.0f, 1.0f, 0.0f, 20.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "2BL3 Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_match_dist, 18.0f, 0.5f, 0.0f, 100.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gate_dist, 24.0f, 1.0f, 0.0f, 100.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_new_dist, 36.0f, 2.0f, 0.0f, 100.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_confirm, 2.0f, 1.0f, 1.0f, 20.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_misses, 3.0f, 1.0f, 0.0f, 20.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "FR Beacon Track"),
 
     MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_stream_mode, 0.0f, 1.0f, 0.0f, 3.0f,
-                                 "2BL3 Stream", s_air_bl3_stream_mode_labels),
+                                 "FR Camera", s_air_bl3_stream_mode_labels),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_width, 3.5f, 0.1f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_width, 2.7f, 0.1f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_elong, 3.5f, 0.1f, 1.0f, 20.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_upper_area, 120.0f, 5.0f, 0.0f, 2000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_upper_len, 22.0f, 1.0f, 0.0f, 100.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_upper_width, 5.5f, 0.25f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_y, 20.0f, 0.5f, 0.0f, 224.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_area, 36.0f, 2.0f, 0.0f, 1000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_len, 14.0f, 0.5f, 0.0f, 100.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_width, 3.0f, 0.1f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_elong, 3.0f, 0.1f, 1.0f, 20.0f, "2BL3 Car Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_width, 3.5f, 0.1f, 0.0f, 50.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_width, 2.7f, 0.1f, 0.0f, 50.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_elong, 3.5f, 0.1f, 1.0f, 20.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_upper_area, 120.0f, 5.0f, 0.0f, 2000.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_upper_len, 22.0f, 1.0f, 0.0f, 100.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_upper_width, 5.5f, 0.25f, 0.0f, 50.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_y, 20.0f, 0.5f, 0.0f, 224.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_area, 36.0f, 2.0f, 0.0f, 1000.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_len, 14.0f, 0.5f, 0.0f, 100.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_width, 3.0f, 0.1f, 0.0f, 50.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_elong, 3.0f, 0.1f, 1.0f, 20.0f, "FR Lamp Detect"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_elong, 1.8f, 0.1f, 1.0f, 20.0f, "2BL3 Reflection"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_gray, 200.0f, 1.0f, 0.0f, 255.0f, "2BL3 Reflection"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_linear_elong, 6.0f, 0.25f, 1.0f, 20.0f, "2BL3 Reflection"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_elong, 1.8f, 0.1f, 1.0f, 20.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_gray, 200.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_linear_elong, 6.0f, 0.25f, 1.0f, 20.0f, "FR Beacon Detect"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_thr, 70.0f, 1.0f, 0.0f, 255.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_min, 3.0f, 1.0f, 0.0f, 500.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_max, 12.0f, 0.5f, 0.0f, 500.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_gray, 90.0f, 1.0f, 0.0f, 255.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_bg, 10.0f, 1.0f, 0.0f, 255.0f, "2BL3 Weak Center"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_thr, 70.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_min, 3.0f, 1.0f, 0.0f, 500.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_max, 12.0f, 1.0f, 0.0f, 500.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_gray, 90.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_bg, 10.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Detect"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_min, 6.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Shape Filter"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_ratio, 2.0f, 0.1f, 1.0f, 20.0f, "2BL3 Shape Filter"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_fill, 60.0f, 1.0f, 0.0f, 100.0f, "2BL3 Shape Filter"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_s_fill, 50.0f, 1.0f, 0.0f, 100.0f, "2BL3 Shape Filter"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_min, 6.0f, 1.0f, 0.0f, 1000.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_ratio, 2.0f, 0.1f, 1.0f, 20.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_fill, 60.0f, 1.0f, 0.0f, 100.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_s_fill, 50.0f, 1.0f, 0.0f, 100.0f, "FR Beacon Detect"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_top_v_elong, 3.0f, 0.1f, 1.0f, 20.0f, "2BL3 Vertical Top"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_sat_t_gray, 240.0f, 1.0f, 0.0f, 255.0f, "2BL3 Saturated Top"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_top_v_elong, 3.0f, 0.1f, 1.0f, 20.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_sat_t_gray, 240.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Detect"),
+
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_edge_misses, 3.0f, 1.0f, 0.0f, 255.0f, "Down Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_center_misses, 24.0f, 1.0f, 0.0f, 255.0f, "Down Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_temp_core_pad, 2.0f, 1.0f, 0.0f, 224.0f, "Down Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_temp_takeover_pad, 10.0f, 1.0f, 0.0f, 224.0f, "Down Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_temp_min_bright, 3.0f, 1.0f, 0.0f, 22560.0f, "Down Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_output_env_pad, 10.0f, 1.0f, 0.0f, 224.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_group_angle_max, 25.0f, 1.0f, 0.1f, 180.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_group_minor_pad, 2.0f, 0.5f, 0.0f, 224.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_group_major_gap, 4.0f, 0.5f, 0.1f, 224.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_recover_min_core, 3.0f, 1.0f, 0.0f, 22560.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_recover_max_core, 18.0f, 1.0f, 0.0f, 22560.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_recover_connect_thr, 150.0f, 1.0f, 0.0f, 255.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_recover_track_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_recover_bridge_thr, 80.0f, 1.0f, 0.0f, 255.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_recover_support_pad, 3.0f, 0.5f, 0.0f, 224.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_support_pad, 1.0f, 1.0f, 0.0f, 224.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gray_support_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_compact_edge_margin, 2.0f, 1.0f, 0.0f, 120.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_compact_max_major, 10.0f, 0.5f, 0.0f, 224.0f, "Down Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_beacon_coast, 4.0f, 1.0f, 0.0f, 255.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_beacon_corner_margin, 12.0f, 1.0f, 0.0f, 120.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_near_beacon_confirm, 3.0f, 1.0f, 1.0f, 255.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_near_beacon_misses, 2.0f, 1.0f, 0.0f, 255.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_edge_beacon_confirm, 2.0f, 1.0f, 1.0f, 255.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_edge_beacon_radius, 6.0f, 1.0f, 0.0f, 224.0f, "Down Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(c1_edge_beacon_peak, 170.0f, 1.0f, 0.0f, 255.0f, "Down Beacon Track"),
+
+    MENU_AIR_OPTIONAL_PARAM(bl3_temp_min_bright, 3.0f, 1.0f, 0.0f, 22560.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_frag_min_area, 5.0f, 1.0f, 0.0f, 22560.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_frag_min_len, 3.5f, 0.5f, 0.0f, 224.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_frag_min_width, 1.5f, 0.1f, 0.0f, 224.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_frag_pad, 4.0f, 0.5f, 0.0f, 224.0f, "FR Lamp Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_frag_valid_limit, 2.0f, 1.0f, 1.0f, 11.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_takeover_confirm, 2.0f, 1.0f, 1.0f, 255.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_pending_angle_delta, 15.0f, 1.0f, 0.0f, 180.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_track_angle_delta, 30.0f, 1.0f, 0.0f, 180.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_angle_min_elong, 3.5f, 0.1f, 0.0f, 10.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_angle_min_len, 12.0f, 0.5f, 0.0f, 224.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_angle_min_len_ratio, 0.70f, 0.05f, 0.0f, 10.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_angle_max_len_ratio, 1.50f, 0.05f, 0.0f, 10.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_angle_min_width_ratio, 0.60f, 0.05f, 0.0f, 10.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_angle_max_width_ratio, 1.60f, 0.05f, 0.0f, 10.0f, "FR Lamp Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_switch_confirm, 2.0f, 1.0f, 1.0f, 255.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_reacquire_confirm, 2.0f, 1.0f, 1.0f, 255.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_reacquire_min_area, 8.5f, 0.5f, 0.0f, 22560.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_reacquire_min_ratio, 0.50f, 0.05f, 0.0f, 10.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_reacquire_max_ratio, 2.00f, 0.05f, 0.0f, 10.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_direct_close_dist, 6.0f, 0.5f, 0.0f, 224.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_direct_min_ratio, 0.25f, 0.05f, 0.0f, 10.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_b0_direct_max_ratio, 4.00f, 0.05f, 0.0f, 10.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_center_lower_min_area, 12.5f, 0.5f, 0.0f, 22560.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_center_lower_hard_min, 8.0f, 0.5f, 0.0f, 22560.0f, "FR Beacon Detect"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_reacquire_hits, 2.0f, 1.0f, 1.0f, 255.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_track_bootstrap_gray, 70.0f, 1.0f, 0.0f, 255.0f, "FR Beacon Track"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_track_min_area_ratio, 0.25f, 0.05f, 0.0f, 10.0f, "FR Beacon Track"),
 
     MENU_AIR_PARAM(mode1_img_kp, 0.28f, 0.01f, 0.0f, 1.0f, "Mode1 Img"),
     MENU_AIR_PARAM(mode1_img_kd, 0.18f, 0.01f, 0.0f, 1.0f, "Mode1 Img"),
@@ -904,6 +971,71 @@ static uint8 menu_air_full_ring_values_are_valid(float ring_in, float ring_out)
     return (ring_in < ring_out) ? 1U : 0U;
 }
 
+static uint8 menu_air_full_ordered_pairs_are_valid(void)
+{
+    uint8 pair;
+    uint16 indices[2];
+
+    for(pair = 0U; pair < MENU_AIR_ARRAY_COUNT(s_air_full_ordered_pair_names); pair++)
+    {
+        if(menu_air_full_group_get_indices(s_air_full_ordered_pair_names[pair],
+                                           2U,
+                                           indices) == 0U)
+        {
+            continue;
+        }
+
+        if((menu_air_full_group_confirmed_is_valid(indices, 2U) == 0U) ||
+           (s_air_confirmed_values[indices[0]] >
+            s_air_confirmed_values[indices[1]]) ||
+           (*(s_air_params[indices[0]].variable) >
+            *(s_air_params[indices[1]].variable)))
+        {
+            return 0U;
+        }
+    }
+
+    return 1U;
+}
+
+static uint8 menu_air_full_ordered_pair_candidate_is_safe(uint16 candidate_index)
+{
+    uint8 pair;
+    uint16 indices[2];
+    float minimum;
+    float maximum;
+
+    for(pair = 0U; pair < MENU_AIR_ARRAY_COUNT(s_air_full_ordered_pair_names); pair++)
+    {
+        if((menu_air_full_group_get_indices(s_air_full_ordered_pair_names[pair],
+                                            2U,
+                                            indices) == 0U) ||
+           ((candidate_index != indices[0]) && (candidate_index != indices[1])))
+        {
+            continue;
+        }
+        if(menu_air_full_group_confirmed_is_valid(indices, 2U) == 0U)
+        {
+            return 0U;
+        }
+
+        minimum = s_air_confirmed_values[indices[0]];
+        maximum = s_air_confirmed_values[indices[1]];
+        if(candidate_index == indices[0])
+        {
+            minimum = *(s_air_params[candidate_index].variable);
+        }
+        else
+        {
+            maximum = *(s_air_params[candidate_index].variable);
+        }
+
+        return (minimum <= maximum) ? 1U : 0U;
+    }
+
+    return 1U;
+}
+
 static uint8 menu_air_full_constraints_are_valid(void)
 {
     uint16 lamp_indices[MENU_AIR_ARRAY_COUNT(s_air_full_lamp_names)];
@@ -945,7 +1077,7 @@ static uint8 menu_air_full_constraints_are_valid(void)
         }
     }
 
-    return 1U;
+    return menu_air_full_ordered_pairs_are_valid();
 }
 
 static uint8 menu_air_full_candidate_is_safe(uint16 candidate_index)
@@ -1016,7 +1148,7 @@ static uint8 menu_air_full_candidate_is_safe(uint16 candidate_index)
         return menu_air_full_ring_values_are_valid(ring_in, ring_out);
     }
 
-    return 1U;
+    return menu_air_full_ordered_pair_candidate_is_safe(candidate_index);
 }
 
 /* 全量启动覆盖关闭时，仅从启动槽恢复核1屏幕模式。 */
