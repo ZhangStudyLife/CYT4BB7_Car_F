@@ -728,7 +728,11 @@ static uint8 menu_build_air_param_menus(void)
 
             item = &s_air_param_menu_storage[cursor++];
             item_name = config->name;
-            if(strcmp(config->name, "bl3_stream_mode") == 0)
+            if(strcmp(config->name, "bl3_screen_enable") == 0)
+            {
+                item_name = "Screen";
+            }
+            else if(strcmp(config->name, "bl3_stream_mode") == 0)
             {
                 item_name = "ImageMode";
             }

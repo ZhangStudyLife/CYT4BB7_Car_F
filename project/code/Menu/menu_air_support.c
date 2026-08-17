@@ -13,6 +13,7 @@
 #define MENU_AIR_ACK_TYPE_GET_PARAM         (0x07U)
 #define MENU_AIR_COMMAND_TIMEOUT_MS         (1000U)
 #define MENU_AIR_PULL_RETRY_MS              (1000U)
+#define MENU_AIR_REMOTE_ACK_TIMEOUT_MS      (1500U)
 #define MENU_AIR_EXPOSURE_ACK_TIMEOUT_MS    (3000U)
 #define MENU_AIR_CORE1_EXPOSURE_NAME        "c1_exp_time"
 #define MENU_AIR_2BL3_EXPOSURE_NAME         "bl3_exp_time"
@@ -126,6 +127,12 @@ static const char * const s_air_bl3_stream_mode_labels[] =
     "Lamp Binary",
     "Beacon Binary",
     "Detected Overlay"
+};
+
+static const char * const s_air_off_on_labels[] =
+{
+    "Off",
+    "On"
 };
 
 static const char * const s_air_full_lamp_names[] =
@@ -263,6 +270,8 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_OPTIONAL_PARAM(bl3_exp_time, 500.0f, 10.0f, 1.0f, 636.0f, "FR Calibration"),
     MENU_AIR_OPTIONAL_ENUM_PARAM(c1_screen_mode, 0.0f, 1.0f, 0.0f, 4.0f, "Down Camera",
                                  s_air_screen_mode_labels),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(c1_horizon_enable, 1.0f, 1.0f, 0.0f, 1.0f,
+                                 "Down Camera", s_air_off_on_labels),
     MENU_AIR_OPTIONAL_PARAM(c1_beacon_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Down Beacon Detect"),
     MENU_AIR_OPTIONAL_PARAM(c1_edge_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Down Beacon Detect"),
     MENU_AIR_OPTIONAL_PARAM(c1_edge_thr, 100.0f, 1.0f, 0.0f, 255.0f, "Down Beacon Detect"),
@@ -318,6 +327,10 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_OPTIONAL_PARAM(bl3_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "FR Beacon Track"),
     MENU_AIR_OPTIONAL_PARAM(bl3_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "FR Beacon Track"),
 
+    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_screen_enable, 0.0f, 1.0f, 0.0f, 1.0f,
+                                 "FR Camera", s_air_off_on_labels),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_horizon_enable, 0.0f, 1.0f, 0.0f, 1.0f,
+                                 "FR Camera", s_air_off_on_labels),
     MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_stream_mode, 0.0f, 1.0f, 0.0f, 3.0f,
                                  "FR Camera", s_air_bl3_stream_mode_labels),
 
@@ -491,29 +504,45 @@ static uint8 menu_air_ack_is_success(uint8 result, uint8 status)
              ((result == AIR_COMM_ACK_RESULT_ERROR) && (status == AIR_COMM_STATUS_OUT_OF_RANGE))) ? 1U : 0U);
 }
 
-static uint8 menu_air_param_is_exposure(uint16 index)
+static uint32 menu_air_param_ack_timeout_ms(uint16 index)
 {
+    const char *name;
+
     if(index >= s_air_param_count)
     {
         return 0U;
     }
 
-    return ((strcmp(s_air_params[index].name, MENU_AIR_CORE1_EXPOSURE_NAME) == 0) ||
-            (strcmp(s_air_params[index].name, MENU_AIR_2BL3_EXPOSURE_NAME) == 0)) ? 1U : 0U;
+    name = s_air_params[index].name;
+    if((strcmp(name, MENU_AIR_CORE1_EXPOSURE_NAME) == 0) ||
+       (strcmp(name, MENU_AIR_2BL3_EXPOSURE_NAME) == 0))
+    {
+        return MENU_AIR_EXPOSURE_ACK_TIMEOUT_MS;
+    }
+    if((strncmp(name, "c1_", 3U) == 0) ||
+       (strncmp(name, "bl3_", 4U) == 0))
+    {
+        return MENU_AIR_REMOTE_ACK_TIMEOUT_MS;
+    }
+
+    return 0U;
 }
 
 static uint8 menu_air_send_set_param(uint16 index, float value)
 {
+    uint32 timeout_ms;
+
     if(index >= s_air_param_count)
     {
         return 1U;
     }
 
-    if(menu_air_param_is_exposure(index) != 0U)
+    timeout_ms = menu_air_param_ack_timeout_ms(index);
+    if(timeout_ms != 0U)
     {
         return air_comm_car_set_param_with_timeout(s_air_params[index].name,
                                                    value,
-                                                   MENU_AIR_EXPOSURE_ACK_TIMEOUT_MS);
+                                                   timeout_ms);
     }
 
     return air_comm_car_set_param(s_air_params[index].name, value);
@@ -521,16 +550,19 @@ static uint8 menu_air_send_set_param(uint16 index, float value)
 
 static uint8 menu_air_send_get_param(uint16 index)
 {
+    uint32 timeout_ms;
+
     if(index >= s_air_param_count)
     {
         return 1U;
     }
 
-    if(menu_air_param_is_exposure(index) != 0U)
+    timeout_ms = menu_air_param_ack_timeout_ms(index);
+    if(timeout_ms != 0U)
     {
         return air_comm_car_get_param_with_timeout(
             s_air_params[index].name,
-            MENU_AIR_EXPOSURE_ACK_TIMEOUT_MS);
+            timeout_ms);
     }
 
     return air_comm_car_get_param(s_air_params[index].name);
