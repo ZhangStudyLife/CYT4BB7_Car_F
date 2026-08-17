@@ -1,6 +1,6 @@
 #include "menu_config.h"
 
-#define MENU_CAR_EXPECTED_PARAM_COUNT (181U)
+#define MENU_CAR_EXPECTED_PARAM_COUNT (182U)
 
 static void diag_imu_function(void);
 static void diag_encoder_function(void);
@@ -268,8 +268,8 @@ static menu_item_t car_mode4_large_turn_menu[] = {
 };
 
 static menu_item_t car_mode4_fuya_menu[] = {
-    {"Enable", MENU_TYPE_PARAMETER, .param_index = 179U},
-    {"Target", MENU_TYPE_PARAMETER, .param_index = 180U},
+    {"Enable", MENU_TYPE_PARAMETER, .param_index = 178U},
+    {"Target", MENU_TYPE_PARAMETER, .param_index = 179U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -360,6 +360,12 @@ static menu_item_t car_mode5_large_turn_menu[] = {
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
+static menu_item_t car_mode5_fuya_menu[] = {
+    {"Enable", MENU_TYPE_PARAMETER, .param_index = 180U},
+    {"Target", MENU_TYPE_PARAMETER, .param_index = 181U},
+    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
+};
+
 static menu_item_t car_mode5_menu[] = {
     {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode5_input_menu},
     {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode5_left_speed_menu},
@@ -369,11 +375,7 @@ static menu_item_t car_mode5_menu[] = {
     {"Yaw Angle", MENU_TYPE_SUBMENU, .submenu = car_mode5_yaw_angle_menu},
     {"Brake", MENU_TYPE_SUBMENU, .submenu = car_mode5_brake_menu},
     {"Large Turn", MENU_TYPE_SUBMENU, .submenu = car_mode5_large_turn_menu},
-    {"", MENU_TYPE_SUBMENU, .submenu = NULL}
-};
-
-static menu_item_t car_mode8_input_menu[] = {
-    {"Target m/s", MENU_TYPE_PARAMETER, .param_index = 174U},
+    {"Fuya", MENU_TYPE_SUBMENU, .submenu = car_mode5_fuya_menu},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
@@ -394,15 +396,14 @@ static menu_item_t car_mode8_right_speed_menu[] = {
 static menu_item_t car_mode8_speed_menu[] = {
     {"Filter", MENU_TYPE_PARAMETER, .param_index = 172U},
     {"FF Static", MENU_TYPE_PARAMETER, .param_index = 173U},
-    {"I Limit", MENU_TYPE_PARAMETER, .param_index = 175U},
-    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 176U},
-    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 177U},
-    {"Inc Limit", MENU_TYPE_PARAMETER, .param_index = 178U},
+    {"I Limit", MENU_TYPE_PARAMETER, .param_index = 174U},
+    {"FF Dead", MENU_TYPE_PARAMETER, .param_index = 175U},
+    {"FF Trans", MENU_TYPE_PARAMETER, .param_index = 176U},
+    {"Inc Limit", MENU_TYPE_PARAMETER, .param_index = 177U},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static menu_item_t car_mode8_menu[] = {
-    {"Input", MENU_TYPE_SUBMENU, .submenu = car_mode8_input_menu},
     {"L Speed", MENU_TYPE_SUBMENU, .submenu = car_mode8_left_speed_menu},
     {"R Speed", MENU_TYPE_SUBMENU, .submenu = car_mode8_right_speed_menu},
     {"Speed", MENU_TYPE_SUBMENU, .submenu = car_mode8_speed_menu},
@@ -955,13 +956,14 @@ void menu_config_init(void)
     menu_register_param(&mode8_speed_right_kd, 0.05f, 0.0f, 20.0f);
     menu_register_param(&mode8_speed_filter_alpha, 0.01f, 0.0f, 1.0f);
     menu_register_param(&mode8_speed_ff_static, 50.0f, 0.0f, 3000.0f);
-    menu_register_param(&mode8_target_speed_mps, 0.1f, 0.0f, 5.0f);
     menu_register_param(&mode8_speed_i_limit, 100.0f, 0.0f, 10000.0f);
     menu_register_param(&mode8_speed_ff_deadband, 1.0f, 0.0f, 200.0f);
     menu_register_param(&mode8_speed_ff_transition, 10.0f, 0.0f, 1000.0f);
     menu_register_param(&mode8_speed_increment_limit, 250.0f, 0.0f, 20000.0f);
     menu_register_param(&mode4_fuya_enable, 1.0f, 0.0f, 1.0f);
     menu_register_param(&mode4_fuya_target, 500.0f, 2000.0f, 6000.0f);
+    menu_register_param(&mode5_fuya_enable, 1.0f, 0.0f, 1.0f);
+    menu_register_param(&mode5_fuya_target, 500.0f, 2000.0f, 6000.0f);
 
     if(menu_get_param_count() != MENU_CAR_EXPECTED_PARAM_COUNT)
     {

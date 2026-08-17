@@ -1,7 +1,8 @@
 #include "car_mode.h"
 #include "pid_core.h"
 
-#define MODE8_STICK_MAX (1000.0f)
+#define MODE8_STICK_MAX        (1000.0f)
+#define MODE8_TARGET_SPEED_MPS (2.5f)
 
 volatile float mode8_speed_left_kp = 10.80f;
 volatile float mode8_speed_left_ki = 0.52f;
@@ -11,7 +12,6 @@ volatile float mode8_speed_right_ki = 0.52f;
 volatile float mode8_speed_right_kd = 1.00f;
 volatile float mode8_speed_filter_alpha = 0.557f;
 volatile float mode8_speed_ff_static = 800.0f;
-volatile float mode8_target_speed_mps = 2.5f;
 volatile float mode8_speed_i_limit = 2000.0f;
 volatile float mode8_speed_ff_deadband = 10.0f;
 volatile float mode8_speed_ff_transition = 100.0f;
@@ -88,7 +88,7 @@ void car_mode8_update_100HZ(uint32 now_ms)
     target_speed_mps = car_math_clampf(g_air_std_ch1,
                                        -MODE8_STICK_MAX,
                                         MODE8_STICK_MAX) *
-                       car_math_clampf(mode8_target_speed_mps, 0.0f, 5.0f) /
+                       MODE8_TARGET_SPEED_MPS /
                        MODE8_STICK_MAX;
     Left_Target_Speed = car_speed_mps_to_encoder_cnt(target_speed_mps);
     Right_Target_Speed = Left_Target_Speed;
