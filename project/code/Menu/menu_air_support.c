@@ -13,9 +13,13 @@
 #define MENU_AIR_ACK_TYPE_GET_PARAM         (0x07U)
 #define MENU_AIR_COMMAND_TIMEOUT_MS         (1000U)
 #define MENU_AIR_PULL_RETRY_MS              (1000U)
-#define MENU_AIR_EXPOSURE_ACK_TIMEOUT_MS    (3000U)
+#define MENU_AIR_CAMERA_REINIT_TIMEOUT_MS   (3000U)
 #define MENU_AIR_CORE1_EXPOSURE_NAME        "c1_exp_time"
 #define MENU_AIR_2BL3_EXPOSURE_NAME         "bl3_exp_time"
+#define MENU_AIR_CORE1_FPS_NAME             "c1_fps"
+#define MENU_AIR_CORE1_GAIN_NAME            "c1_gain"
+#define MENU_AIR_2BL3_FPS_NAME              "bl3_fps"
+#define MENU_AIR_2BL3_GAIN_NAME             "bl3_gain"
 #define MENU_AIR_CORE1_SCREEN_MODE_NAME     "c1_screen_mode"
 #define MENU_AIR_BL3_LAMP_MIN_NAME          "bl3_lamp_min"
 #define MENU_AIR_BL3_LAMP_MAX_NAME          "bl3_lamp_max"
@@ -89,6 +93,7 @@ static uint8 s_air_catalog_ready;
 static uint32 s_air_pull_retry_tick;
 static uint8 s_air_deferred_error_reason;
 static uint16 s_air_recover_index;
+static uint16 s_air_background_next_index;
 static uint8 s_air_boot_screen_restore_done;
 static menu_air_cmd_status_t s_air_cmd_status;
 
@@ -126,6 +131,12 @@ static const char * const s_air_bl3_stream_mode_labels[] =
     "Lamp Binary",
     "Beacon Binary",
     "Detected Overlay"
+};
+
+static const char * const s_air_switch_labels[] =
+{
+    "Off",
+    "On"
 };
 
 static const char * const s_air_full_lamp_names[] =
@@ -246,99 +257,122 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_PARAM(mode8_vel_y_kff, 0.0f, 0.001f, 0.0f, 1.0f, "Mode8 Vel"),
     MENU_AIR_PARAM(mode8_vel_y_i_limit, 3.0f, 0.1f, 0.0f, 20.0f, "Mode8 Vel"),
     MENU_AIR_PARAM(mode8_vel_y_d_lpf, 10.0f, 0.5f, 0.0f, 50.0f, "Mode8 Vel"),
-    MENU_AIR_OPTIONAL_PARAM(c1_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Core1 Camera"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(c1_exp_time, 400.0f, 10.0f, 1.0f, 636.0f, "Core1 Camera"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_exp_time, 500.0f, 10.0f, 1.0f, 636.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_ENUM_PARAM(c1_screen_mode, 0.0f, 1.0f, 0.0f, 4.0f, "Core1 Camera",
+    MENU_AIR_OPTIONAL_PARAM(c1_exp_time, 400.0f, 10.0f, 1.0f, 636.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_PARAM(c1_fps, 110.0f, 5.0f, 1.0f, 200.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gain, 32.0f, 1.0f, 16.0f, 64.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(c1_screen_mode, 0.0f, 1.0f, 0.0f, 4.0f, "Display",
                                  s_air_screen_mode_labels),
-    MENU_AIR_OPTIONAL_PARAM(c1_beacon_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Core1 Beacon"),
-    MENU_AIR_OPTIONAL_PARAM(c1_edge_min, 10.0f, 1.0f, 0.0f, 1000.0f, "Core1 Beacon"),
-    MENU_AIR_OPTIONAL_PARAM(c1_edge_thr, 100.0f, 1.0f, 0.0f, 255.0f, "Core1 Beacon"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_min, 24.0f, 1.0f, 0.0f, 1000.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_max, 1200.0f, 50.0f, 100.0f, 5000.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_elong, 1.6f, 0.1f, 1.0f, 20.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_lamp_len, 8.0f, 0.5f, 1.0f, 100.0f, "Core1 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_pad, 8.0f, 0.5f, 0.0f, 50.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_min, 45.0f, 2.0f, 0.0f, 2000.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_iso_min, 18.0f, 1.0f, 0.0f, 2000.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_near_bg, 40.0f, 1.0f, 0.0f, 255.0f, "Core1 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(c1_match_dist, 18.0f, 0.5f, 0.0f, 100.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_gate_dist, 24.0f, 1.0f, 0.0f, 100.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_new_dist, 36.0f, 2.0f, 0.0f, 100.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_confirm, 2.0f, 1.0f, 1.0f, 20.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_misses, 3.0f, 1.0f, 0.0f, 20.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "Core1 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(c1_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "Core1 Tracking"),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(c1_horizon_enable, 1.0f, 1.0f, 0.0f, 1.0f, "Horizon",
+                                 s_air_switch_labels),
+    MENU_AIR_OPTIONAL_PARAM(c1_horizon_height_offset, 0.0f, 5.0f, -300.0f, 300.0f, "Horizon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_horizon_margin_px, -5.0f, 1.0f, -30.0f, 30.0f, "Horizon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_beacon_boundary_px, 9.0f, 1.0f, 0.0f, 30.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gray_dedup_dist, 5.0f, 0.5f, 0.0f, 30.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_edge_peak_min, 200.0f, 1.0f, 0.0f, 255.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_edge_occupancy_max, 0.25f, 0.01f, 0.0f, 1.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gray_weak_peak_delta, 70.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gray_weak_peak_floor, 140.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gray_weak_min_area, 3.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gray_weak_max_area, 20.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(c1_car_score_strong, 0.53f, 0.01f, 0.0f, 1.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_car_score_weak, 0.50f, 0.01f, 0.0f, 1.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_car_score_track, 0.47f, 0.01f, 0.0f, 1.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_car_score_margin, 0.02f, 0.01f, 0.0f, 0.20f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_lamp_max, 1200.0f, 50.0f, 0.0f, 22560.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(c1_match_dist, 18.0f, 0.5f, 0.0f, 224.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(c1_gate_dist, 24.0f, 1.0f, 0.0f, 224.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(c1_new_dist, 36.0f, 2.0f, 0.0f, 224.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(c1_confirm, 4.0f, 1.0f, 1.0f, 255.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(c1_misses, 6.0f, 1.0f, 0.0f, 255.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(c1_pos_alpha, 0.408392f, 0.01f, 0.0f, 1.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(c1_vel_alpha, 0.163340f, 0.01f, 0.0f, 1.0f, "Tracking"),
 
-    MENU_AIR_OPTIONAL_PARAM(bl3_edge_thr, 80.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_track_thr, 105.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_thr, 150.0f, 1.0f, 0.0f, 255.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_y, 64.0f, 2.0f, 0.0f, 224.0f, "2BL3 Threshold"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_bridge_gap, 4.0f, 0.25f, 0.0f, 30.0f, "2BL3 Threshold"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_min, 6.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_edge_min, 2.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_top_max, 50.0f, 2.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_edge_max, 60.0f, 2.0f, 0.0f, 1000.0f, "2BL3 Beacon Area"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_min, 24.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_max, 230.0f, 10.0f, 50.0f, 5000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_elong, 1.6f, 0.1f, 1.0f, 20.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_back_len, 12.0f, 0.5f, 0.0f, 100.0f, "2BL3 Car Lamp"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_iso_gray, 120.0f, 1.0f, 0.0f, 255.0f, "2BL3 Background"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_iso_bg, 2.0f, 1.0f, 0.0f, 255.0f, "2BL3 Background"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_ring_in, 3.0f, 0.25f, 0.0f, 50.0f, "2BL3 Background"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_ring_out, 8.0f, 0.5f, 0.0f, 50.0f, "2BL3 Background"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_pad, 8.0f, 0.5f, 0.0f, 50.0f, "2BL3 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_min, 21.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_gray, 150.0f, 1.0f, 0.0f, 255.0f, "2BL3 Near Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_near_bg, 20.0f, 1.0f, 0.0f, 255.0f, "2BL3 Near Lamp"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_match_dist, 18.0f, 0.5f, 0.0f, 100.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_gate_dist, 24.0f, 1.0f, 0.0f, 100.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_new_dist, 36.0f, 2.0f, 0.0f, 100.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_confirm, 2.0f, 1.0f, 1.0f, 20.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_misses, 3.0f, 1.0f, 0.0f, 20.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "2BL3 Tracking"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "2BL3 Tracking"),
-
-    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_stream_mode, 0.0f, 1.0f, 0.0f, 3.0f,
-                                 "2BL3 Stream", s_air_bl3_stream_mode_labels),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_width, 3.5f, 0.1f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_width, 2.7f, 0.1f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_elong, 3.5f, 0.1f, 1.0f, 20.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_upper_area, 120.0f, 5.0f, 0.0f, 2000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_upper_len, 22.0f, 1.0f, 0.0f, 100.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_upper_width, 5.5f, 0.25f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_y, 20.0f, 0.5f, 0.0f, 224.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_area, 36.0f, 2.0f, 0.0f, 1000.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_len, 14.0f, 0.5f, 0.0f, 100.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_width, 3.0f, 0.1f, 0.0f, 50.0f, "2BL3 Car Lamp"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_compact_elong, 3.0f, 0.1f, 1.0f, 20.0f, "2BL3 Car Lamp"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_elong, 1.8f, 0.1f, 1.0f, 20.0f, "2BL3 Reflection"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_gray, 200.0f, 1.0f, 0.0f, 255.0f, "2BL3 Reflection"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_linear_elong, 6.0f, 0.25f, 1.0f, 20.0f, "2BL3 Reflection"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_thr, 70.0f, 1.0f, 0.0f, 255.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_min, 3.0f, 1.0f, 0.0f, 500.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_max, 12.0f, 0.5f, 0.0f, 500.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_gray, 90.0f, 1.0f, 0.0f, 255.0f, "2BL3 Weak Center"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_bg, 10.0f, 1.0f, 0.0f, 255.0f, "2BL3 Weak Center"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_min, 6.0f, 1.0f, 0.0f, 1000.0f, "2BL3 Shape Filter"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_ratio, 2.0f, 0.1f, 1.0f, 20.0f, "2BL3 Shape Filter"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_fill, 60.0f, 1.0f, 0.0f, 100.0f, "2BL3 Shape Filter"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_shape_s_fill, 50.0f, 1.0f, 0.0f, 100.0f, "2BL3 Shape Filter"),
-
-    MENU_AIR_OPTIONAL_PARAM(bl3_top_v_elong, 3.0f, 0.1f, 1.0f, 20.0f, "2BL3 Vertical Top"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_sat_t_gray, 240.0f, 1.0f, 0.0f, 255.0f, "2BL3 Saturated Top"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_exp_time, 500.0f, 10.0f, 1.0f, 636.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_fps, 110.0f, 5.0f, 1.0f, 200.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gain, 32.0f, 1.0f, 16.0f, 64.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_screen_enable, 0.0f, 1.0f, 0.0f, 1.0f, "Display",
+                                 s_air_switch_labels),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_horizon_enable, 1.0f, 1.0f, 0.0f, 1.0f, "Horizon",
+                                 s_air_switch_labels),
+    MENU_AIR_OPTIONAL_PARAM(bl3_horizon_height_offset, 0.0f, 5.0f, -300.0f, 300.0f, "Horizon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_horizon_margin_px, 8.0f, 1.0f, -30.0f, 30.0f, "Horizon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_edge_thr, 80.0f, 1.0f, 0.0f, 255.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_track_thr, 105.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_thr, 200.0f, 1.0f, 0.0f, 255.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_thr, 150.0f, 1.0f, 0.0f, 255.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_up_y, 64.0f, 2.0f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_bridge_gap, 4.0f, 0.25f, 0.0f, 224.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_beacon_min, 6.0f, 1.0f, 0.0f, 22560.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_edge_min, 2.0f, 1.0f, 0.0f, 22560.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_top_max, 50.0f, 2.0f, 0.0f, 22560.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_edge_max, 60.0f, 2.0f, 0.0f, 22560.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_min, 24.0f, 1.0f, 0.0f, 22560.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_max, 230.0f, 10.0f, 0.0f, 22560.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_elong, 1.6f, 0.1f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_back_len, 12.0f, 0.5f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_iso_gray, 120.0f, 1.0f, 0.0f, 255.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_iso_bg, 2.0f, 1.0f, 0.0f, 255.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_ring_in, 3.0f, 0.25f, 0.0f, 224.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_ring_out, 8.0f, 0.5f, 0.0f, 224.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_pad, 8.0f, 0.5f, 0.0f, 224.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_min, 21.0f, 1.0f, 0.0f, 22560.0f, "Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_gray, 150.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_near_bg, 20.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_match_dist, 18.0f, 0.5f, 0.0f, 224.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gate_dist, 24.0f, 1.0f, 0.0f, 224.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_new_dist, 36.0f, 2.0f, 0.0f, 224.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_confirm, 2.0f, 1.0f, 1.0f, 255.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_misses, 3.0f, 1.0f, 0.0f, 255.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_pos_alpha, 0.65f, 0.01f, 0.0f, 1.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_vel_alpha, 0.30f, 0.01f, 0.0f, 1.0f, "Tracking"),
+    MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_stream_mode, 0.0f, 1.0f, 0.0f, 3.0f, "Display",
+                                 s_air_bl3_stream_mode_labels),
+    MENU_AIR_OPTIONAL_PARAM(bl3_lamp_width, 3.5f, 0.1f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_width, 2.7f, 0.1f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_narrow_elong, 3.5f, 0.1f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_upper_area, 120.0f, 5.0f, 0.0f, 22560.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_upper_len, 22.0f, 1.0f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_upper_width, 5.5f, 0.25f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_y, 20.0f, 0.5f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_area, 36.0f, 2.0f, 0.0f, 22560.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_len, 14.0f, 0.5f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_width, 3.0f, 0.1f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_compact_elong, 3.0f, 0.1f, 0.0f, 224.0f, "Lamp"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_elong, 1.8f, 0.1f, 0.0f, 224.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_vglare_gray, 200.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_linear_elong, 6.0f, 0.25f, 0.0f, 224.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_thr, 70.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_min, 3.0f, 1.0f, 0.0f, 22560.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_max, 12.0f, 0.5f, 0.0f, 22560.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_gray, 90.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_weak_c_bg, 10.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_min, 6.0f, 1.0f, 0.0f, 22560.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_ratio, 2.0f, 0.1f, 1.0f, 224.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_fill, 60.0f, 1.0f, 0.0f, 100.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_shape_s_fill, 50.0f, 1.0f, 0.0f, 100.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_top_v_elong, 3.0f, 0.1f, 0.0f, 224.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_sat_t_gray, 240.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_area, 16.0f, 1.0f, 0.0f, 22560.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_max_area, 80.0f, 1.0f, 0.0f, 22560.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_len, 8.0f, 0.5f, 0.0f, 224.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_max_len, 20.0f, 0.5f, 0.0f, 224.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_width, 3.0f, 0.1f, 0.0f, 224.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_elong, 1.8f, 0.1f, 0.0f, 224.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_peak, 240.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_mean, 170.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_contrast, 100.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_min_fill, 35.0f, 1.0f, 0.0f, 100.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_strip_gray, 150.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_lamp_strip_fill, 38.0f, 1.0f, 0.0f, 100.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_beacon_min_peak, 60.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_beacon_min_area, 4.0f, 0.5f, 0.0f, 22560.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_beacon_max_area, 20.5f, 0.5f, 0.0f, 22560.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_gray_beacon_compact_peak, 220.0f, 1.0f, 0.0f, 255.0f, "Weak Beacon"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_car_edge_misses, 3.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_car_center_misses, 24.0f, 1.0f, 0.0f, 255.0f, "Lamp Recover"),
 
     MENU_AIR_PARAM(mode1_img_kp, 0.28f, 0.01f, 0.0f, 1.0f, "Mode1 Img"),
     MENU_AIR_PARAM(mode1_img_kd, 0.18f, 0.01f, 0.0f, 1.0f, "Mode1 Img"),
@@ -424,7 +458,7 @@ static uint8 menu_air_ack_is_success(uint8 result, uint8 status)
              ((result == AIR_COMM_ACK_RESULT_ERROR) && (status == AIR_COMM_STATUS_OUT_OF_RANGE))) ? 1U : 0U);
 }
 
-static uint8 menu_air_param_is_exposure(uint16 index)
+static uint8 menu_air_param_uses_long_timeout(uint16 index)
 {
     if(index >= s_air_param_count)
     {
@@ -432,7 +466,11 @@ static uint8 menu_air_param_is_exposure(uint16 index)
     }
 
     return ((strcmp(s_air_params[index].name, MENU_AIR_CORE1_EXPOSURE_NAME) == 0) ||
-            (strcmp(s_air_params[index].name, MENU_AIR_2BL3_EXPOSURE_NAME) == 0)) ? 1U : 0U;
+            (strcmp(s_air_params[index].name, MENU_AIR_2BL3_EXPOSURE_NAME) == 0) ||
+            (strcmp(s_air_params[index].name, MENU_AIR_CORE1_FPS_NAME) == 0) ||
+            (strcmp(s_air_params[index].name, MENU_AIR_CORE1_GAIN_NAME) == 0) ||
+            (strcmp(s_air_params[index].name, MENU_AIR_2BL3_FPS_NAME) == 0) ||
+            (strcmp(s_air_params[index].name, MENU_AIR_2BL3_GAIN_NAME) == 0)) ? 1U : 0U;
 }
 
 static uint8 menu_air_send_set_param(uint16 index, float value)
@@ -442,11 +480,11 @@ static uint8 menu_air_send_set_param(uint16 index, float value)
         return 1U;
     }
 
-    if(menu_air_param_is_exposure(index) != 0U)
+    if(menu_air_param_uses_long_timeout(index) != 0U)
     {
         return air_comm_car_set_param_with_timeout(s_air_params[index].name,
                                                    value,
-                                                   MENU_AIR_EXPOSURE_ACK_TIMEOUT_MS);
+                                                   MENU_AIR_CAMERA_REINIT_TIMEOUT_MS);
     }
 
     return air_comm_car_set_param(s_air_params[index].name, value);
@@ -459,11 +497,11 @@ static uint8 menu_air_send_get_param(uint16 index)
         return 1U;
     }
 
-    if(menu_air_param_is_exposure(index) != 0U)
+    if(menu_air_param_uses_long_timeout(index) != 0U)
     {
         return air_comm_car_get_param_with_timeout(
             s_air_params[index].name,
-            MENU_AIR_EXPOSURE_ACK_TIMEOUT_MS);
+            MENU_AIR_CAMERA_REINIT_TIMEOUT_MS);
     }
 
     return air_comm_car_get_param(s_air_params[index].name);
@@ -1100,6 +1138,7 @@ void menu_air_support_init(void)
     s_air_pull_retry_tick = 0U;
     s_air_deferred_error_reason = MENU_AIR_SYNC_REASON_NONE;
     s_air_recover_index = MENU_AIR_SYNC_INVALID_INDEX;
+    s_air_background_next_index = 0U;
     s_air_boot_screen_restore_done = 0U;
     s_air_cmd_status.state = MENU_AIR_CMD_STATE_IDLE;
     s_air_cmd_status.active_index = MENU_AIR_CMD_INVALID_INDEX;
@@ -1224,6 +1263,7 @@ uint8 menu_air_sync_all_start(uint8 reason)
        (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_FULL) ||
        (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_PULL) ||
        (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_RECOVER) ||
+       (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_BACKGROUND) ||
        (menu_air_command_is_active() != 0U) ||
        (air_comm_car_has_pending_ack() != 0U))
     {
@@ -1267,6 +1307,7 @@ uint8 menu_air_is_busy(void)
             (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_FULL) ||
             (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_PULL) ||
             (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_RECOVER) ||
+            (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_BACKGROUND) ||
             (menu_air_command_is_active() != 0U) ||
             (air_comm_car_has_pending_ack() != 0U)) ? 1U : 0U;
 }
@@ -1278,7 +1319,8 @@ void menu_air_stop_param_sync(void)
     if((mode != MENU_AIR_SYNC_MODE_COMMIT) &&
        (mode != MENU_AIR_SYNC_MODE_FULL) &&
        (mode != MENU_AIR_SYNC_MODE_PULL) &&
-       (mode != MENU_AIR_SYNC_MODE_RECOVER))
+       (mode != MENU_AIR_SYNC_MODE_RECOVER) &&
+       (mode != MENU_AIR_SYNC_MODE_BACKGROUND))
     {
         return;
     }
@@ -1308,7 +1350,8 @@ void menu_air_stop_param_sync(void)
     menu_air_sync_reset(MENU_AIR_SYNC_MODE_FAIL);
     menu_air_mark_catalog_stale();
     if((mode == MENU_AIR_SYNC_MODE_PULL) ||
-       (mode == MENU_AIR_SYNC_MODE_RECOVER))
+       (mode == MENU_AIR_SYNC_MODE_RECOVER) ||
+       (mode == MENU_AIR_SYNC_MODE_BACKGROUND))
     {
         air_comm_car_cancel_pending_get_param();
     }
@@ -1334,13 +1377,15 @@ void menu_air_abort_param_sync_runtime(void)
     if((mode != MENU_AIR_SYNC_MODE_COMMIT) &&
        (mode != MENU_AIR_SYNC_MODE_FULL) &&
        (mode != MENU_AIR_SYNC_MODE_PULL) &&
-       (mode != MENU_AIR_SYNC_MODE_RECOVER))
+       (mode != MENU_AIR_SYNC_MODE_RECOVER) &&
+       (mode != MENU_AIR_SYNC_MODE_BACKGROUND))
     {
         return;
     }
 
     if((mode == MENU_AIR_SYNC_MODE_PULL) ||
-       (mode == MENU_AIR_SYNC_MODE_RECOVER))
+       (mode == MENU_AIR_SYNC_MODE_RECOVER) ||
+       (mode == MENU_AIR_SYNC_MODE_BACKGROUND))
     {
         air_comm_car_cancel_pending_get_param();
     }
@@ -1512,7 +1557,8 @@ void menu_air_update_100HZ(void)
             if((s_air_sync_status.mode == MENU_AIR_SYNC_MODE_PULL) ||
                (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_COMMIT) ||
                (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_FULL) ||
-               (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_RECOVER))
+               (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_RECOVER) ||
+               (s_air_sync_status.mode == MENU_AIR_SYNC_MODE_BACKGROUND))
             {
                 menu_air_stop_param_sync();
             }
@@ -1555,7 +1601,8 @@ void menu_air_update_100HZ(void)
         active_index = s_air_sync_status.active_index;
         current_mode = s_air_sync_status.mode;
         get_mode = ((current_mode == MENU_AIR_SYNC_MODE_PULL) ||
-                    (current_mode == MENU_AIR_SYNC_MODE_RECOVER)) ? 1U : 0U;
+                    (current_mode == MENU_AIR_SYNC_MODE_RECOVER) ||
+                    (current_mode == MENU_AIR_SYNC_MODE_BACKGROUND)) ? 1U : 0U;
         expected_type = (get_mode != 0U) ?
                         MENU_AIR_ACK_TYPE_GET_PARAM : MENU_AIR_ACK_TYPE_SET_PARAM;
         s_air_sync_status.sending = 0U;
@@ -1565,6 +1612,24 @@ void menu_air_update_100HZ(void)
 
         ack_name[0] = '\0';
         (void)air_comm_car_get_last_ack_name(ack_name, (uint8)sizeof(ack_name));
+        if((current_mode == MENU_AIR_SYNC_MODE_BACKGROUND) &&
+           ((active_index >= s_air_param_count) ||
+            (ack_type != expected_type) ||
+            (ack_result != AIR_COMM_ACK_RESULT_OK) ||
+            (ack_status != AIR_COMM_STATUS_OK) ||
+            (strcmp(ack_name, s_air_params[active_index].name) != 0)))
+        {
+            menu_air_record_failure(active_index, ack_result, ack_status);
+            if(active_index < s_air_param_count)
+            {
+                s_air_params[active_index].available = 0U;
+                s_air_confirmed_valid[active_index] = 0U;
+                s_air_param_dirty[active_index] = 0U;
+            }
+            menu_air_sync_reset(MENU_AIR_SYNC_MODE_DONE);
+            s_air_pull_retry_tick = now;
+            return;
+        }
         if((current_mode == MENU_AIR_SYNC_MODE_PULL) &&
            (menu_air_optional_get_failure_can_skip(active_index,
                                                    ack_type,
@@ -1669,6 +1734,14 @@ void menu_air_update_100HZ(void)
             return;
         }
 
+        if(current_mode == MENU_AIR_SYNC_MODE_BACKGROUND)
+        {
+            menu_air_sync_reset(MENU_AIR_SYNC_MODE_DONE);
+            s_air_pull_retry_tick = now;
+            menu_request_refresh(REFRESH_VALUE);
+            return;
+        }
+
         if(current_mode == MENU_AIR_SYNC_MODE_FULL)
         {
             s_air_full_pending[active_index] = 0U;
@@ -1725,6 +1798,7 @@ void menu_air_update_100HZ(void)
             s_air_catalog_ready = 1U;
             s_air_boot_sync_done = 1U;
             s_air_pull_retry_tick = now;
+            s_air_background_next_index = 0U;
             if((MENU_AIR_BOOT_OVERRIDE_ENABLE != 0U) &&
                (s_air_boot_override_done == 0U))
             {
@@ -1790,6 +1864,40 @@ void menu_air_update_100HZ(void)
     if(s_air_sync_status.mode != MENU_AIR_SYNC_MODE_FULL)
     {
         s_air_sync_status.dirty_count = menu_air_dirty_count();
+        if((s_air_catalog_ready != 0U) &&
+           (menu_air_command_is_active() == 0U) &&
+           (air_comm_car_has_pending_ack() == 0U) &&
+           ((now - s_air_pull_retry_tick) >= MENU_AIR_PULL_RETRY_MS))
+        {
+            for(full_index = 0U; full_index < s_air_param_count; full_index++)
+            {
+                active_index = (uint16)((s_air_background_next_index + full_index) %
+                                        s_air_param_count);
+                if((s_air_params[active_index].optional != 0U) &&
+                   (s_air_params[active_index].available == 0U))
+                {
+                    s_air_background_next_index = (uint16)((active_index + 1U) %
+                                                           s_air_param_count);
+                    air_comm_car_clear_last_ack();
+                    if(menu_air_send_get_param(active_index) == 0U)
+                    {
+                        s_air_sync_status.sending = 1U;
+                        s_air_sync_status.active_index = active_index;
+                        s_air_sync_status.mode = MENU_AIR_SYNC_MODE_BACKGROUND;
+                        s_air_sync_status.reason = MENU_AIR_SYNC_REASON_BOOT;
+                        s_air_sync_status.send_count++;
+                    }
+                    else
+                    {
+                        menu_air_record_failure(active_index,
+                                                AIR_COMM_ACK_RESULT_ERROR,
+                                                AIR_COMM_STATUS_ERROR);
+                        s_air_pull_retry_tick = now;
+                    }
+                    break;
+                }
+            }
+        }
         return;
     }
 

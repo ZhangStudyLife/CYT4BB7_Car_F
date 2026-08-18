@@ -414,61 +414,57 @@ static menu_item_t car_menu[] = {
 };
 
 static menu_item_t core1_image_param_menu[] = {
-    {"Camera", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Camera Basic", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Horizon", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp Recover", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Beacon", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Car Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Near Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Weak Beacon", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Tracking", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Display", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static const char * const s_core1_param_group_names[] = {
-    "Core1 Camera",
-    "Core1 Beacon",
-    "Core1 Car Lamp",
-    "Core1 Near Lamp",
-    "Core1 Tracking"
+    "Camera Basic",
+    "Horizon",
+    "Lamp",
+    "Lamp Recover",
+    "Beacon",
+    "Weak Beacon",
+    "Tracking",
+    "Display"
 };
 
 typedef char core1_param_group_count_must_match[
     ((sizeof(s_core1_param_group_names) /
-      sizeof(s_core1_param_group_names[0])) == 5U) ? 1 : -1];
+      sizeof(s_core1_param_group_names[0])) == 8U) ? 1 : -1];
 
 static menu_item_t bl3_image_param_menu[] = {
-    {"Stream", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Threshold", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Beacon Area", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Car Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Reflection", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Weak Center", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Shape Filter", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Vertical Top", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Saturated Top", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Background", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Near Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Camera Basic", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Horizon", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Lamp Recover", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Beacon", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Weak Beacon", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"Tracking", MENU_TYPE_SUBMENU, .submenu = NULL},
-    {"Calibration", MENU_TYPE_SUBMENU, .submenu = NULL},
+    {"Display", MENU_TYPE_SUBMENU, .submenu = NULL},
     {"", MENU_TYPE_SUBMENU, .submenu = NULL}
 };
 
 static const char * const s_bl3_param_group_names[] = {
-    "2BL3 Stream",
-    "2BL3 Threshold",
-    "2BL3 Beacon Area",
-    "2BL3 Car Lamp",
-    "2BL3 Reflection",
-    "2BL3 Weak Center",
-    "2BL3 Shape Filter",
-    "2BL3 Vertical Top",
-    "2BL3 Saturated Top",
-    "2BL3 Background",
-    "2BL3 Near Lamp",
-    "2BL3 Tracking",
-    "2BL3 Calibration"
+    "Camera Basic",
+    "Horizon",
+    "Lamp",
+    "Lamp Recover",
+    "Beacon",
+    "Weak Beacon",
+    "Tracking",
+    "Display"
 };
 
 typedef char bl3_param_group_count_must_match[
-    ((sizeof(s_bl3_param_group_names) / sizeof(s_bl3_param_group_names[0])) == 13U) ? 1 : -1];
+    ((sizeof(s_bl3_param_group_names) / sizeof(s_bl3_param_group_names[0])) == 8U) ? 1 : -1];
 
 static menu_item_t air_param_menu[] = {
     {"Basic", MENU_TYPE_SUBMENU, .submenu = NULL},
@@ -592,6 +588,58 @@ static uint8 menu_build_air_param_group(const char *group_name,
     return 0U;
 }
 
+static const char *menu_image_param_display_name(const char *name)
+{
+    if((strcmp(name, "c1_exp_time") == 0) ||
+       (strcmp(name, "bl3_exp_time") == 0)) return "Exposure";
+    if((strcmp(name, "c1_fps") == 0) ||
+       (strcmp(name, "bl3_fps") == 0)) return "FPS";
+    if((strcmp(name, "c1_gain") == 0) ||
+       (strcmp(name, "bl3_gain") == 0)) return "Gain";
+    if(strcmp(name, "bl3_screen_enable") == 0) return "Screen";
+    if((strcmp(name, "c1_screen_mode") == 0) ||
+       (strcmp(name, "bl3_stream_mode") == 0)) return "ImageMode";
+    if((strcmp(name, "c1_horizon_enable") == 0) ||
+       (strcmp(name, "bl3_horizon_enable") == 0)) return "Horizon";
+    if((strcmp(name, "c1_horizon_height_offset") == 0) ||
+       (strcmp(name, "bl3_horizon_height_offset") == 0)) return "HeightOffset";
+    if((strcmp(name, "c1_horizon_margin_px") == 0) ||
+       (strcmp(name, "bl3_horizon_margin_px") == 0)) return "CropMargin";
+    if(strcmp(name, "c1_beacon_boundary_px") == 0) return "Boundary";
+    if(strcmp(name, "c1_gray_dedup_dist") == 0) return "GrayDedup";
+    if(strcmp(name, "c1_edge_peak_min") == 0) return "EdgePeak";
+    if(strcmp(name, "c1_edge_occupancy_max") == 0) return "EdgeOccMax";
+    if(strcmp(name, "c1_gray_weak_peak_delta") == 0) return "WeakPeakDelta";
+    if(strcmp(name, "c1_gray_weak_peak_floor") == 0) return "WeakPeakFloor";
+    if(strcmp(name, "c1_gray_weak_min_area") == 0) return "WeakAreaMin";
+    if(strcmp(name, "c1_gray_weak_max_area") == 0) return "WeakAreaMax";
+    if(strcmp(name, "c1_car_score_strong") == 0) return "ScoreStrong";
+    if(strcmp(name, "c1_car_score_weak") == 0) return "ScoreWeak";
+    if(strcmp(name, "c1_car_score_track") == 0) return "ScoreTrack";
+    if(strcmp(name, "c1_car_score_margin") == 0) return "ScoreMargin";
+    if(strcmp(name, "bl3_gray_lamp_min_area") == 0) return "GrayAreaMin";
+    if(strcmp(name, "bl3_gray_lamp_max_area") == 0) return "GrayAreaMax";
+    if(strcmp(name, "bl3_gray_lamp_min_len") == 0) return "GrayLenMin";
+    if(strcmp(name, "bl3_gray_lamp_max_len") == 0) return "GrayLenMax";
+    if(strcmp(name, "bl3_gray_lamp_min_width") == 0) return "GrayWidthMin";
+    if(strcmp(name, "bl3_gray_lamp_min_elong") == 0) return "GrayElongMin";
+    if(strcmp(name, "bl3_gray_lamp_min_peak") == 0) return "GrayPeakMin";
+    if(strcmp(name, "bl3_gray_lamp_min_mean") == 0) return "GrayMeanMin";
+    if(strcmp(name, "bl3_gray_lamp_min_contrast") == 0) return "GrayContrast";
+    if(strcmp(name, "bl3_gray_lamp_min_fill") == 0) return "GrayFillMin";
+    if(strcmp(name, "bl3_gray_lamp_strip_gray") == 0) return "StripGray";
+    if(strcmp(name, "bl3_gray_lamp_strip_fill") == 0) return "StripFill";
+    if(strcmp(name, "bl3_gray_beacon_min_peak") == 0) return "BeaconPeak";
+    if(strcmp(name, "bl3_gray_beacon_min_area") == 0) return "BeaconAreaMin";
+    if(strcmp(name, "bl3_gray_beacon_max_area") == 0) return "BeaconAreaMax";
+    if(strcmp(name, "bl3_gray_beacon_compact_peak") == 0) return "CompactPeak";
+    if(strcmp(name, "bl3_car_edge_misses") == 0) return "EdgeMisses";
+    if(strcmp(name, "bl3_car_center_misses") == 0) return "CenterMisses";
+    if(strncmp(name, "c1_", 3U) == 0) return name + 3U;
+    if(strncmp(name, "bl3_", 4U) == 0) return name + 4U;
+    return name;
+}
+
 static uint8 menu_build_air_param_menus(void)
 {
     uint16 cursor = 0U;
@@ -682,6 +730,7 @@ static uint8 menu_build_air_param_menus(void)
             config = menu_get_air_param_config(index);
             if((config == NULL) || (config->menu_name == NULL) ||
                (config->visible == 0U) ||
+               (strncmp(config->name, "c1_", 3U) != 0) ||
                (strcmp(config->menu_name, s_core1_param_group_names[group]) != 0))
             {
                 continue;
@@ -694,7 +743,8 @@ static uint8 menu_build_air_param_menus(void)
             }
 
             item = &s_air_param_menu_storage[cursor++];
-            strncpy(item->name, config->name, sizeof(item->name) - 1U);
+            item_name = menu_image_param_display_name(config->name);
+            strncpy(item->name, item_name, sizeof(item->name) - 1U);
             item->name[sizeof(item->name) - 1U] = '\0';
             item->type = MENU_TYPE_AIR_PARAMETER;
             item->param_index = index;
@@ -721,6 +771,7 @@ static uint8 menu_build_air_param_menus(void)
             config = menu_get_air_param_config(index);
             if((config == NULL) || (config->menu_name == NULL) ||
                (config->visible == 0U) ||
+               (strncmp(config->name, "bl3_", 4U) != 0) ||
                (strcmp(config->menu_name, s_bl3_param_group_names[group]) != 0))
             {
                 continue;
@@ -733,11 +784,7 @@ static uint8 menu_build_air_param_menus(void)
             }
 
             item = &s_air_param_menu_storage[cursor++];
-            item_name = config->name;
-            if(strcmp(config->name, "bl3_stream_mode") == 0)
-            {
-                item_name = "ImageMode";
-            }
+            item_name = menu_image_param_display_name(config->name);
             strncpy(item->name, item_name, sizeof(item->name) - 1U);
             item->name[sizeof(item->name) - 1U] = '\0';
             item->type = MENU_TYPE_AIR_PARAMETER;
