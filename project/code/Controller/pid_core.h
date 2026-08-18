@@ -60,7 +60,7 @@ void PID_SetFeedforwardTransition(pid_t *pid, float deadband,
 /** 配置外部动态前馈，并与目标前馈共同经过死区、平滑和最终输出限幅。 */
 void PID_SetExternalFeedforward(pid_t *pid, float external_ff);
 
-/** 配置增量式PID每个采样周期的输出增量限幅，非正值表示不限幅。 */
+/** 配置增量式输出增量或受限位置式最终PWM步进，非正值表示不限幅。 */
 void PID_SetIncrementLimit(pid_t *pid, float incremental_limit);
 
 /** 位置式离散PID：可通过将某项系数设为0实现P、PI或PD控制。 */
@@ -68,6 +68,10 @@ float PID_Update(pid_t *pid, float setpoint, float measurement);
 
 /** 增量式离散PID。 */
 float PID_UpdateIncremental(pid_t *pid, float setpoint, float measurement);
+
+/** Mode4/Mode5专用的独立积分位置式PID，带最终PWM步进和条件抗饱和。 */
+float PID_UpdatePositionLimited(pid_t *pid, float setpoint,
+                                float measurement);
 
 /** 清零PID历史状态和输出。 */
 void PID_Reset(pid_t *pid);

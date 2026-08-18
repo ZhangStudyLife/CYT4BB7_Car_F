@@ -1,4 +1,5 @@
 #include "car_mode.h"
+#include "car_loop.h"
 #include "pid_core.h"
 #include <math.h>
 
@@ -9,13 +10,12 @@
 #define MODE4_LARGE_TURN_BRAKE           (1U)
 #define MODE4_LARGE_TURN_PIVOT           (2U)
 volatile float mode4_speed_left_kp = 10.80f;
-volatile float mode4_speed_left_ki = 0.52f;
+volatile float mode4_speed_left_ki = 0.26f;
 volatile float mode4_speed_left_kd = 1.00f;
 volatile float mode4_speed_right_kp = 10.80f;
-volatile float mode4_speed_right_ki = 0.52f;
+volatile float mode4_speed_right_ki = 0.26f;
 volatile float mode4_speed_right_kd = 1.00f;
 volatile float mode4_speed_filter_alpha = 0.557f;
-volatile float mode4_speed_ff_static = 800.0f;
 volatile float mode4_gyroz_kp = 1.27f;
 volatile float mode4_gyroz_ki = 0.022f;
 volatile float mode4_gyroz_kff = 0.12f;
@@ -28,12 +28,10 @@ volatile float mode4_wheel_target_limit = 1000.0f;
 volatile float mode4_speed_i_limit = 2000.0f;
 volatile float mode4_speed_ff_deadband = 10.0f;
 volatile float mode4_speed_ff_transition = 100.0f;
-volatile float mode4_speed_increment_limit = 6000.0f;
-volatile float mode4_speed_brake_static = 800.0f;
+volatile float mode4_speed_pwm_step_limit = 6000.0f;
 volatile float mode4_speed_decel_step = 600.0f;
 volatile float mode4_gyroz_output_limit = 600.0f;
 volatile float mode4_yaw_rate_limit_dps = 1000.0f;
-volatile float mode4_gyroz_stop_target_dps = 2.0f;
 volatile float mode4_wheel_stop_speed = 8.0f;
 volatile float mode4_large_turn_brake_speed = 80.0f;
 volatile float mode4_large_turn_brake_target = 20.0f;
@@ -50,16 +48,26 @@ volatile float mode4_exit_command_match_deg = 80.0f;
 volatile float mode4_brake_target_margin = 5.0f;
 volatile float mode4_brake_ff_fade_span = 40.0f;
 
+/* 纵向力模型系数：a = b0*pwm_norm + b1*v + b2*sign(v) + b4。 */
+static const float mode4_ff_fan_table[8] =
+    {0.0f, 2000.0f, 2500.0f, 3000.0f, 3500.0f, 4000.0f, 4500.0f, 5000.0f};
+static const float mode4_ff_model[8][4] = {
+    {12.766022f, -0.8075469f, -0.3274675f, 0.4309255f},
+    {12.461290f, -0.5966385f, -0.7292719f, 0.0420895f},
+    {12.377394f, -0.7135110f, -0.2277669f, 0.1232141f},
+    {13.180540f, -0.6681932f, -0.7527403f, 0.1125604f},
+    {12.100573f, -0.6336953f, -0.7125850f, 0.1641450f},
+    {14.248403f, -1.0152786f, -0.4983454f, 0.6730683f},
+    {13.342708f, -0.7303908f, -0.8071498f, -0.2283004f},
+    {14.170924f, -0.7917450f, -0.8738459f, -0.2449317f},
+};
+
 static pid_t s_mode4_left_speed_pid;
 static pid_t s_mode4_right_speed_pid;
 static pid_t s_mode4_yaw_pid;
 static pid_t s_mode4_gyroz_pid;
 static float s_mode4_yaw_target_deg;
 static float s_mode4_gyroz_target_dps;
-static float s_mode4_previous_base_target;
-static uint8 s_mode4_speed_brake_active;
-static float s_mode4_left_brake_direction;
-static float s_mode4_right_brake_direction;
 static uint8 s_mode4_large_turn_state;
 static uint8 s_mode4_large_turn_rearm_required;
 static int8 s_mode4_large_turn_direction;
@@ -125,6 +133,59 @@ static void mode4_large_turn_set(uint8 state)
         s_mode4_large_turn_elapsed_cycles = 0U;
         s_mode4_large_turn_target_yaw_deg = 0.0f;
     }
+}
+
+static float mode4_speed_feedforward(float target)
+{
+    float fan = mode4_clampf(g_car_negative_pressure_throttle,
+                             mode4_ff_fan_table[0], mode4_ff_fan_table[7]);
+    float speed_cnt = fabsf(target);
+    float speed_mps = target / 115.0f;
+    float direction = (target < 0.0f) ? -1.0f : 1.0f;
+    float beta[4];
+    float model_ff;
+    float scale = 1.0f;
+    uint8 index = 0U;
+
+    while ((index < 7U) && (fan > mode4_ff_fan_table[index + 1U]))
+    {
+        index++;
+    }
+    if (index >= 7U)
+    {
+        index = 6U;
+    }
+    {
+        float span = mode4_ff_fan_table[index + 1U] -
+                     mode4_ff_fan_table[index];
+        float ratio = (span > 0.0f)
+                          ? (fan - mode4_ff_fan_table[index]) / span
+                          : 0.0f;
+        uint8 k;
+        for (k = 0U; k < 4U; k++)
+        {
+            beta[k] = mode4_ff_model[index][k] +
+                      ratio * (mode4_ff_model[index + 1U][k] -
+                               mode4_ff_model[index][k]);
+        }
+    }
+
+    if (speed_cnt <= mode4_speed_ff_deadband)
+    {
+        return 0.0f;
+    }
+    if (mode4_speed_ff_transition > mode4_speed_ff_deadband &&
+        speed_cnt < mode4_speed_ff_transition)
+    {
+        scale = (speed_cnt - mode4_speed_ff_deadband) /
+                (mode4_speed_ff_transition - mode4_speed_ff_deadband);
+    }
+    model_ff = -(beta[1] * speed_mps + beta[2] * direction + beta[3]) /
+               beta[0] * (float)MOTOR_PWM_MAX;
+    model_ff *= scale;
+    return (target > 0.0f)
+               ? mode4_clampf(model_ff, 0.0f, 5000.0f)
+               : mode4_clampf(model_ff, -5000.0f, 0.0f);
 }
 
 static uint8 mode4_command_update(float heading_deg,
@@ -297,7 +358,6 @@ static void mode4_speed_plan_update(void)
     float command;
     float delta;
 
-    s_mode4_previous_base_target = g_car_base_speed_target;
     if (s_mode4_large_turn_state != MODE4_LARGE_TURN_BRAKE)
     {
         g_car_base_speed_target = g_car_base_speed_command;
@@ -394,46 +454,6 @@ static float mode4_speed_direction(float feedback, float fallback)
     return 0.0f;
 }
 
-static void mode4_brake_update(uint8 command_active, float gyroz_target)
-{
-    if ((command_active != 0U) ||
-        (fabsf(gyroz_target) >= mode4_gyroz_stop_target_dps))
-    {
-        s_mode4_speed_brake_active = 0U;
-        return;
-    }
-    if ((s_mode4_speed_brake_active == 0U) &&
-        ((fabsf(g_car_speed_left_filtered) > mode4_wheel_stop_speed) ||
-         (fabsf(g_car_speed_right_filtered) > mode4_wheel_stop_speed)))
-    {
-        s_mode4_left_brake_direction = mode4_speed_direction(
-            g_car_speed_left_filtered, s_mode4_previous_base_target);
-        s_mode4_right_brake_direction = mode4_speed_direction(
-            g_car_speed_right_filtered, s_mode4_previous_base_target);
-        s_mode4_speed_brake_active = 1U;
-    }
-}
-
-static float mode4_brake_feedforward(float feedback, float direction)
-{
-    float speed_abs = fabsf(feedback);
-    float ff_deadband = fmaxf(mode4_speed_ff_deadband,
-                              mode4_wheel_stop_speed + 1.0f);
-    float scale;
-
-    if ((s_mode4_speed_brake_active == 0U) || (direction == 0.0f) ||
-        (feedback * direction <= 0.0f) ||
-        (speed_abs <= mode4_wheel_stop_speed))
-    {
-        return 0.0f;
-    }
-    scale = (speed_abs >= ff_deadband)
-                ? 1.0f
-                : (speed_abs - mode4_wheel_stop_speed) /
-                      (ff_deadband - mode4_wheel_stop_speed);
-    return -direction * mode4_speed_brake_static * scale;
-}
-
 static float mode4_large_turn_brake_feedforward(void)
 {
     float body_speed = 0.5f *
@@ -463,21 +483,16 @@ static int16 mode4_speed_pid_update(pid_t *pid,
                                     float brake_ff)
 {
     float output;
-    float ff_deadband = fmaxf(mode4_speed_ff_deadband,
-                              mode4_wheel_stop_speed + 1.0f);
-    float ff_transition = fmaxf(mode4_speed_ff_transition, ff_deadband);
 
     pid->kp = kp;
     pid->ki = ki;
     pid->kd = kd;
     pid->kff = 0.0f;
     pid->i_limit = mode4_speed_i_limit;
-    PID_SetStaticFeedforward(pid, mode4_speed_ff_static);
-    PID_SetFeedforwardTransition(pid, ff_deadband, ff_transition);
-    PID_SetExternalFeedforward(pid, 0.0f);
-    PID_SetIncrementLimit(pid, mode4_speed_increment_limit);
+    PID_SetExternalFeedforward(pid, mode4_speed_feedforward(target));
+    PID_SetIncrementLimit(pid, mode4_speed_pwm_step_limit);
     PID_SetOutputLimits(pid, -(float)MOTOR_PWM_MAX, (float)MOTOR_PWM_MAX);
-    output = PID_UpdateIncremental(pid, target, feedback) + brake_ff;
+    output = PID_UpdatePositionLimited(pid, target, feedback) + brake_ff;
     return (int16)mode4_clampf(output,
                               -(float)MOTOR_PWM_MAX,
                                (float)MOTOR_PWM_MAX);
@@ -504,10 +519,6 @@ void car_mode4_reset(void)
     PID_Reset(&s_mode4_gyroz_pid);
     s_mode4_yaw_target_deg = g_car_yaw_feedback_deg;
     s_mode4_gyroz_target_dps = 0.0f;
-    s_mode4_previous_base_target = 0.0f;
-    s_mode4_speed_brake_active = 0U;
-    s_mode4_left_brake_direction = 0.0f;
-    s_mode4_right_brake_direction = 0.0f;
     mode4_large_turn_reset();
     g_car_base_speed_command = 0.0f;
     g_car_base_speed_target = 0.0f;
@@ -517,13 +528,10 @@ void car_mode4_reset(void)
     g_car_speed_right_motor_output = 0.0f;
 }
 
-static void mode4_control_update(uint8 command_active,
-                                 float command_speed_mps)
+static void mode4_control_update(float command_speed_mps)
 {
     float gyroz_target;
-    float left_brake_ff;
-    float right_brake_ff;
-    float large_turn_brake_ff;
+    float brake_ff;
     int16 left_output;
     int16 right_output;
 
@@ -534,37 +542,18 @@ static void mode4_control_update(uint8 command_active,
     s_mode4_gyroz_target_dps = -gyroz_target;
     mode4_gyroz_control(gyroz_target);
 
-    if (s_mode4_large_turn_state == MODE4_LARGE_TURN_BRAKE)
-    {
-        s_mode4_speed_brake_active = 0U;
-    }
-    else
-    {
-        mode4_brake_update(command_active, gyroz_target);
-    }
-
-    large_turn_brake_ff = mode4_large_turn_brake_feedforward();
-    left_brake_ff = (s_mode4_large_turn_state == MODE4_LARGE_TURN_BRAKE)
-                        ? large_turn_brake_ff
-                        : mode4_brake_feedforward(
-                              g_car_speed_left_filtered,
-                              s_mode4_left_brake_direction);
-    right_brake_ff = (s_mode4_large_turn_state == MODE4_LARGE_TURN_BRAKE)
-                         ? large_turn_brake_ff
-                         : mode4_brake_feedforward(
-                               g_car_speed_right_filtered,
-                               s_mode4_right_brake_direction);
+    brake_ff = mode4_large_turn_brake_feedforward();
 
     left_output = mode4_speed_pid_update(
         &s_mode4_left_speed_pid,
         Left_Target_Speed, g_car_speed_left_filtered,
         mode4_speed_left_kp, mode4_speed_left_ki, mode4_speed_left_kd,
-        left_brake_ff);
+        brake_ff);
     right_output = mode4_speed_pid_update(
         &s_mode4_right_speed_pid,
         Right_Target_Speed, g_car_speed_right_filtered,
         mode4_speed_right_kp, mode4_speed_right_ki, mode4_speed_right_kd,
-        right_brake_ff);
+        brake_ff);
     g_car_speed_left_motor_output = (float)left_output;
     g_car_speed_right_motor_output = (float)right_output;
     motor_left_set_speed(left_output);
@@ -574,11 +563,10 @@ static void mode4_control_update(uint8 command_active,
 void car_mode4_update_100HZ(uint32 now_ms)
 {
     float speed_mps;
-    uint8 command_active;
 
     (void)now_ms;
-    command_active = mode4_plan_command_update(&speed_mps);
-    mode4_control_update(command_active, speed_mps);
+    (void)mode4_plan_command_update(&speed_mps);
+    mode4_control_update(speed_mps);
 }
 
 void car_mode4_get_diag(car_drive_diag_t *diag)
@@ -613,5 +601,5 @@ void car_mode4_get_diag(car_drive_diag_t *diag)
     diag->large_turn_direction = s_mode4_large_turn_direction;
     diag->large_turn_state = s_mode4_large_turn_state;
     diag->large_turn_rearm_required = s_mode4_large_turn_rearm_required;
-    diag->speed_brake_active = s_mode4_speed_brake_active;
+    diag->speed_brake_active = 0U;
 }

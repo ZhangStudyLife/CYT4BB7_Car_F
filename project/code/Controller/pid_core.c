@@ -248,6 +248,83 @@ float PID_UpdateIncremental(pid_t *pid, float setpoint, float measurement)
     return pid->output;
 }
 
+float PID_UpdatePositionLimited(pid_t *pid, float setpoint,
+                                float measurement)
+{
+    float error;
+    float integral_delta;
+    float integral_base;
+    float integral_candidate;
+    float output_unsaturated;
+    float output_target;
+    float output;
+
+    if (pid == 0)
+    {
+        return 0.0f;
+    }
+
+    error = setpoint - measurement;
+    pid->p_term = pid->kp * error;
+    pid->d_term = (pid->initialized != 0U) ?
+                  pid->kd * (error - pid->prev_error) : 0.0f;
+    pid->ff_term = pid_feedforward(pid, setpoint);
+    integral_delta = pid->ki * error;
+    integral_base = (pid->ki == 0.0f) ? 0.0f :
+                    pid_clampf(pid->integral,
+                               -pid->i_limit, pid->i_limit);
+    integral_candidate = pid_clampf(integral_base + integral_delta,
+                                    -pid->i_limit, pid->i_limit);
+
+    output_unsaturated = pid->p_term + integral_candidate +
+                         pid->d_term + pid->ff_term;
+    output_target = pid_clampf(output_unsaturated,
+                               pid->output_min, pid->output_max);
+    output = output_target;
+    if (pid->incremental_limit > 0.0f)
+    {
+        output = pid->output + pid_clampf(output_target - pid->output,
+                                          -pid->incremental_limit,
+                                           pid->incremental_limit);
+    }
+
+    /* 饱和或PWM步进限制阻止输出时，冻结继续推动限制器的积分。 */
+    if (((output_unsaturated > output) &&
+         (integral_delta > 0.0f)) ||
+        ((output_unsaturated < output) &&
+         (integral_delta < 0.0f)))
+    {
+        integral_candidate = integral_base;
+        output_unsaturated = pid->p_term + integral_candidate +
+                             pid->d_term + pid->ff_term;
+        output_target = pid_clampf(output_unsaturated,
+                                   pid->output_min, pid->output_max);
+        output = output_target;
+        if (pid->incremental_limit > 0.0f)
+        {
+            output = pid->output +
+                pid_clampf(output_target - pid->output,
+                           -pid->incremental_limit,
+                            pid->incremental_limit);
+        }
+    }
+
+    pid->integral = integral_candidate;
+    pid->error = error;
+    pid->i_term = pid->integral;
+    pid->output = output;
+    pid->incremental_output = pid->output - pid->ff_term;
+    pid->sp_rate = (pid->initialized != 0U) ?
+                   (setpoint - pid->prev_sp) : 0.0f;
+    pid->prev_prev_error = pid->prev_error;
+    pid->prev_error = error;
+    pid->prev_meas = measurement;
+    pid->prev_sp = setpoint;
+    pid->initialized = 1U;
+
+    return pid->output;
+}
+
 void PID_Reset(pid_t *pid)
 {
     if (pid == 0)
