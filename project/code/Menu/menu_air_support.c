@@ -373,11 +373,11 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_PARAM(mode4_car_turn_accel_ff, 3.4f, 0.2f, 0.0f, 15.0f, "Mode4 Img"),
     MENU_AIR_PARAM(mode4_car_turn_accel_lpf_hz, 2.9f, 0.1f, 0.1f, 20.0f, "Mode4 Img"),
 
-    MENU_AIR_PARAM(yaw_change_mode1, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
-    MENU_AIR_PARAM(yaw_change_mode2, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
-    MENU_AIR_PARAM(yaw_change_mode4, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
-    MENU_AIR_PARAM(yaw_change_mode5, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw"),
-    MENU_AIR_PARAM(yaw_change_mode8, 0.0f, 1.0f, 0.0f, 1.0f, "Yaw")
+    MENU_AIR_PARAM(yaw_change_mode1, 0.0f, 1.0f, 0.0f, 2.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode2, 0.0f, 1.0f, 0.0f, 2.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode4, 0.0f, 1.0f, 0.0f, 2.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode5, 0.0f, 1.0f, 0.0f, 2.0f, "Yaw"),
+    MENU_AIR_PARAM(yaw_change_mode8, 0.0f, 1.0f, 0.0f, 2.0f, "Yaw")
 };
 
 typedef char menu_air_param_count_must_match[
