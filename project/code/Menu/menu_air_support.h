@@ -15,7 +15,7 @@
 #include "zf_common_headfile.h"
 
 #define MENU_AIR_MAX_PARAMS                  (384U)
-#define MENU_AIR_EXPECTED_PARAM_COUNT        (212U)
+#define MENU_AIR_EXPECTED_PARAM_COUNT        (256U)
 
 #if (MENU_AIR_EXPECTED_PARAM_COUNT > MENU_AIR_MAX_PARAMS)
 #error "Air parameter count exceeds storage capacity"
@@ -28,6 +28,7 @@
 #define MENU_AIR_SYNC_MODE_FAIL             (4U)
 #define MENU_AIR_SYNC_MODE_PULL             (5U)
 #define MENU_AIR_SYNC_MODE_RECOVER          (6U)
+#define MENU_AIR_SYNC_MODE_BACKGROUND       (7U)
 #define MENU_AIR_SYNC_REASON_NONE           (0U)
 #define MENU_AIR_SYNC_REASON_BOOT           (1U)
 #define MENU_AIR_SYNC_REASON_LOAD           (2U)
