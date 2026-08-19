@@ -6,7 +6,9 @@
 
 #define CAR_IMU_STALE_CONTROL_LIMIT (3U) /* IMU连续未更新的控制周期上限 */
 #define CAR_PIT_TICKS_PER_US        (8U) /* PIT每微秒计数值 */
-#define AIR_RUN_DATA_CRITICAL_COUNT          (16U) /* 飞行关键数据数量 */
+#define AIR_RUN_DATA_CRITICAL_LEGACY_COUNT   (16U) /* 旧飞行关键数据数量 */
+#define AIR_RUN_DATA_CRITICAL_COUNT          (17U) /* 当前飞行关键数据数量 */
+#define AIR_RUN_DATA_CRITICAL_VACUUM_ENABLE  (16U) /* 飞机负压许可字段索引 */
 #define AIR_RUN_DATA_DIAGNOSTIC_LEGACY_COUNT (45U) /* 旧诊断数据数量 */
 #define AIR_RUN_DATA_DIAGNOSTIC_V1_COUNT     (48U) /* V1诊断数据数量 */
 #define AIR_RUN_DATA_DIAGNOSTIC_COUNT        (52U) /* 当前诊断数据数量 */
@@ -27,7 +29,7 @@ volatile float g_car_speed_right_motor_output = 0.0f;
 volatile float Left_Target_Speed = 0.0f;
 volatile float Right_Target_Speed = 0.0f;
 volatile float mode4_fuya_enable = 1.0f;
-volatile float mode4_fuya_target = 5000.0f;
+volatile float mode4_fuya_target = 4000.0f;
 volatile float mode5_fuya_enable = 0.0f;
 volatile float mode5_fuya_target = 5000.0f;
 volatile float g_car_negative_pressure_throttle = 0.0f;
@@ -74,6 +76,7 @@ static volatile int16 s_car_pwm_test_left_pwm = 0;
 static volatile int16 s_car_pwm_test_right_pwm = 0;
 static uint16 s_negative_pressure_ramp_tick = 0U;
 static car_mode_e s_negative_pressure_mode = CAR_MODE_0;
+static volatile float s_air_vacuum_enable = 0.0f; /* 飞机下发的负压许可，默认关闭。 */
 
 static void car_loop_update_air_runtime_state(float air_state)
 {
@@ -85,7 +88,8 @@ static void car_loop_update_air_runtime_state(float air_state)
 
 static void on_air_data(const float *data, uint8 count)
 {
-    if (count == AIR_RUN_DATA_CRITICAL_COUNT)
+    if ((count == AIR_RUN_DATA_CRITICAL_LEGACY_COUNT) ||
+        (count == AIR_RUN_DATA_CRITICAL_COUNT))
     {
         car_loop_update_air_runtime_state(data[0]);
         g_air_std_ch0 = data[1];
@@ -103,6 +107,8 @@ static void on_air_data(const float *data, uint8 count)
         g_air_car_plan_forward_mps = data[13];
         g_air_beacon_lost_flag = data[14];
         g_air_sync_time_ms = data[15];
+        s_air_vacuum_enable = (count == AIR_RUN_DATA_CRITICAL_COUNT) ?
+                                  data[AIR_RUN_DATA_CRITICAL_VACUUM_ENABLE] : 0.0f;
         return;
     }
 
@@ -110,9 +116,11 @@ static void on_air_data(const float *data, uint8 count)
         (count != AIR_RUN_DATA_DIAGNOSTIC_V1_COUNT) &&
         (count != AIR_RUN_DATA_DIAGNOSTIC_COUNT))
     {
+        s_air_vacuum_enable = 0.0f;
         return;
     }
 
+    s_air_vacuum_enable = 0.0f;
     g_air_tof_fused_height_mm = data[0];
     g_air_euler_roll = data[1];
     g_air_euler_pitch = data[2];
@@ -383,6 +391,7 @@ void car_loop_motion_100HZ_isr(void)
 
     if (air_comm_car_is_run_data_fresh() == 0U)
     {
+        s_air_vacuum_enable = 0.0f;
         g_car_realtime_diag.command_stale_count++;
     }
     if (IMU_GetRealtimeSnapshot(&s_car_imu_snapshot) == 0U)
@@ -449,7 +458,7 @@ void car_loop_motion_100HZ_isr(void)
             target = (uint16)mode5_fuya_target;
         }
 
-        if (enable >= 0.5f)
+        if ((enable >= 0.5f) && (s_air_vacuum_enable >= 0.5f))
         {
             if ((negative_pressure_is_enabled() == 0U) ||
                 (s_negative_pressure_mode != mode))
