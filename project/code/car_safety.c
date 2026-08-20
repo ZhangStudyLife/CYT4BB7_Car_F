@@ -351,19 +351,19 @@ void car_safety_update_100HZ(const car_safety_input_t *input)
         return;
     }
 
-    car_safety_monitor_stop(input);
+    // car_safety_monitor_stop(input);
     if (s_car_safety.output_allowed == 0U)
     {
         return;
     }
 
-    car_safety_monitor_stall(input);
+    // car_safety_monitor_stall(input);
     if (s_car_safety.output_allowed == 0U)
     {
         return;
     }
 
-    car_safety_monitor_rotation(input);
+    // car_safety_monitor_rotation(input);
 }
 
 uint8 car_safety_is_output_allowed(void)
