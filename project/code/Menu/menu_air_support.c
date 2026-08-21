@@ -257,7 +257,7 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_PARAM(mode8_vel_y_kff, 0.0f, 0.001f, 0.0f, 1.0f, "Mode8 Vel"),
     MENU_AIR_PARAM(mode8_vel_y_i_limit, 3.0f, 0.1f, 0.0f, 20.0f, "Mode8 Vel"),
     MENU_AIR_PARAM(mode8_vel_y_d_lpf, 10.0f, 0.5f, 0.0f, 50.0f, "Mode8 Vel"),
-    MENU_AIR_OPTIONAL_PARAM(c1_exp_time, 400.0f, 10.0f, 1.0f, 636.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_PARAM(c1_exp_time, 240.0f, 10.0f, 1.0f, 636.0f, "Camera Basic"),
     MENU_AIR_OPTIONAL_PARAM(c1_fps, 110.0f, 5.0f, 1.0f, 200.0f, "Camera Basic"),
     MENU_AIR_OPTIONAL_PARAM(c1_gain, 32.0f, 1.0f, 16.0f, 64.0f, "Camera Basic"),
     MENU_AIR_OPTIONAL_ENUM_PARAM(c1_screen_mode, 0.0f, 1.0f, 0.0f, 4.0f, "Display",
@@ -302,7 +302,7 @@ static const menu_air_param_definition_t s_air_param_definitions[] =
     MENU_AIR_OPTIONAL_PARAM(c1_vel_alpha, 0.163340f, 0.01f, 0.0f, 1.0f, "Tracking"),
 
     MENU_AIR_OPTIONAL_PARAM(bl3_beacon_thr, 120.0f, 1.0f, 0.0f, 255.0f, "Beacon"),
-    MENU_AIR_OPTIONAL_PARAM(bl3_exp_time, 500.0f, 10.0f, 1.0f, 636.0f, "Camera Basic"),
+    MENU_AIR_OPTIONAL_PARAM(bl3_exp_time, 240.0f, 10.0f, 1.0f, 636.0f, "Camera Basic"),
     MENU_AIR_OPTIONAL_PARAM(bl3_fps, 110.0f, 5.0f, 1.0f, 200.0f, "Camera Basic"),
     MENU_AIR_OPTIONAL_PARAM(bl3_gain, 32.0f, 1.0f, 16.0f, 64.0f, "Camera Basic"),
     MENU_AIR_OPTIONAL_ENUM_PARAM(bl3_screen_enable, 0.0f, 1.0f, 0.0f, 1.0f, "Display",
