@@ -9,9 +9,9 @@
 
 static void car_platform_init(void)
 {
-    clock_init(SYSTEM_CLOCK_250M);      // æ—¶é’Ÿé…ç½®åŠç³»ç»Ÿåˆå§‹åŒ–<åŠ¡å¿…ä¿ç•™>
+    clock_init(SYSTEM_CLOCK_250M);      // Ê±ÖÓÅäÖÃ¼°ÏµÍ³³õÊ¼»¯<Îñ±Ø±£Áô>
     SCB_DisableDCache();
-    debug_init();                       // è°ƒè¯•ä¸²å£ä¿¡æ¯åˆå§‹åŒ–
+    debug_init();                       // µ÷ÊÔ´®¿ÚĞÅÏ¢³õÊ¼»¯
 }
 
 int main(void)

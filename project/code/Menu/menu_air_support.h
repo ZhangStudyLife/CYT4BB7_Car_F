@@ -1,12 +1,12 @@
-/* Airå‚æ•°è¿œç¨‹åŒæ­¥æ¨¡å— - å¤´æ–‡ä»¶
+/* Air²ÎÊıÔ¶³ÌÍ¬²½Ä£¿é - Í·ÎÄ¼ş
  *
- * åŠŸèƒ½ï¼šç®¡ç†é£æœºç«¯ï¼ˆAirï¼‰çš„å¯è°ƒå‚æ•°ï¼Œé€šè¿‡AirCommæ— çº¿åŒæ­¥
- * å·¥ä½œæ–¹å¼ï¼š
- *   1. èœå•ä¿®æ”¹å‚æ•° â†’ æ ‡è®°dirty
- *   2. 100HZè½®è¯¢å‘ç°dirty â†’ å‘é€set_paramå‘½ä»¤ç»™Air
- *   3. Airå›å¤ACK â†’ æ¸…é™¤dirtyæ ‡è®°
- * å®‰å…¨æ¡ä»¶ï¼šAiråœ¨çº¿ ä¸” å°è½¦æœªè¿è¡Œï¼ˆcontrol_enabled=0æˆ–ç´§æ€¥åœï¼‰æ—¶æ‰å…è®¸ç¼–è¾‘
- * Flashå­˜æ¡£ï¼šæ”¯æŒ4ä¸ªå­˜æ¡£æ§½ï¼ˆslot 0-3ï¼‰ï¼Œç‹¬ç«‹äºè½¦ç«¯å‚æ•°å­˜æ¡£
+ * ¹¦ÄÜ£º¹ÜÀí·É»ú¶Ë£¨Air£©µÄ¿Éµ÷²ÎÊı£¬Í¨¹ıAirCommÎŞÏßÍ¬²½
+ * ¹¤×÷·½Ê½£º
+ *   1. ²Ëµ¥ĞŞ¸Ä²ÎÊı ¡ú ±ê¼Çdirty
+ *   2. 100HZÂÖÑ¯·¢ÏÖdirty ¡ú ·¢ËÍset_paramÃüÁî¸øAir
+ *   3. Air»Ø¸´ACK ¡ú Çå³ıdirty±ê¼Ç
+ * °²È«Ìõ¼ş£ºAirÔÚÏß ÇÒ Ğ¡³µÎ´ÔËĞĞ£¨control_enabled=0»ò½ô¼±Í££©Ê±²ÅÔÊĞí±à¼­
+ * Flash´æµµ£ºÖ§³Ö4¸ö´æµµ²Û£¨slot 0-3£©£¬¶ÀÁ¢ÓÚ³µ¶Ë²ÎÊı´æµµ
  */
 
 #ifndef MENU_AIR_SUPPORT_H
@@ -44,37 +44,37 @@
 #define MENU_AIR_CMD_INVALID_INDEX          (0xFFU)
 #define MENU_AIR_CMD_ACK_TEXT_MAX           (96U)
 
-/* Airå‚æ•°é…ç½®ç»“æ„ä½“ */
+/* Air²ÎÊıÅäÖÃ½á¹¹Ìå */
 typedef struct
 {
-    char name[32];          // å‚æ•°åï¼ˆç”¨äºAirCommä¼ è¾“ï¼‰
-    float *variable;        // å‚æ•°å˜é‡æŒ‡é’ˆ
-    float step;             // ç¼–è¾‘æ­¥è¿›å€¼
-    float min_val;          // æœ€å°å€¼
-    float max_val;          // æœ€å¤§å€¼
-    const char *menu_name;  // æ‰€å±èœå•åç§°
-    uint8 visible;          // 0=ä»…ä»èœå•éšè—ï¼Œä»å‚ä¸é€šä¿¡ä¸Flashå­˜æ¡£
-    const char * const *enum_labels; // å¯é€‰æšä¸¾æ–‡æœ¬ï¼ŒNULLè¡¨ç¤ºæŒ‰æ™®é€šæ•°å€¼æ˜¾ç¤º
-    uint8 enum_count;                // æšä¸¾æ–‡æœ¬æ•°é‡
-    uint8 optional;                  // 1è¡¨ç¤ºæ—§Airå›ºä»¶ç¼ºå°‘è¯¥å‚æ•°æ—¶ä¸é˜»æ–­å…¶ä½™å‚æ•°åŒæ­¥
-    uint8 available;                 // 1è¡¨ç¤ºæœ¬æ¬¡ç›®å½•æ‹‰å–å·²ç¡®è®¤è¿œç«¯æ”¯æŒè¯¥å‚æ•°
-    uint8 enter_confirm_only;        // 1è¡¨ç¤ºBackå–æ¶ˆç¼–è¾‘ï¼Œä»…Enterç¡®è®¤åä¸‹å‘
+    char name[32];          // ²ÎÊıÃû£¨ÓÃÓÚAirComm´«Êä£©
+    float *variable;        // ²ÎÊı±äÁ¿Ö¸Õë
+    float step;             // ±à¼­²½½øÖµ
+    float min_val;          // ×îĞ¡Öµ
+    float max_val;          // ×î´óÖµ
+    const char *menu_name;  // ËùÊô²Ëµ¥Ãû³Æ
+    uint8 visible;          // 0=½ö´Ó²Ëµ¥Òş²Ø£¬ÈÔ²ÎÓëÍ¨ĞÅÓëFlash´æµµ
+    const char * const *enum_labels; // ¿ÉÑ¡Ã¶¾ÙÎÄ±¾£¬NULL±íÊ¾°´ÆÕÍ¨ÊıÖµÏÔÊ¾
+    uint8 enum_count;                // Ã¶¾ÙÎÄ±¾ÊıÁ¿
+    uint8 optional;                  // 1±íÊ¾¾ÉAir¹Ì¼şÈ±ÉÙ¸Ã²ÎÊıÊ±²»×è¶ÏÆäÓà²ÎÊıÍ¬²½
+    uint8 available;                 // 1±íÊ¾±¾´ÎÄ¿Â¼À­È¡ÒÑÈ·ÈÏÔ¶¶ËÖ§³Ö¸Ã²ÎÊı
+    uint8 enter_confirm_only;        // 1±íÊ¾BackÈ¡Ïû±à¼­£¬½öEnterÈ·ÈÏºóÏÂ·¢
 } menu_air_param_config_t;
 
-/* Airå‚æ•°åŒæ­¥çŠ¶æ€ï¼ˆä¾›è¯Šæ–­é¡µè¯»å–ï¼‰ */
+/* Air²ÎÊıÍ¬²½×´Ì¬£¨¹©Õï¶ÏÒ³¶ÁÈ¡£© */
 typedef struct
 {
-    uint16 dirty_count;         // å¾…åŒæ­¥å‚æ•°æ•°é‡
-    uint8 sending;              // æ˜¯å¦æ­£åœ¨å‘é€
-    uint16 active_index;        // å½“å‰æ­£åœ¨åŒæ­¥çš„å‚æ•°ç´¢å¼•
-    uint16 last_failed_index;   // ä¸Šæ¬¡åŒæ­¥å¤±è´¥çš„ç´¢å¼•
-    uint8 last_failed_result;   // ä¸Šæ¬¡å¤±è´¥è¯·æ±‚çš„ACKç»“æœ
-    uint8 last_failed_status;   // ä¸Šæ¬¡å¤±è´¥è¯·æ±‚çš„ACKçŠ¶æ€ç 
-    uint8 last_result;          // ä¸Šæ¬¡ACKç»“æœ
-    uint8 last_status;          // ä¸Šæ¬¡ACKçŠ¶æ€ç 
-    uint32 send_count;          // æ€»å‘é€æ¬¡æ•°
-    uint32 ok_count;            // æˆåŠŸæ¬¡æ•°
-    uint32 fail_count;          // å¤±è´¥æ¬¡æ•°
+    uint16 dirty_count;         // ´ıÍ¬²½²ÎÊıÊıÁ¿
+    uint8 sending;              // ÊÇ·ñÕıÔÚ·¢ËÍ
+    uint16 active_index;        // µ±Ç°ÕıÔÚÍ¬²½µÄ²ÎÊıË÷Òı
+    uint16 last_failed_index;   // ÉÏ´ÎÍ¬²½Ê§°ÜµÄË÷Òı
+    uint8 last_failed_result;   // ÉÏ´ÎÊ§°ÜÇëÇóµÄACK½á¹û
+    uint8 last_failed_status;   // ÉÏ´ÎÊ§°ÜÇëÇóµÄACK×´Ì¬Âë
+    uint8 last_result;          // ÉÏ´ÎACK½á¹û
+    uint8 last_status;          // ÉÏ´ÎACK×´Ì¬Âë
+    uint32 send_count;          // ×Ü·¢ËÍ´ÎÊı
+    uint32 ok_count;            // ³É¹¦´ÎÊı
+    uint32 fail_count;          // Ê§°Ü´ÎÊı
     uint8 mode;
     uint8 reason;
     uint32 timeout_count;
@@ -91,26 +91,26 @@ typedef struct
     char last_ack_text[MENU_AIR_CMD_ACK_TEXT_MAX + 1U];
 } menu_air_cmd_status_t;
 
-/* Airå‚æ•°å˜é‡ï¼ˆèœå•å¯è°ƒï¼‰ */
+/* Air²ÎÊı±äÁ¿£¨²Ëµ¥¿Éµ÷£© */
 void menu_air_support_init(void);
-uint16 menu_get_air_param_count(void);                                                  // è·å–å‚æ•°æ•°é‡
-float menu_get_air_param_by_index(uint16 index);                                        // æŒ‰ç´¢å¼•è¯»å–
-uint8 menu_set_air_param_by_index(uint16 index, float value);                           // æŒ‰ç´¢å¼•è®¾ç½®ï¼ˆè‡ªåŠ¨æ ‡è®°dirtyï¼‰
-const menu_air_param_config_t *menu_get_air_param_config(uint16 index);                 // è·å–å‚æ•°é…ç½®
-uint8 menu_air_param_is_available(uint16 index);                                        // è¿œç«¯æ˜¯å¦æ”¯æŒæŒ‡å®šå‚æ•°
-uint8 menu_is_air_connected(void);                                                      // Airæ˜¯å¦åœ¨çº¿
-uint8 menu_can_edit_air_params(void);                                                   // æ˜¯å¦å…è®¸ç¼–è¾‘ï¼ˆåœ¨çº¿ä¸”æœªè¿è¡Œï¼‰
-uint8 menu_sync_all_air_params(void);                                                   // æ ‡è®°æ‰€æœ‰å‚æ•°ä¸ºdirtyï¼ˆè§¦å‘å…¨é‡åŒæ­¥ï¼‰
+uint16 menu_get_air_param_count(void);                                                  // »ñÈ¡²ÎÊıÊıÁ¿
+float menu_get_air_param_by_index(uint16 index);                                        // °´Ë÷Òı¶ÁÈ¡
+uint8 menu_set_air_param_by_index(uint16 index, float value);                           // °´Ë÷ÒıÉèÖÃ£¨×Ô¶¯±ê¼Çdirty£©
+const menu_air_param_config_t *menu_get_air_param_config(uint16 index);                 // »ñÈ¡²ÎÊıÅäÖÃ
+uint8 menu_air_param_is_available(uint16 index);                                        // Ô¶¶ËÊÇ·ñÖ§³ÖÖ¸¶¨²ÎÊı
+uint8 menu_is_air_connected(void);                                                      // AirÊÇ·ñÔÚÏß
+uint8 menu_can_edit_air_params(void);                                                   // ÊÇ·ñÔÊĞí±à¼­£¨ÔÚÏßÇÒÎ´ÔËĞĞ£©
+uint8 menu_sync_all_air_params(void);                                                   // ±ê¼ÇËùÓĞ²ÎÊıÎªdirty£¨´¥·¢È«Á¿Í¬²½£©
 uint8 menu_air_commit_param(uint16 index);
 uint8 menu_air_commit_param_value(uint16 index, float value);
 uint8 menu_air_sync_all_start(uint8 reason);
 uint8 menu_air_is_busy(void);
 void menu_air_stop_param_sync(void);
 void menu_air_abort_param_sync_runtime(void);
-void menu_air_update_100HZ(void);                                                       // 100HZåŒæ­¥è½®è¯¢
-void menu_get_air_sync_status(menu_air_sync_status_t *status);                          // è·å–åŒæ­¥çŠ¶æ€
-uint8 menu_load_air_slot(uint8 slot);                                                   // ä»FlashåŠ è½½Airå‚æ•°å­˜æ¡£
-uint8 menu_save_air_slot(uint8 slot);                                                   // ä¿å­˜Airå‚æ•°åˆ°Flash
+void menu_air_update_100HZ(void);                                                       // 100HZÍ¬²½ÂÖÑ¯
+void menu_get_air_sync_status(menu_air_sync_status_t *status);                          // »ñÈ¡Í¬²½×´Ì¬
+uint8 menu_load_air_slot(uint8 slot);                                                   // ´ÓFlash¼ÓÔØAir²ÎÊı´æµµ
+uint8 menu_save_air_slot(uint8 slot);                                                   // ±£´æAir²ÎÊıµ½Flash
 
 uint8 menu_air_command_start(uint8 index);
 uint8 menu_air_command_stop(void);

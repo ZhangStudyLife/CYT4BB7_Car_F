@@ -1,45 +1,45 @@
 /**
  * @file air_comm_car.h
- * @brief è½¦ç«¯ç©ºä¸­é€šä¿¡æ¨¡å—ï¼ˆUART ä¸²å£åè®®ï¼‰
+ * @brief ³µ¶Ë¿ÕÖĞÍ¨ĞÅÄ£¿é£¨UART ´®¿ÚĞ­Òé£©
  *
- * åŠŸèƒ½ï¼šè½¦ç«¯ MCU ä¸é¥æ§ç«¯ï¼ˆæ‰‹æœº/ä¸Šä½æœºï¼‰é€šè¿‡ UART è¿›è¡Œå‚æ•°ä¸‹å‘ã€
- *       å‡½æ•°è°ƒç”¨ã€å¿ƒè·³ä¿æ´»å’Œå®æ—¶æ•°æ®æ¥æ”¶
+ * ¹¦ÄÜ£º³µ¶Ë MCU ÓëÒ£¿Ø¶Ë£¨ÊÖ»ú/ÉÏÎ»»ú£©Í¨¹ı UART ½øĞĞ²ÎÊıÏÂ·¢¡¢
+ *       º¯Êıµ÷ÓÃ¡¢ĞÄÌø±£»îºÍÊµÊ±Êı¾İ½ÓÊÕ
  *
- * å¸§æ ¼å¼ï¼ˆå…± 9 + payload + 2 = 11~259 å­—èŠ‚ï¼‰ï¼š
- *   [0:3]  å¸§å¤´ï¼š0xAA 0xAA 0x55 0x55ï¼ˆå››å­—èŠ‚å®šå¸§å¤´ï¼ŒæŠ—å¹²æ‰°ï¼‰
- *   [4]     ç±»å‹ï¼šæ¶ˆæ¯ç±»å‹å­—èŠ‚
- *   [5]     åºå·ï¼šå¸§åºå·ï¼ˆ0~255 å¾ªç¯ï¼Œç”¨äº ACK åŒ¹é…ï¼‰
- *   [6]     é•¿åº¦ï¼špayload å­—èŠ‚æ•°ï¼ˆ0~250ï¼‰
- *   [7:N]   payloadï¼šæ•°æ®è½½è·
- *   [N+1:N+2] CRC16-CCITTï¼šè¦†ç›–å¸§å¤´åˆ° payload æœ«å°¾
+ * Ö¡¸ñÊ½£¨¹² 9 + payload + 2 = 11~259 ×Ö½Ú£©£º
+ *   [0:3]  Ö¡Í·£º0xAA 0xAA 0x55 0x55£¨ËÄ×Ö½Ú¶¨Ö¡Í·£¬¿¹¸ÉÈÅ£©
+ *   [4]     ÀàĞÍ£ºÏûÏ¢ÀàĞÍ×Ö½Ú
+ *   [5]     ĞòºÅ£ºÖ¡ĞòºÅ£¨0~255 Ñ­»·£¬ÓÃÓÚ ACK Æ¥Åä£©
+ *   [6]     ³¤¶È£ºpayload ×Ö½ÚÊı£¨0~250£©
+ *   [7:N]   payload£ºÊı¾İÔØºÉ
+ *   [N+1:N+2] CRC16-CCITT£º¸²¸ÇÖ¡Í·µ½ payload Ä©Î²
  *
- * æ¶ˆæ¯ç±»å‹ï¼š
- *   0x01 SET_PARAM  - ä¸‹å‘å‚æ•°ï¼ˆéœ€ ACKï¼‰    payload: [name_len][name...][float(4B)]
- *   0x02 ACK_PARAM  - å‚æ•°æ“ä½œç¡®è®¤           payload: [status]
- *   0x03 EXEC_COMMAND - æ‰§è¡Œè¿œç¨‹å‘½ä»¤ï¼ˆéœ€ ACKï¼‰payload: [name_len][name...]
- *   0x04 ACK_COMMAND  - è¿œç¨‹å‘½ä»¤ç¡®è®¤         payload: [ACKæ–‡æœ¬]
- *   0x05 HEARTBEAT  - å¿ƒè·³ï¼ˆä¸éœ€ ACKï¼‰      payload: [reserved(2B)][tick_ms(4B)]
- *   0x06 RUN_DATA   - åŒå‘å®æ—¶æ•°æ®ï¼ˆæ—  ACKï¼‰ payload: [count][float0][float1]...
+ * ÏûÏ¢ÀàĞÍ£º
+ *   0x01 SET_PARAM  - ÏÂ·¢²ÎÊı£¨Ğè ACK£©    payload: [name_len][name...][float(4B)]
+ *   0x02 ACK_PARAM  - ²ÎÊı²Ù×÷È·ÈÏ           payload: [status]
+ *   0x03 EXEC_COMMAND - Ö´ĞĞÔ¶³ÌÃüÁî£¨Ğè ACK£©payload: [name_len][name...]
+ *   0x04 ACK_COMMAND  - Ô¶³ÌÃüÁîÈ·ÈÏ         payload: [ACKÎÄ±¾]
+ *   0x05 HEARTBEAT  - ĞÄÌø£¨²»Ğè ACK£©      payload: [reserved(2B)][tick_ms(4B)]
+ *   0x06 RUN_DATA   - Ë«ÏòÊµÊ±Êı¾İ£¨ÎŞ ACK£© payload: [count][float0][float1]...
  *
- * ACK/é‡è¯•ç­–ç•¥ï¼š
- *   - SET_PARAM / EXEC_COMMAND å‘é€åå¯åŠ¨ ACK ç­‰å¾…
- *   - ACKç­‰å¾…æœŸé—´æ¯200msé‡å‘åŸå¸§
- *   - æ™®é€šæ“ä½œæ€»ç­‰å¾…800msï¼ŒæŒ‡å®šè¶…æ—¶æ¥å£å¯ä¸ºæ…¢æ“ä½œæ‰©å¤§çª—å£
- *   - è¾¾åˆ°æ€»ç­‰å¾…æ—¶é—´ä»æ— ACK â†’ ACK_RESULT_TIMEOUT
- *   - æ”¶åˆ° ACK ä½† status != OK â†’ ACK_RESULT_ERROR
+ * ACK/ÖØÊÔ²ßÂÔ£º
+ *   - SET_PARAM / EXEC_COMMAND ·¢ËÍºóÆô¶¯ ACK µÈ´ı
+ *   - ACKµÈ´ıÆÚ¼äÃ¿200msÖØ·¢Ô­Ö¡
+ *   - ÆÕÍ¨²Ù×÷×ÜµÈ´ı800ms£¬Ö¸¶¨³¬Ê±½Ó¿Ú¿ÉÎªÂı²Ù×÷À©´ó´°¿Ú
+ *   - ´ïµ½×ÜµÈ´ıÊ±¼äÈÔÎŞACK ¡ú ACK_RESULT_TIMEOUT
+ *   - ÊÕµ½ ACK µ« status != OK ¡ú ACK_RESULT_ERROR
  *
- * å¿ƒè·³/åœ¨çº¿åˆ¤æ–­ï¼š
- *   - è½¦ç«¯æ¯ 200ms å‘ä¸€æ¬¡å¿ƒè·³
- *   - æ”¶åˆ°å¯¹æ–¹å¿ƒè·³æ—¶æ›´æ–° last_peer_ms
- *   - è¶…è¿‡ 600ms æœªæ”¶åˆ°å¯¹æ–¹å¿ƒè·³ â†’ online_status=2ï¼ˆç¦»çº¿ï¼‰
- *   - åœ¨çº¿ = online_status=1ï¼Œç¦»çº¿ = online_status=2ï¼Œåˆå§‹ = 0
+ * ĞÄÌø/ÔÚÏßÅĞ¶Ï£º
+ *   - ³µ¶ËÃ¿ 200ms ·¢Ò»´ÎĞÄÌø
+ *   - ÊÕµ½¶Ô·½ĞÄÌøÊ±¸üĞÂ last_peer_ms
+ *   - ³¬¹ı 600ms Î´ÊÕµ½¶Ô·½ĞÄÌø ¡ú online_status=2£¨ÀëÏß£©
+ *   - ÔÚÏß = online_status=1£¬ÀëÏß = online_status=2£¬³õÊ¼ = 0
  *
- * ä½¿ç”¨æ–¹å¼ï¼š
- *   1. air_comm_car_init() åˆå§‹åŒ–
- *   2. UART ä¸­æ–­ä¸­è°ƒ air_comm_car_rx_byte() å–‚å­—èŠ‚
- *   3. ä¸»å¾ªç¯è°ƒ air_comm_car_poll() è§£æå¸§ + æ£€æŸ¥ ACK è¶…æ—¶
- *   4. 100Hz è°ƒ air_comm_car_update_100HZ() å‘å¿ƒè·³
- *   5. ä¸Šå±‚é€šè¿‡ air_comm_car_is_online() åˆ¤æ–­è¿æ¥çŠ¶æ€
+ * Ê¹ÓÃ·½Ê½£º
+ *   1. air_comm_car_init() ³õÊ¼»¯
+ *   2. UART ÖĞ¶ÏÖĞµ÷ air_comm_car_rx_byte() Î¹×Ö½Ú
+ *   3. Ö÷Ñ­»·µ÷ air_comm_car_poll() ½âÎöÖ¡ + ¼ì²é ACK ³¬Ê±
+ *   4. 100Hz µ÷ air_comm_car_update_100HZ() ·¢ĞÄÌø
+ *   5. ÉÏ²ãÍ¨¹ı air_comm_car_is_online() ÅĞ¶ÏÁ¬½Ó×´Ì¬
  */
 
 #ifndef AIR_COMM_CAR_H
@@ -47,142 +47,142 @@
 
 #include "zf_common_headfile.h"
 
-/* ===== å‚æ•°é™åˆ¶ ===== */
-#define AIR_COMM_PARAM_NAME_MAX             (32U)   /* å‚æ•°åæœ€å¤§é•¿åº¦ï¼ˆå­—èŠ‚ï¼‰ */
-#define AIR_COMM_COMMAND_NAME_MAX           (32U)   /* è¿œç¨‹å‘½ä»¤åæœ€å¤§é•¿åº¦ï¼Œä¸å« '\0' */
-#define AIR_COMM_ACK_TEXT_MAX               (96U)   /* è¿œç¨‹å‘½ä»¤ ACK æ–‡æœ¬æœ€å¤§é•¿åº¦ï¼Œä¸å« '\0' */
-#define AIR_COMM_RUN_DATA_MAX_FLOATS        (52U)   /* å®æ—¶æ•°æ®æœ€å¤§ float ä¸ªæ•° */
-#define AIR_COMM_BAUDRATE                   (1152000U) /* UART æ³¢ç‰¹ç‡ 1.152Mbps */
+/* ===== ²ÎÊıÏŞÖÆ ===== */
+#define AIR_COMM_PARAM_NAME_MAX             (32U)   /* ²ÎÊıÃû×î´ó³¤¶È£¨×Ö½Ú£© */
+#define AIR_COMM_COMMAND_NAME_MAX           (32U)   /* Ô¶³ÌÃüÁîÃû×î´ó³¤¶È£¬²»º¬ '\0' */
+#define AIR_COMM_ACK_TEXT_MAX               (96U)   /* Ô¶³ÌÃüÁî ACK ÎÄ±¾×î´ó³¤¶È£¬²»º¬ '\0' */
+#define AIR_COMM_RUN_DATA_MAX_FLOATS        (52U)   /* ÊµÊ±Êı¾İ×î´ó float ¸öÊı */
+#define AIR_COMM_BAUDRATE                   (1152000U) /* UART ²¨ÌØÂÊ 1.152Mbps */
 
-/* ===== ACK çŠ¶æ€ç ï¼ˆå¯¹ç«¯è¿”å›çš„æ“ä½œç»“æœï¼‰ ===== */
-#define AIR_COMM_STATUS_OK                  (0U)    /* æ“ä½œæˆåŠŸ */
-#define AIR_COMM_STATUS_NOT_FOUND           (1U)    /* å‚æ•°/å‡½æ•°æœªæ‰¾åˆ° */
-#define AIR_COMM_STATUS_OUT_OF_RANGE        (2U)    /* å€¼è¶…å‡ºèŒƒå›´ */
-#define AIR_COMM_STATUS_ERROR               (3U)    /* é€šç”¨é”™è¯¯ */
-#define AIR_COMM_STATUS_BUSY                (4U)    /* è¿œç«¯äº‹åŠ¡å¿™ */
-#define AIR_COMM_STATUS_REMOTE_TIMEOUT      (5U)    /* è¿œç«¯ä¸‹æ¸¸é€šä¿¡è¶…æ—¶ */
-#define AIR_COMM_STATUS_REMOTE_MISMATCH     (6U)    /* è¿œç«¯è¯»å›å€¼ä¸ä¸€è‡´ */
-#define AIR_COMM_STATUS_REMOTE_PARTIAL      (7U)    /* å¤šç›®æ ‡ä»…éƒ¨åˆ†æˆåŠŸ */
-#define AIR_COMM_STATUS_REMOTE_ROLLBACK_FAIL (8U)   /* è¿œç«¯å›æ»šå¤±è´¥ */
+/* ===== ACK ×´Ì¬Âë£¨¶Ô¶Ë·µ»ØµÄ²Ù×÷½á¹û£© ===== */
+#define AIR_COMM_STATUS_OK                  (0U)    /* ²Ù×÷³É¹¦ */
+#define AIR_COMM_STATUS_NOT_FOUND           (1U)    /* ²ÎÊı/º¯ÊıÎ´ÕÒµ½ */
+#define AIR_COMM_STATUS_OUT_OF_RANGE        (2U)    /* Öµ³¬³ö·¶Î§ */
+#define AIR_COMM_STATUS_ERROR               (3U)    /* Í¨ÓÃ´íÎó */
+#define AIR_COMM_STATUS_BUSY                (4U)    /* Ô¶¶ËÊÂÎñÃ¦ */
+#define AIR_COMM_STATUS_REMOTE_TIMEOUT      (5U)    /* Ô¶¶ËÏÂÓÎÍ¨ĞÅ³¬Ê± */
+#define AIR_COMM_STATUS_REMOTE_MISMATCH     (6U)    /* Ô¶¶Ë¶Á»ØÖµ²»Ò»ÖÂ */
+#define AIR_COMM_STATUS_REMOTE_PARTIAL      (7U)    /* ¶àÄ¿±ê½ö²¿·Ö³É¹¦ */
+#define AIR_COMM_STATUS_REMOTE_ROLLBACK_FAIL (8U)   /* Ô¶¶Ë»Ø¹öÊ§°Ü */
 
-/* ===== æœ¬åœ° ACK ç»“æœï¼ˆæœ¬ç«¯åˆ¤æ–­çš„ä¼ è¾“ç»“æœï¼‰ ===== */
-#define AIR_COMM_ACK_RESULT_NONE            (0U)    /* æ— å¾…ç¡®è®¤ ACK */
-#define AIR_COMM_ACK_RESULT_OK              (1U)    /* æ”¶åˆ° ACK ä¸” status=OK */
-#define AIR_COMM_ACK_RESULT_TIMEOUT         (2U)    /* é‡è¯•è€—å°½ï¼Œè¶…æ—¶ */
-#define AIR_COMM_ACK_RESULT_ERROR           (3U)    /* æ”¶åˆ° ACK ä½† status!=OK */
+/* ===== ±¾µØ ACK ½á¹û£¨±¾¶ËÅĞ¶ÏµÄ´«Êä½á¹û£© ===== */
+#define AIR_COMM_ACK_RESULT_NONE            (0U)    /* ÎŞ´ıÈ·ÈÏ ACK */
+#define AIR_COMM_ACK_RESULT_OK              (1U)    /* ÊÕµ½ ACK ÇÒ status=OK */
+#define AIR_COMM_ACK_RESULT_TIMEOUT         (2U)    /* ÖØÊÔºÄ¾¡£¬³¬Ê± */
+#define AIR_COMM_ACK_RESULT_ERROR           (3U)    /* ÊÕµ½ ACK µ« status!=OK */
 
 /**
- * @brief å®æ—¶æ•°æ®å›è°ƒå‡½æ•°ç±»å‹
- * @param data float æ•°ç»„æŒ‡é’ˆ
- * @param count float ä¸ªæ•°
- * è°æ³¨å†Œï¼šä¸Šå±‚é€šè¿‡ air_comm_car_set_run_data_callback() æ³¨å†Œ
+ * @brief ÊµÊ±Êı¾İ»Øµ÷º¯ÊıÀàĞÍ
+ * @param data float Êı×éÖ¸Õë
+ * @param count float ¸öÊı
+ * Ë­×¢²á£ºÉÏ²ãÍ¨¹ı air_comm_car_set_run_data_callback() ×¢²á
  */
 typedef void (*air_comm_run_data_fn)(const float *data, uint8 count);
 
 /**
- * @brief é€šä¿¡ç»Ÿè®¡ç»“æ„ä½“
- * è°ç”¨ï¼šè°ƒè¯•/è¯Šæ–­ï¼Œé€šè¿‡ air_comm_car_get_stats() è·å–
+ * @brief Í¨ĞÅÍ³¼Æ½á¹¹Ìå
+ * Ë­ÓÃ£ºµ÷ÊÔ/Õï¶Ï£¬Í¨¹ı air_comm_car_get_stats() »ñÈ¡
  */
 typedef struct
 {
-    uint32 tick_ms;                 /* å½“å‰ tickï¼ˆmsï¼‰ */
-    uint32 tx_frame_count;          /* å‘é€å¸§æ€»æ•° */
-    uint32 tx_byte_count;           /* å‘é€å­—èŠ‚æ€»æ•° */
-    uint32 rx_frame_count;          /* æ¥æ”¶å¸§æ€»æ•°ï¼ˆCRC æ ¡éªŒé€šè¿‡ï¼‰ */
-    uint32 rx_byte_count;           /* æ¥æ”¶å­—èŠ‚æ€»æ•° */
-    uint32 rx_raw_byte_count;       /* æ¥æ”¶åŸå§‹å­—èŠ‚æ•°ï¼ˆå«æ— æ•ˆå¸§ï¼‰ */
-    uint32 crc_error_count;         /* CRC æ ¡éªŒå¤±è´¥æ¬¡æ•° */
-    uint32 rx_oversize_count;       /* payload è¶…é™æ¬¡æ•° */
-    uint32 rx_queue_overflow_count; /* æ¥æ”¶é˜Ÿåˆ—æº¢å‡ºæ¬¡æ•° */
-    uint32 ack_ok_count;            /* ACK æˆåŠŸæ¬¡æ•° */
-    uint32 ack_timeout_count;       /* ACK è¶…æ—¶æ¬¡æ•° */
-    uint32 ack_retry_count;         /* ACK é‡è¯•æ€»æ¬¡æ•° */
-    uint32 heartbeat_tx_count;      /* å¿ƒè·³å‘é€æ¬¡æ•° */
-    uint32 heartbeat_rx_count;      /* å¿ƒè·³æ¥æ”¶æ¬¡æ•° */
-    uint8 online_status;            /* åœ¨çº¿çŠ¶æ€ï¼š0=åˆå§‹, 1=åœ¨çº¿, 2=ç¦»çº¿ */
-    uint8 pending_ack;              /* æ˜¯å¦æœ‰å¾…ç¡®è®¤ ACKï¼š1=æœ‰ */
-    uint8 pending_ack_type;         /* å¾…ç¡®è®¤çš„æ¶ˆæ¯ç±»å‹ */
-    uint8 last_ack_status;          /* æœ€è¿‘ä¸€æ¬¡ ACK çš„çŠ¶æ€ç  */
-    uint8 last_ack_type;            /* æœ€è¿‘ä¸€æ¬¡ ACK çš„æ¶ˆæ¯ç±»å‹ */
-    uint8 last_ack_result;          /* æœ€è¿‘ä¸€æ¬¡ ACK çš„ç»“æœ */
-    float last_ack_value;           /* æœ€è¿‘ä¸€æ¬¡ ACK è¿”å›çš„å®é™…å€¼ */
+    uint32 tick_ms;                 /* µ±Ç° tick£¨ms£© */
+    uint32 tx_frame_count;          /* ·¢ËÍÖ¡×ÜÊı */
+    uint32 tx_byte_count;           /* ·¢ËÍ×Ö½Ú×ÜÊı */
+    uint32 rx_frame_count;          /* ½ÓÊÕÖ¡×ÜÊı£¨CRC Ğ£ÑéÍ¨¹ı£© */
+    uint32 rx_byte_count;           /* ½ÓÊÕ×Ö½Ú×ÜÊı */
+    uint32 rx_raw_byte_count;       /* ½ÓÊÕÔ­Ê¼×Ö½ÚÊı£¨º¬ÎŞĞ§Ö¡£© */
+    uint32 crc_error_count;         /* CRC Ğ£ÑéÊ§°Ü´ÎÊı */
+    uint32 rx_oversize_count;       /* payload ³¬ÏŞ´ÎÊı */
+    uint32 rx_queue_overflow_count; /* ½ÓÊÕ¶ÓÁĞÒç³ö´ÎÊı */
+    uint32 ack_ok_count;            /* ACK ³É¹¦´ÎÊı */
+    uint32 ack_timeout_count;       /* ACK ³¬Ê±´ÎÊı */
+    uint32 ack_retry_count;         /* ACK ÖØÊÔ×Ü´ÎÊı */
+    uint32 heartbeat_tx_count;      /* ĞÄÌø·¢ËÍ´ÎÊı */
+    uint32 heartbeat_rx_count;      /* ĞÄÌø½ÓÊÕ´ÎÊı */
+    uint8 online_status;            /* ÔÚÏß×´Ì¬£º0=³õÊ¼, 1=ÔÚÏß, 2=ÀëÏß */
+    uint8 pending_ack;              /* ÊÇ·ñÓĞ´ıÈ·ÈÏ ACK£º1=ÓĞ */
+    uint8 pending_ack_type;         /* ´ıÈ·ÈÏµÄÏûÏ¢ÀàĞÍ */
+    uint8 last_ack_status;          /* ×î½üÒ»´Î ACK µÄ×´Ì¬Âë */
+    uint8 last_ack_type;            /* ×î½üÒ»´Î ACK µÄÏûÏ¢ÀàĞÍ */
+    uint8 last_ack_result;          /* ×î½üÒ»´Î ACK µÄ½á¹û */
+    float last_ack_value;           /* ×î½üÒ»´Î ACK ·µ»ØµÄÊµ¼ÊÖµ */
     char last_ack_name[AIR_COMM_PARAM_NAME_MAX + 1U];
     char last_command_ack_text[AIR_COMM_ACK_TEXT_MAX + 1U];
 } air_comm_stats_t;
 
 /**
- * @brief åˆå§‹åŒ–è½¦ç«¯ç©ºä¸­é€šä¿¡æ¨¡å—
- * è°ƒç”¨æ—¶æœºï¼šç³»ç»Ÿå¯åŠ¨æ—¶è°ƒä¸€æ¬¡
- * å†…éƒ¨ï¼šæ¸…é›¶æ‰€æœ‰çŠ¶æ€ï¼Œåˆå§‹åŒ– UART3ï¼ˆ1152000 æ³¢ç‰¹ç‡ï¼‰
+ * @brief ³õÊ¼»¯³µ¶Ë¿ÕÖĞÍ¨ĞÅÄ£¿é
+ * µ÷ÓÃÊ±»ú£ºÏµÍ³Æô¶¯Ê±µ÷Ò»´Î
+ * ÄÚ²¿£ºÇåÁãËùÓĞ×´Ì¬£¬³õÊ¼»¯ UART3£¨1152000 ²¨ÌØÂÊ£©
  */
 void air_comm_car_init(void);
 
 /**
- * @brief 1ms tick è®¡æ•°å™¨é€’å¢
- * è°ƒç”¨é¢‘ç‡ï¼š1ms å®šæ—¶å™¨ä¸­æ–­
- * ç”¨é€”ï¼šé©±åŠ¨è¶…æ—¶åˆ¤æ–­å’Œå¿ƒè·³é—´éš”
+ * @brief 1ms tick ¼ÆÊıÆ÷µİÔö
+ * µ÷ÓÃÆµÂÊ£º1ms ¶¨Ê±Æ÷ÖĞ¶Ï
+ * ÓÃÍ¾£ºÇı¶¯³¬Ê±ÅĞ¶ÏºÍĞÄÌø¼ä¸ô
  */
 void air_comm_car_tick_1MS(void);
 
 /**
- * @brief ä¸»å¾ªç¯è½®è¯¢
- * è°ƒç”¨é¢‘ç‡ï¼šä¸»å¾ªç¯æ¯æ¬¡
- * å†…éƒ¨ï¼šä»æ¥æ”¶é˜Ÿåˆ—å–å­—èŠ‚ â†’ çŠ¶æ€æœºè§£æå¸§ â†’ æ£€æŸ¥ ACK è¶…æ—¶å’Œåœ¨çº¿çŠ¶æ€
+ * @brief Ö÷Ñ­»·ÂÖÑ¯
+ * µ÷ÓÃÆµÂÊ£ºÖ÷Ñ­»·Ã¿´Î
+ * ÄÚ²¿£º´Ó½ÓÊÕ¶ÓÁĞÈ¡×Ö½Ú ¡ú ×´Ì¬»ú½âÎöÖ¡ ¡ú ¼ì²é ACK ³¬Ê±ºÍÔÚÏß×´Ì¬
  */
 void air_comm_car_poll(void);
 
 /**
- * @brief 100Hz æ›´æ–°
- * è°ƒç”¨é¢‘ç‡ï¼š100Hzï¼ˆæ¯ 10msï¼‰
- * å†…éƒ¨ï¼šæ£€æŸ¥æ˜¯å¦éœ€è¦å‘å¿ƒè·³ï¼ˆæ¯ 200msï¼‰ï¼Œæ£€æŸ¥ ACK è¶…æ—¶
+ * @brief 100Hz ¸üĞÂ
+ * µ÷ÓÃÆµÂÊ£º100Hz£¨Ã¿ 10ms£©
+ * ÄÚ²¿£º¼ì²éÊÇ·ñĞèÒª·¢ĞÄÌø£¨Ã¿ 200ms£©£¬¼ì²é ACK ³¬Ê±
  */
 void air_comm_car_update_100HZ(void);
 
 /**
- * @brief UART æ¥æ”¶ä¸­æ–­å›è°ƒï¼Œå–‚å…¥ä¸€ä¸ªå­—èŠ‚
- * @param byte æ–°æ”¶åˆ°çš„å­—èŠ‚
- * è°è°ƒç”¨ï¼šUART3 RX ä¸­æ–­å¤„ç†å‡½æ•°
- * å†…éƒ¨ï¼šå†™å…¥ç¯å½¢æ¥æ”¶é˜Ÿåˆ—ï¼ˆæ»¡åˆ™ä¸¢å¼ƒå¹¶è®¡æ•°ï¼‰
+ * @brief UART ½ÓÊÕÖĞ¶Ï»Øµ÷£¬Î¹ÈëÒ»¸ö×Ö½Ú
+ * @param byte ĞÂÊÕµ½µÄ×Ö½Ú
+ * Ë­µ÷ÓÃ£ºUART3 RX ÖĞ¶Ï´¦Àíº¯Êı
+ * ÄÚ²¿£ºĞ´Èë»·ĞÎ½ÓÊÕ¶ÓÁĞ£¨ÂúÔò¶ªÆú²¢¼ÆÊı£©
  */
 void air_comm_car_rx_byte(uint8 byte);
 
 /**
- * @brief åˆ¤æ–­å¯¹ç«¯æ˜¯å¦åœ¨çº¿
- * @return 1=åœ¨çº¿ï¼Œ0=ç¦»çº¿æˆ–åˆå§‹
- * åœ¨çº¿æ¡ä»¶ï¼šæœ€è¿‘ 600ms å†…æ”¶åˆ°è¿‡å¯¹ç«¯å¿ƒè·³
+ * @brief ÅĞ¶Ï¶Ô¶ËÊÇ·ñÔÚÏß
+ * @return 1=ÔÚÏß£¬0=ÀëÏß»ò³õÊ¼
+ * ÔÚÏßÌõ¼ş£º×î½ü 600ms ÄÚÊÕµ½¹ı¶Ô¶ËĞÄÌø
  */
 uint8 air_comm_car_is_online(void);
 
 /**
- * @brief è·å–åœ¨çº¿çŠ¶æ€ç 
- * @return 0=åˆå§‹, 1=åœ¨çº¿, 2=ç¦»çº¿
+ * @brief »ñÈ¡ÔÚÏß×´Ì¬Âë
+ * @return 0=³õÊ¼, 1=ÔÚÏß, 2=ÀëÏß
  */
 uint8 air_comm_car_get_online_status(void);
 uint8 air_comm_car_is_run_data_fresh(void);
 
 /**
- * @brief è·å–å½“å‰ tick è®¡æ•°
- * @return æ¯«ç§’è®¡æ•°
+ * @brief »ñÈ¡µ±Ç° tick ¼ÆÊı
+ * @return ºÁÃë¼ÆÊı
  */
 uint32 air_comm_car_get_tick(void);
 
 /**
- * @brief ä¸‹å‘å‚æ•°åˆ°å¯¹ç«¯ï¼ˆéœ€ ACKï¼‰
- * @param name å‚æ•°åï¼ˆC å­—ç¬¦ä¸²ï¼Œâ‰¤16 å­—èŠ‚ï¼‰
- * @param value å‚æ•°å€¼ï¼ˆfloatï¼‰
- * @return 0=å‘é€æˆåŠŸï¼Œ1=å¤±è´¥ï¼ˆå‚æ•°åæ— æ•ˆ/æœªåˆå§‹åŒ–/æœ‰æœªå®Œæˆ ACKï¼‰
- * æ³¨æ„ï¼šåŒä¸€æ—¶é—´åªèƒ½æœ‰ä¸€ä¸ªå¾…ç¡®è®¤çš„ ACK å¸§
+ * @brief ÏÂ·¢²ÎÊıµ½¶Ô¶Ë£¨Ğè ACK£©
+ * @param name ²ÎÊıÃû£¨C ×Ö·û´®£¬¡Ü16 ×Ö½Ú£©
+ * @param value ²ÎÊıÖµ£¨float£©
+ * @return 0=·¢ËÍ³É¹¦£¬1=Ê§°Ü£¨²ÎÊıÃûÎŞĞ§/Î´³õÊ¼»¯/ÓĞÎ´Íê³É ACK£©
+ * ×¢Òâ£ºÍ¬Ò»Ê±¼äÖ»ÄÜÓĞÒ»¸ö´ıÈ·ÈÏµÄ ACK Ö¡
  */
 uint8 air_comm_car_set_param(const char *name, float value);
-/* timeout_msä¸ºæœ¬æ¬¡SETä»é¦–æ¬¡å‘é€å¼€å§‹è®¡ç®—çš„ACKæ€»ç­‰å¾…æ—¶é—´ã€‚ */
+/* timeout_msÎª±¾´ÎSET´ÓÊ×´Î·¢ËÍ¿ªÊ¼¼ÆËãµÄACK×ÜµÈ´ıÊ±¼ä¡£ */
 uint8 air_comm_car_set_param_with_timeout(const char *name, float value, uint32 timeout_ms);
 uint8 air_comm_car_get_param(const char *name);
 uint8 air_comm_car_get_param_with_timeout(const char *name, uint32 timeout_ms);
 
 /**
- * @brief æ‰§è¡Œ Air ç«¯è¿œç¨‹å‘½ä»¤ï¼ˆéœ€ ACKï¼‰
- * @param name è¿œç¨‹å‘½ä»¤å
- * @return 0=å‘é€æˆåŠŸï¼Œ1=å¤±è´¥
+ * @brief Ö´ĞĞ Air ¶ËÔ¶³ÌÃüÁî£¨Ğè ACK£©
+ * @param name Ô¶³ÌÃüÁîÃû
+ * @return 0=·¢ËÍ³É¹¦£¬1=Ê§°Ü
  */
 uint8 air_comm_car_exec_command(const char *name);
 
@@ -191,8 +191,8 @@ void air_comm_set_run_data_callback(air_comm_run_data_fn callback);
 uint8 air_comm_get_last_run_data(float *data, uint8 max_count, uint8 *count);
 
 /**
- * @brief æ˜¯å¦æœ‰å¾…ç¡®è®¤çš„ ACK
- * @return 1=æœ‰ï¼Œ0=æ— 
+ * @brief ÊÇ·ñÓĞ´ıÈ·ÈÏµÄ ACK
+ * @return 1=ÓĞ£¬0=ÎŞ
  */
 void air_comm_car_cancel_pending_set_param(void);
 void air_comm_car_cancel_pending_get_param(void);
@@ -201,11 +201,11 @@ void air_comm_car_clear_last_ack(void);
 uint8 air_comm_car_has_pending_ack(void);
 
 /**
- * @brief è·å–æœ€è¿‘ä¸€æ¬¡ ACK ç»“æœ
- * @param type è¾“å‡ºæ¶ˆæ¯ç±»å‹ï¼ˆå¯é€‰ï¼Œä¼  NULL è·³è¿‡ï¼‰
- * @param result è¾“å‡º ACK ç»“æœï¼ˆå¯é€‰ï¼‰
- * @param status è¾“å‡º ACK çŠ¶æ€ç ï¼ˆå¯é€‰ï¼‰
- * @return æœ€è¿‘ä¸€æ¬¡ ACK çš„ result å€¼
+ * @brief »ñÈ¡×î½üÒ»´Î ACK ½á¹û
+ * @param type Êä³öÏûÏ¢ÀàĞÍ£¨¿ÉÑ¡£¬´« NULL Ìø¹ı£©
+ * @param result Êä³ö ACK ½á¹û£¨¿ÉÑ¡£©
+ * @param status Êä³ö ACK ×´Ì¬Âë£¨¿ÉÑ¡£©
+ * @return ×î½üÒ»´Î ACK µÄ result Öµ
  */
 uint8 air_comm_car_get_last_ack(uint8 *type, uint8 *result, uint8 *status);
 uint8 air_comm_car_get_last_ack_value(float *value);
@@ -213,15 +213,15 @@ uint8 air_comm_car_get_last_ack_name(char *name, uint8 size);
 uint8 air_comm_car_get_last_command_ack_text(char *text, uint8 size);
 
 /**
- * @brief æ³¨å†Œå®æ—¶æ•°æ®å›è°ƒ
- * @param callback å›è°ƒå‡½æ•°æŒ‡é’ˆï¼ˆNULL å–æ¶ˆæ³¨å†Œï¼‰
- * è°ç”¨ï¼šä¸Šå±‚æ¨¡å—æ³¨å†Œåï¼Œæ”¶åˆ° RUN_DATA å¸§æ—¶è‡ªåŠ¨å›è°ƒ
+ * @brief ×¢²áÊµÊ±Êı¾İ»Øµ÷
+ * @param callback »Øµ÷º¯ÊıÖ¸Õë£¨NULL È¡Ïû×¢²á£©
+ * Ë­ÓÃ£ºÉÏ²ãÄ£¿é×¢²áºó£¬ÊÕµ½ RUN_DATA Ö¡Ê±×Ô¶¯»Øµ÷
  */
 void air_comm_car_set_run_data_callback(air_comm_run_data_fn callback);
 
 /**
- * @brief è·å–é€šä¿¡ç»Ÿè®¡
- * @param stats è¾“å‡ºç»Ÿè®¡ç»“æ„ä½“
+ * @brief »ñÈ¡Í¨ĞÅÍ³¼Æ
+ * @param stats Êä³öÍ³¼Æ½á¹¹Ìå
  */
 void air_comm_car_get_stats(air_comm_stats_t *stats);
 

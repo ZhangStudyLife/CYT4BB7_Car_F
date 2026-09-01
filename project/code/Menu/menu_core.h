@@ -1,11 +1,11 @@
 /*********************************************************************************************************************
-* èœå•æ ¸å¿ƒæ¡†æ¶å¤´æ–‡ä»¶
-* åŠŸèƒ½ï¼šæä¾›å®Œæ•´çš„èœå•å¼•æ“ï¼ŒåŒ…æ‹¬èœå•å¯¼èˆªã€æŒ‰é”®å¤„ç†ã€å±å¹•æ¸²æŸ“ã€Flashå­˜æ¡£ç®¡ç†ã€å‚æ•°ç¼–è¾‘ç³»ç»Ÿ
-* ç‰¹ç‚¹ï¼šä¸€æ—¦å®Œæˆå¼€å‘ï¼ŒåŸºæœ¬ä¸éœ€è¦ä¿®æ”¹ï¼›æä¾›æ ‡å‡†APIä¾›ç”¨æˆ·é…ç½®è°ƒç”¨ï¼›å®Œå…¨ç‹¬ç«‹ï¼Œä¸ä¾èµ–å…·ä½“èœå•å†…å®¹
+* ²Ëµ¥ºËĞÄ¿ò¼ÜÍ·ÎÄ¼ş
+* ¹¦ÄÜ£ºÌá¹©ÍêÕûµÄ²Ëµ¥ÒıÇæ£¬°üÀ¨²Ëµ¥µ¼º½¡¢°´¼ü´¦Àí¡¢ÆÁÄ»äÖÈ¾¡¢Flash´æµµ¹ÜÀí¡¢²ÎÊı±à¼­ÏµÍ³
+* ÌØµã£ºÒ»µ©Íê³É¿ª·¢£¬»ù±¾²»ĞèÒªĞŞ¸Ä£»Ìá¹©±ê×¼API¹©ÓÃ»§ÅäÖÃµ÷ÓÃ£»ÍêÈ«¶ÀÁ¢£¬²»ÒÀÀµ¾ßÌå²Ëµ¥ÄÚÈİ
 *
-* é€‚é…ï¼šé€é£ç§‘æŠ€ IPS114 + CYT4BB7 Flash
-* ç‰ˆæœ¬ï¼šv2.1 (CYT4BB7 ç§»æ¤ç‰ˆæœ¬)
-* æ—¥æœŸï¼š2025å¹´
+* ÊÊÅä£ºÖğ·É¿Æ¼¼ IPS114 + CYT4BB7 Flash
+* °æ±¾£ºv2.1 (CYT4BB7 ÒÆÖ²°æ±¾)
+* ÈÕÆÚ£º2025Äê
 ********************************************************************************************************************/
 
 #include "zf_common_headfile.h"
@@ -18,58 +18,58 @@ void menu_runtime_resume(void);
 
 
 
-// å¤–éƒ¨å˜é‡å£°æ˜
+// Íâ²¿±äÁ¿ÉùÃ÷
 
-// èœå•ç³»ç»Ÿé…ç½®
-#define MENU_MAX_ITEMS          32          // æ¯ä¸ªèœå•æœ€å¤§é€‰é¡¹æ•°
-#define MENU_MAX_DEPTH          8           // æœ€å¤§èœå•åµŒå¥—å±‚çº§
-#define MENU_MAX_PARAMS         182         // æœ€å¤§å‚æ•°æ•°é‡
-#define MENU_MAX_VISIBLE_LINES  8          // å±å¹•æœ€å¤§å¯æ˜¾ç¤ºèœå•è¡Œæ•°
+// ²Ëµ¥ÏµÍ³ÅäÖÃ
+#define MENU_MAX_ITEMS          32          // Ã¿¸ö²Ëµ¥×î´óÑ¡ÏîÊı
+#define MENU_MAX_DEPTH          8           // ×î´ó²Ëµ¥Ç¶Ì×²ã¼¶
+#define MENU_MAX_PARAMS         182         // ×î´ó²ÎÊıÊıÁ¿
+#define MENU_MAX_VISIBLE_LINES  8          // ÆÁÄ»×î´ó¿ÉÏÔÊ¾²Ëµ¥ĞĞÊı
 
-// UIæ˜¾ç¤ºé…ç½® (çº¯å‡€è®¾è®¡ï¼Œæ— çŠ¶æ€æ æ ‡é¢˜æ )
-#define UI_COLOR_BG             0x0000      // çº¯é»‘èƒŒæ™¯
-#define UI_COLOR_NORMAL         0xFFFF      // ç™½è‰²æ­£å¸¸æ–‡å­—
-#define UI_COLOR_SELECTED       0x07E0      // ç»¿è‰²é€‰ä¸­é¡¹
-#define UI_COLOR_EDITING        0xFFE0      // é»„è‰²ç¼–è¾‘çŠ¶æ€
-#define UI_COLOR_SUCCESS        0x07E0      // ç»¿è‰²æˆåŠŸçŠ¶æ€
-#define UI_COLOR_ERROR          0xF800      // çº¢è‰²é”™è¯¯çŠ¶æ€
-#define UI_COLOR_VALUE          0x07FF      // é’è‰²å‚æ•°å€¼
+// UIÏÔÊ¾ÅäÖÃ (´¿¾»Éè¼Æ£¬ÎŞ×´Ì¬À¸±êÌâÀ¸)
+#define UI_COLOR_BG             0x0000      // ´¿ºÚ±³¾°
+#define UI_COLOR_NORMAL         0xFFFF      // °×É«Õı³£ÎÄ×Ö
+#define UI_COLOR_SELECTED       0x07E0      // ÂÌÉ«Ñ¡ÖĞÏî
+#define UI_COLOR_EDITING        0xFFE0      // »ÆÉ«±à¼­×´Ì¬
+#define UI_COLOR_SUCCESS        0x07E0      // ÂÌÉ«³É¹¦×´Ì¬
+#define UI_COLOR_ERROR          0xF800      // ºìÉ«´íÎó×´Ì¬
+#define UI_COLOR_VALUE          0x07FF      // ÇàÉ«²ÎÊıÖµ
 
-// å­—ä½“å¤§å°é…ç½®ï¼ˆç›´æ¥ä½¿ç”¨åº“å®šä¹‰çš„æšä¸¾ç±»å‹ï¼Œé¿å…ç±»å‹æ··åˆè­¦å‘Šï¼‰
-#define UI_FONT_NORMAL              IPS114_8X16_FONT    // æ™®é€šå­—ä½“ï¼šèœå•é¡¹ (8x16åƒç´ )
-#define UI_FONT_LARGE               IPS114_8X16_FONT    // å¤§å­—ä½“ï¼šå…³é”®æç¤º (æš‚ç”¨8x16ï¼Œ16x16å­—ä½“éœ€éªŒè¯)
+// ×ÖÌå´óĞ¡ÅäÖÃ£¨Ö±½ÓÊ¹ÓÃ¿â¶¨ÒåµÄÃ¶¾ÙÀàĞÍ£¬±ÜÃâÀàĞÍ»ìºÏ¾¯¸æ£©
+#define UI_FONT_NORMAL              IPS114_8X16_FONT    // ÆÕÍ¨×ÖÌå£º²Ëµ¥Ïî (8x16ÏñËØ)
+#define UI_FONT_LARGE               IPS114_8X16_FONT    // ´ó×ÖÌå£º¹Ø¼üÌáÊ¾ (ÔİÓÃ8x16£¬16x16×ÖÌåĞèÑéÖ¤)
 
-// Flashå­˜æ¡£å®‰å…¨é…ç½® (CYT4BB7: 96é¡µï¼Œæ¯é¡µ2KB)
-#define MENU_SLOT_COUNT         4           // å­˜æ¡£æ•°é‡
-#define MENU_SLOT_BASE_PAGE     72          // Carèœå•å­˜æ¡£ä½¿ç”¨72-79é¡µï¼Œé¿å¼€IMU page 95
-#define MENU_SLOT_SIZE          2           // æ¯ä¸ªå­˜æ¡£å ç”¨2é¡µ(4KB)
-#define MENU_MAGIC_NUMBER       0x5A5A5A5A  // å­˜æ¡£éªŒè¯é­”æ•°
-#define MENU_VERSION            0x04        // å‚æ•°ç›®å½•å˜åŒ–åä½¿æ—§ä½ç½®å¼å­˜æ¡£å¤±æ•ˆ
+// Flash´æµµ°²È«ÅäÖÃ (CYT4BB7: 96Ò³£¬Ã¿Ò³2KB)
+#define MENU_SLOT_COUNT         4           // ´æµµÊıÁ¿
+#define MENU_SLOT_BASE_PAGE     72          // Car²Ëµ¥´æµµÊ¹ÓÃ72-79Ò³£¬±Ü¿ªIMU page 95
+#define MENU_SLOT_SIZE          2           // Ã¿¸ö´æµµÕ¼ÓÃ2Ò³(4KB)
+#define MENU_MAGIC_NUMBER       0x5A5A5A5A  // ´æµµÑéÖ¤Ä§Êı
+#define MENU_VERSION            0x04        // ²ÎÊıÄ¿Â¼±ä»¯ºóÊ¹¾ÉÎ»ÖÃÊ½´æµµÊ§Ğ§
 
-// Flashå®‰å…¨è¾¹ç•Œæ£€æŸ¥ (CYT4BB7æœ‰96é¡µï¼Œç¡®ä¿ä¸è¶…å‡ºé™åˆ¶)
+// Flash°²È«±ß½ç¼ì²é (CYT4BB7ÓĞ96Ò³£¬È·±£²»³¬³öÏŞÖÆ)
 #define FLASH_SAFE_START_PAGE   MENU_SLOT_BASE_PAGE
 #define FLASH_SAFE_END_PAGE     (MENU_SLOT_BASE_PAGE + MENU_SLOT_COUNT * MENU_SLOT_SIZE - 1)
 #if (FLASH_SAFE_END_PAGE >= 96)
 #error "Flash slot configuration exceeds 96 pages limit!"
 #endif
 
-// èœå•é¡¹ç±»å‹
+// ²Ëµ¥ÏîÀàĞÍ
 typedef enum {
-    MENU_TYPE_SUBMENU = 0,      // å­èœå•é¡¹
-    MENU_TYPE_FUNCTION,         // å‡½æ•°é¡¹
-    MENU_TYPE_PARAMETER,        // å‚æ•°é¡¹
-    MENU_TYPE_AIR_PARAMETER,    // Airè¿œç¨‹å‚æ•°é¡¹
-    MENU_TYPE_EXTERNAL_PARAMETER, // å¤–éƒ¨æ¨¡å—æµ®ç‚¹å‚æ•°é¡¹
-    MENU_TYPE_AIR_COMMAND,      // Airè¿œç¨‹å‘½ä»¤é¡¹
-    MENU_TYPE_DIAG_VIEW         // åªè¯»è¯Šæ–­é¡µ
+    MENU_TYPE_SUBMENU = 0,      // ×Ó²Ëµ¥Ïî
+    MENU_TYPE_FUNCTION,         // º¯ÊıÏî
+    MENU_TYPE_PARAMETER,        // ²ÎÊıÏî
+    MENU_TYPE_AIR_PARAMETER,    // AirÔ¶³Ì²ÎÊıÏî
+    MENU_TYPE_EXTERNAL_PARAMETER, // Íâ²¿Ä£¿é¸¡µã²ÎÊıÏî
+    MENU_TYPE_AIR_COMMAND,      // AirÔ¶³ÌÃüÁîÏî
+    MENU_TYPE_DIAG_VIEW         // Ö»¶ÁÕï¶ÏÒ³
 } menu_type_t;
 
-// åˆ·æ–°ç±»å‹æšä¸¾ï¼ˆå±€éƒ¨åˆ·æ–°ä¼˜åŒ–ï¼‰
+// Ë¢ĞÂÀàĞÍÃ¶¾Ù£¨¾Ö²¿Ë¢ĞÂÓÅ»¯£©
 typedef enum {
-    REFRESH_NONE = 0,           // æ— éœ€åˆ·æ–°
-    REFRESH_VALUE,              // æ•°å€¼åˆ·æ–°ï¼ˆå‚æ•°ç¼–è¾‘ï¼‰
-    REFRESH_SELECTION,          // é€‰æ‹©é¡¹åˆ·æ–°ï¼ˆä¸Šä¸‹ç§»åŠ¨ï¼‰
-    REFRESH_FULL                // é¡µé¢åˆ·æ–°ï¼ˆä»…æ›´æ–°å˜åŒ–å†…å®¹ï¼‰
+    REFRESH_NONE = 0,           // ÎŞĞèË¢ĞÂ
+    REFRESH_VALUE,              // ÊıÖµË¢ĞÂ£¨²ÎÊı±à¼­£©
+    REFRESH_SELECTION,          // Ñ¡ÔñÏîË¢ĞÂ£¨ÉÏÏÂÒÆ¶¯£©
+    REFRESH_FULL                // Ò³ÃæË¢ĞÂ£¨½ö¸üĞÂ±ä»¯ÄÚÈİ£©
 } refresh_type_t;
 
 typedef struct
@@ -78,8 +78,8 @@ typedef struct
     float step;
     float min_val;
     float max_val;
-    const char * const *enum_labels; // å¯é€‰æšä¸¾æ–‡æœ¬ï¼ŒNULLè¡¨ç¤ºæ˜¾ç¤ºæ•°å€¼
-    uint8_t enum_count;              // æšä¸¾æ–‡æœ¬æ•°é‡
+    const char * const *enum_labels; // ¿ÉÑ¡Ã¶¾ÙÎÄ±¾£¬NULL±íÊ¾ÏÔÊ¾ÊıÖµ
+    uint8_t enum_count;              // Ã¶¾ÙÎÄ±¾ÊıÁ¿
 } menu_external_param_config_t;
 
 typedef struct
@@ -92,133 +92,133 @@ typedef struct
     uint8_t allow_runtime_locked;
 } menu_external_view_config_t;
 
-// èœå•é¡¹ç»“æ„
+// ²Ëµ¥Ïî½á¹¹
 typedef struct menu_item {
-    char name[32];              // èœå•é¡¹åç§°
-    menu_type_t type;           // èœå•é¡¹ç±»å‹
+    char name[32];              // ²Ëµ¥ÏîÃû³Æ
+    menu_type_t type;           // ²Ëµ¥ÏîÀàĞÍ
     union {
-        struct menu_item* submenu;      // å­èœå•æŒ‡é’ˆ
-        void (*function)(void);         // å‡½æ•°æŒ‡é’ˆ
-        uint16_t param_index;          // å‚æ•°ç´¢å¼•
+        struct menu_item* submenu;      // ×Ó²Ëµ¥Ö¸Õë
+        void (*function)(void);         // º¯ÊıÖ¸Õë
+        uint16_t param_index;          // ²ÎÊıË÷Òı
         menu_external_param_config_t *external_param;
     };
 } menu_item_t;
 
-// å‚æ•°é…ç½®ç»“æ„
+// ²ÎÊıÅäÖÃ½á¹¹
 typedef struct {
-    volatile float* variable;   // å‚æ•°å˜é‡æŒ‡é’ˆï¼ˆå¯ç”±æ§åˆ¶ä¸­æ–­è¯»å–ï¼‰
-    float step;                 // ç¼–è¾‘æ­¥è¿›å€¼
-    float min_val;              // æœ€å°å€¼
-    float max_val;              // æœ€å¤§å€¼
+    volatile float* variable;   // ²ÎÊı±äÁ¿Ö¸Õë£¨¿ÉÓÉ¿ØÖÆÖĞ¶Ï¶ÁÈ¡£©
+    float step;                 // ±à¼­²½½øÖµ
+    float min_val;              // ×îĞ¡Öµ
+    float max_val;              // ×î´óÖµ
 } param_config_t;
 
-// å­˜æ¡£å‚æ•°æ•°æ®ç»“æ„
+// ´æµµ²ÎÊıÊı¾İ½á¹¹
 typedef struct {
-    float value;                // å‚æ•°å€¼
-    uint32_t checksum;          // å‚æ•°æ ¡éªŒå’Œ
+    float value;                // ²ÎÊıÖµ
+    uint32_t checksum;          // ²ÎÊıĞ£ÑéºÍ
 } menu_param_data_t;
 
-// å­˜æ¡£æ•°æ®ç»“æ„ (è®¾è®¡ä¸ºé€‚åˆFlashé¡µé¢å¤§å°)
+// ´æµµÊı¾İ½á¹¹ (Éè¼ÆÎªÊÊºÏFlashÒ³Ãæ´óĞ¡)
 typedef struct {
-    uint32_t magic;             // é­”æ•°éªŒè¯
-    uint8_t version;            // ç‰ˆæœ¬å·
-    uint8_t slot_id;            // å­˜æ¡£ID (0-3)
-    uint16_t param_count;       // å‚æ•°æ•°é‡
-    uint32_t data_checksum;     // æ•°æ®åŒºæ ¡éªŒå’Œ
-    uint32_t header_checksum;   // å¤´éƒ¨æ ¡éªŒå’Œ
-    char slot_name[16];         // å­˜æ¡£åç§°
-    menu_param_data_t params[MENU_MAX_PARAMS]; // å‚æ•°æ•°æ®
+    uint32_t magic;             // Ä§ÊıÑéÖ¤
+    uint8_t version;            // °æ±¾ºÅ
+    uint8_t slot_id;            // ´æµµID (0-3)
+    uint16_t param_count;       // ²ÎÊıÊıÁ¿
+    uint32_t data_checksum;     // Êı¾İÇøĞ£ÑéºÍ
+    uint32_t header_checksum;   // Í·²¿Ğ£ÑéºÍ
+    char slot_name[16];         // ´æµµÃû³Æ
+    menu_param_data_t params[MENU_MAX_PARAMS]; // ²ÎÊıÊı¾İ
 } menu_save_data_t;
 
-// èœå•çŠ¶æ€
+// ²Ëµ¥×´Ì¬
 typedef enum {
-    MENU_STATE_NORMAL = 0,      // æ™®é€šæµè§ˆæ¨¡å¼
-    MENU_STATE_EDIT,            // å‚æ•°ç¼–è¾‘æ¨¡å¼
-    MENU_STATE_DIAG_VIEW,       // åªè¯»è¯Šæ–­é¡µæ¨¡å¼
-    MENU_STATE_EXTERNAL_VIEW    // å¤–éƒ¨æ¨¡å—é¡µé¢æ¨¡å¼
+    MENU_STATE_NORMAL = 0,      // ÆÕÍ¨ä¯ÀÀÄ£Ê½
+    MENU_STATE_EDIT,            // ²ÎÊı±à¼­Ä£Ê½
+    MENU_STATE_DIAG_VIEW,       // Ö»¶ÁÕï¶ÏÒ³Ä£Ê½
+    MENU_STATE_EXTERNAL_VIEW    // Íâ²¿Ä£¿éÒ³ÃæÄ£Ê½
 } menu_state_t;
 
-// æŒ‰é”®å®šä¹‰
+// °´¼ü¶¨Òå
 typedef enum {
-    KEY_UP = 0,                 // Key1 - ä¸Šç§»/å¢åŠ 
-    KEY_DOWN,                   // Key2 - ä¸‹ç§»/å‡å°‘
-    KEY_ENTER,                  // Key3 - ç¡®è®¤/ç¼–è¾‘åˆ‡æ¢
-    KEY_BACK,                   // Key4 - è¿”å›
+    KEY_UP = 0,                 // Key1 - ÉÏÒÆ/Ôö¼Ó
+    KEY_DOWN,                   // Key2 - ÏÂÒÆ/¼õÉÙ
+    KEY_ENTER,                  // Key3 - È·ÈÏ/±à¼­ÇĞ»»
+    KEY_BACK,                   // Key4 - ·µ»Ø
     KEY_COUNT
 } menu_key_t;
 
-// æŒ‰é”®çŠ¶æ€
+// °´¼ü×´Ì¬
 typedef enum {
-    KEY_STATE_IDLE = 0,         // ç©ºé—²
-    KEY_STATE_PRESSED,          // æŒ‰ä¸‹
-    KEY_STATE_RELEASED          // é‡Šæ”¾
+    KEY_STATE_IDLE = 0,         // ¿ÕÏĞ
+    KEY_STATE_PRESSED,          // °´ÏÂ
+    KEY_STATE_RELEASED          // ÊÍ·Å
 } key_state_t;
 
-// å­˜æ¡£æ ‡è¯†
-#define SLOT_MAGIC_BASE         0xA5A50000  // å­˜æ¡£é­”æ•°åŸºç¡€å€¼
+// ´æµµ±êÊ¶
+#define SLOT_MAGIC_BASE         0xA5A50000  // ´æµµÄ§Êı»ù´¡Öµ
 
-//====================================================èœå•æ ¸å¿ƒAPI====================================================
-// ç³»ç»Ÿåˆå§‹åŒ–
-void menu_init(void);                                  // èœå•ç³»ç»Ÿåˆå§‹åŒ–
-void menu_update_100HZ(void);                          // èœå•ä»»åŠ¡å¤„ç†ï¼ˆä¸»å¾ªç¯è°ƒç”¨ï¼Œå¤„ç†æŒ‰é”®å’Œåˆ·æ–°ï¼‰
-void menu_show(void);                                  // æ‰‹åŠ¨åˆ·æ–°èœå•æ˜¾ç¤º
+//====================================================²Ëµ¥ºËĞÄAPI====================================================
+// ÏµÍ³³õÊ¼»¯
+void menu_init(void);                                  // ²Ëµ¥ÏµÍ³³õÊ¼»¯
+void menu_update_100HZ(void);                          // ²Ëµ¥ÈÎÎñ´¦Àí£¨Ö÷Ñ­»·µ÷ÓÃ£¬´¦Àí°´¼üºÍË¢ĞÂ£©
+void menu_show(void);                                  // ÊÖ¶¯Ë¢ĞÂ²Ëµ¥ÏÔÊ¾
 
-// å®šæ—¶å™¨å¤„ç†
-void menu_timer_handler(void);                         // 10mså®šæ—¶å™¨ä¸­æ–­å¤„ç†å‡½æ•°ï¼ˆåœ¨ç”¨æˆ·ISRä¸­è°ƒç”¨ï¼‰
+// ¶¨Ê±Æ÷´¦Àí
+void menu_timer_handler(void);                         // 10ms¶¨Ê±Æ÷ÖĞ¶Ï´¦Àíº¯Êı£¨ÔÚÓÃ»§ISRÖĞµ÷ÓÃ£©
 
-// å‚æ•°ç®¡ç†
-void menu_register_param(volatile float* var, float step, float min, float max); // æ³¨å†Œå‚æ•°
-uint8_t menu_get_param_count(void);                                        // è·å–å‚æ•°æ•°é‡
-float menu_get_param_by_index(uint8_t index);                             // æŒ‰ç´¢å¼•è·å–å‚æ•°å€¼
-void menu_set_param_by_index(uint8_t index, float value);                 // æŒ‰ç´¢å¼•è®¾ç½®å‚æ•°å€¼
-void menu_show_debug_info(void);                                          // æ˜¾ç¤ºè°ƒè¯•ä¿¡æ¯
+// ²ÎÊı¹ÜÀí
+void menu_register_param(volatile float* var, float step, float min, float max); // ×¢²á²ÎÊı
+uint8_t menu_get_param_count(void);                                        // »ñÈ¡²ÎÊıÊıÁ¿
+float menu_get_param_by_index(uint8_t index);                             // °´Ë÷Òı»ñÈ¡²ÎÊıÖµ
+void menu_set_param_by_index(uint8_t index, float value);                 // °´Ë÷ÒıÉèÖÃ²ÎÊıÖµ
+void menu_show_debug_info(void);                                          // ÏÔÊ¾µ÷ÊÔĞÅÏ¢
 
-// å­˜æ¡£ç®¡ç†
-void menu_load_slot(uint8_t slot);                     // åŠ è½½æŒ‡å®šå­˜æ¡£
-void menu_save_slot(uint8_t slot);                     // ä¿å­˜åˆ°æŒ‡å®šå­˜æ¡£
-uint8_t menu_get_current_slot(void);                   // è·å–å½“å‰å­˜æ¡£å·
+// ´æµµ¹ÜÀí
+void menu_load_slot(uint8_t slot);                     // ¼ÓÔØÖ¸¶¨´æµµ
+void menu_save_slot(uint8_t slot);                     // ±£´æµ½Ö¸¶¨´æµµ
+uint8_t menu_get_current_slot(void);                   // »ñÈ¡µ±Ç°´æµµºÅ
 
-// èœå•æ§åˆ¶
-void menu_set_root(menu_item_t* root_menu);           // è®¾ç½®æ ¹èœå•
-void menu_enter_submenu(menu_item_t* submenu);        // è¿›å…¥å­èœå•
-void menu_return_to_parent(void);                     // è¿”å›ä¸Šçº§èœå•
-void menu_reset_to_first(void);                       // é‡ç½®é€‰æ‹©åˆ°ç¬¬ä¸€é¡¹
+// ²Ëµ¥¿ØÖÆ
+void menu_set_root(menu_item_t* root_menu);           // ÉèÖÃ¸ù²Ëµ¥
+void menu_enter_submenu(menu_item_t* submenu);        // ½øÈë×Ó²Ëµ¥
+void menu_return_to_parent(void);                     // ·µ»ØÉÏ¼¶²Ëµ¥
+void menu_reset_to_first(void);                       // ÖØÖÃÑ¡Ôñµ½µÚÒ»Ïî
 uint8_t menu_enter_external_view(const menu_external_view_config_t *config);
 uint8_t menu_external_view_runtime_active(void);
 
-// æ˜¾ç¤ºæ§åˆ¶
-void menu_set_need_refresh(void);                     // è®¾ç½®éœ€è¦åˆ·æ–°æ ‡å¿—
-void menu_clear_screen(void);                         // æ¸…é™¤å±å¹•
-void menu_show_message(const char* msg);              // æ˜¾ç¤ºæ¶ˆæ¯ (å·²åºŸå¼ƒï¼Œä½¿ç”¨ä¸‹é¢çš„å‡½æ•°)
+// ÏÔÊ¾¿ØÖÆ
+void menu_set_need_refresh(void);                     // ÉèÖÃĞèÒªË¢ĞÂ±êÖ¾
+void menu_clear_screen(void);                         // Çå³ıÆÁÄ»
+void menu_show_message(const char* msg);              // ÏÔÊ¾ÏûÏ¢ (ÒÑ·ÏÆú£¬Ê¹ÓÃÏÂÃæµÄº¯Êı)
 
-// ä¼˜åŒ–çš„æ˜¾ç¤ºæ¥å£ (æ”¯æŒé¢œè‰²å’Œå­—ä½“æ§åˆ¶)
-void menu_show_success(const char* msg);              // æ˜¾ç¤ºæˆåŠŸæ¶ˆæ¯ (ç»¿è‰²å¤§å­—ä½“)
-void menu_show_error(const char* msg);                // æ˜¾ç¤ºé”™è¯¯æ¶ˆæ¯ (çº¢è‰²å¤§å­—ä½“)
-void menu_show_progress(const char* msg);             // æ˜¾ç¤ºè¿›åº¦æ¶ˆæ¯ (é»„è‰²)
-void menu_set_display_color(uint16_t text_color);     // è®¾ç½®æ˜¾ç¤ºé¢œè‰²
+// ÓÅ»¯µÄÏÔÊ¾½Ó¿Ú (Ö§³ÖÑÕÉ«ºÍ×ÖÌå¿ØÖÆ)
+void menu_show_success(const char* msg);              // ÏÔÊ¾³É¹¦ÏûÏ¢ (ÂÌÉ«´ó×ÖÌå)
+void menu_show_error(const char* msg);                // ÏÔÊ¾´íÎóÏûÏ¢ (ºìÉ«´ó×ÖÌå)
+void menu_show_progress(const char* msg);             // ÏÔÊ¾½ø¶ÈÏûÏ¢ (»ÆÉ«)
+void menu_set_display_color(uint16_t text_color);     // ÉèÖÃÏÔÊ¾ÑÕÉ«
 
-// å±€éƒ¨åˆ·æ–°ä¼˜åŒ–æ¥å£
-void menu_request_refresh(refresh_type_t type);       // è¯·æ±‚æŒ‡å®šç±»å‹çš„åˆ·æ–°
-void menu_render_current_optimized(void);             // ä¼˜åŒ–çš„æ¸²æŸ“å‡½æ•°ï¼ˆå±€éƒ¨åˆ·æ–°ï¼‰
-void menu_clear_line(uint8_t line);                   // æ¸…é™¤æŒ‡å®šè¡Œ
-void menu_render_single_item(uint8_t item_index);     // æ¸²æŸ“å•ä¸ªèœå•é¡¹
-void menu_show_text_line(uint8_t line, const char *text, uint16_t color); // ä»…æ›´æ–°ä¸€è¡Œä¸­å˜åŒ–çš„å­—ç¬¦
-void menu_invalidate_display_cache(void);             // å¤–éƒ¨ç›´æ¥ç»˜å›¾åä½¿æ–‡æœ¬ç¼“å­˜å¤±æ•ˆ
+// ¾Ö²¿Ë¢ĞÂÓÅ»¯½Ó¿Ú
+void menu_request_refresh(refresh_type_t type);       // ÇëÇóÖ¸¶¨ÀàĞÍµÄË¢ĞÂ
+void menu_render_current_optimized(void);             // ÓÅ»¯µÄäÖÈ¾º¯Êı£¨¾Ö²¿Ë¢ĞÂ£©
+void menu_clear_line(uint8_t line);                   // Çå³ıÖ¸¶¨ĞĞ
+void menu_render_single_item(uint8_t item_index);     // äÖÈ¾µ¥¸ö²Ëµ¥Ïî
+void menu_show_text_line(uint8_t line, const char *text, uint16_t color); // ½ö¸üĞÂÒ»ĞĞÖĞ±ä»¯µÄ×Ö·û
+void menu_invalidate_display_cache(void);             // Íâ²¿Ö±½Ó»æÍ¼ºóÊ¹ÎÄ±¾»º´æÊ§Ğ§
 
-//====================================================å†…éƒ¨æ¥å£ï¼ˆç”¨æˆ·æ— éœ€å…³å¿ƒï¼‰====================================================
-// æŒ‰é”®å¤„ç†å†…éƒ¨å‡½æ•°
-void menu_process_keys(void);                          // å¤„ç†æŒ‰é”®äº‹ä»¶
-void menu_key_handler(menu_key_t key);                 // æŒ‰é”®å¤„ç†
+//====================================================ÄÚ²¿½Ó¿Ú£¨ÓÃ»§ÎŞĞè¹ØĞÄ£©====================================================
+// °´¼ü´¦ÀíÄÚ²¿º¯Êı
+void menu_process_keys(void);                          // ´¦Àí°´¼üÊÂ¼ş
+void menu_key_handler(menu_key_t key);                 // °´¼ü´¦Àí
 
-// Flashå­˜æ¡£å†…éƒ¨å‡½æ•°
-uint8_t menu_flash_check_slot(uint8_t slot);          // æ£€æŸ¥å­˜æ¡£æœ‰æ•ˆæ€§
-uint8_t menu_flash_load_params(uint8_t slot);         // ä»FlashåŠ è½½å‚æ•°
-uint8_t menu_flash_save_params(uint8_t slot);         // ä¿å­˜å‚æ•°åˆ°Flash
-void menu_flash_format_slot(uint8_t slot);            // æ ¼å¼åŒ–å­˜æ¡£
-void menu_flash_test(void);                           // FlashåŠŸèƒ½æµ‹è¯•
+// Flash´æµµÄÚ²¿º¯Êı
+uint8_t menu_flash_check_slot(uint8_t slot);          // ¼ì²é´æµµÓĞĞ§ĞÔ
+uint8_t menu_flash_load_params(uint8_t slot);         // ´ÓFlash¼ÓÔØ²ÎÊı
+uint8_t menu_flash_save_params(uint8_t slot);         // ±£´æ²ÎÊıµ½Flash
+void menu_flash_format_slot(uint8_t slot);            // ¸ñÊ½»¯´æµµ
+void menu_flash_test(void);                           // Flash¹¦ÄÜ²âÊÔ
 
-// æ˜¾ç¤ºå†…éƒ¨å‡½æ•°
-void menu_render_current(void);                       // æ¸²æŸ“å½“å‰èœå•
+// ÏÔÊ¾ÄÚ²¿º¯Êı
+void menu_render_current(void);                       // äÖÈ¾µ±Ç°²Ëµ¥
 void menu_render_item(uint8_t line, menu_item_t* item, uint8_t selected, uint8_t editing);
 void menu_show_param_value(uint8_t x, uint8_t y, uint8_t index, uint8_t editing);
 

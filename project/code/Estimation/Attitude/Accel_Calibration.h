@@ -1,15 +1,15 @@
 /********************************************************************
- * æ–‡ä»¶å  : Accel_Calibration.h
- * æ¨¡å—    : åŠ é€Ÿåº¦è®¡æ ¡å‡† + IMU æ ¡å‡†å­ç³»ç»Ÿ
- * ä½ç½®    : Estimation/Attitude
- * èŒè´£    :
- *   1) ICM42688 åŠ é€Ÿåº¦è®¡åç½®/ç¼©æ”¾/æ¤­çƒæ ¡å‡†
- *   2) å®‰è£…æ—‹è½¬çŸ©é˜µï¼ˆIMU->æœºä½“ï¼‰
- *   3) å»é‡åŠ› + æœºä½“ç³»/æ°´å¹³ç³»çº¿æ€§åŠ é€Ÿåº¦è¾“å‡ºï¼ˆä¾›é‡Œç¨‹è®¡ã€EKF ä½¿ç”¨ï¼‰
- *   4) IMU æ ¡å‡†çŠ¶æ€æœºï¼ˆé™€èºä»ªé™æ€ã€6é¢åŠ é€Ÿåº¦ã€æ¤­çƒåŠ é€Ÿåº¦ï¼‰
- *   5) Flash æŒä¹…åŒ–æ ¡å‡†å‚æ•°
- * è°ƒç”¨æ–¹  : IMU_TOP.cï¼ˆ1kHz æ›´æ–°ï¼‰ã€èœå•/UIï¼ˆè§¦å‘æ ¡å‡†ï¼‰
- * é¢‘ç‡    : 1kHzï¼ˆAccelCalibration_Update_1000HZï¼‰
+ * ÎÄ¼şÃû  : Accel_Calibration.h
+ * Ä£¿é    : ¼ÓËÙ¶È¼ÆĞ£×¼ + IMU Ğ£×¼×ÓÏµÍ³
+ * Î»ÖÃ    : Estimation/Attitude
+ * Ö°Ôğ    :
+ *   1) ICM42688 ¼ÓËÙ¶È¼ÆÆ«ÖÃ/Ëõ·Å/ÍÖÇòĞ£×¼
+ *   2) °²×°Ğı×ª¾ØÕó£¨IMU->»úÌå£©
+ *   3) È¥ÖØÁ¦ + »úÌåÏµ/Ë®Æ½ÏµÏßĞÔ¼ÓËÙ¶ÈÊä³ö£¨¹©Àï³Ì¼Æ¡¢EKF Ê¹ÓÃ£©
+ *   4) IMU Ğ£×¼×´Ì¬»ú£¨ÍÓÂİÒÇ¾²Ì¬¡¢6Ãæ¼ÓËÙ¶È¡¢ÍÖÇò¼ÓËÙ¶È£©
+ *   5) Flash ³Ö¾Ã»¯Ğ£×¼²ÎÊı
+ * µ÷ÓÃ·½  : IMU_TOP.c£¨1kHz ¸üĞÂ£©¡¢²Ëµ¥/UI£¨´¥·¢Ğ£×¼£©
+ * ÆµÂÊ    : 1kHz£¨AccelCalibration_Update_1000HZ£©
  ********************************************************************/
 
 #include "zf_common_headfile.h"
@@ -22,112 +22,112 @@
 extern "C" {
 #endif
 
-/* ======================== ç‰©ç†å¸¸é‡ä¸é¢‘ç‡ ======================== */
-#define ACCEL_CALIBRATION_GRAVITY_MSS            (9.80665f) /* æ ‡å‡†é‡åŠ›åŠ é€Ÿåº¦ï¼Œå•ä½ m/s^2 */
-#define ACCEL_CALIBRATION_DT_S                   (0.001f)   /* å®æ—¶æ›´æ–°å‘¨æœŸ 1msï¼Œå•ä½ s */
-#define ACCEL_CALIBRATION_SAMPLES                (1000U)    /* é™æ­¢æ ‡å®šç›®æ ‡æ ·æœ¬æ•°ï¼ŒæŒ‰ 1kHz çº¦ 1s */
+/* ======================== ÎïÀí³£Á¿ÓëÆµÂÊ ======================== */
+#define ACCEL_CALIBRATION_GRAVITY_MSS            (9.80665f) /* ±ê×¼ÖØÁ¦¼ÓËÙ¶È£¬µ¥Î» m/s^2 */
+#define ACCEL_CALIBRATION_DT_S                   (0.001f)   /* ÊµÊ±¸üĞÂÖÜÆÚ 1ms£¬µ¥Î» s */
+#define ACCEL_CALIBRATION_SAMPLES                (1000U)    /* ¾²Ö¹±ê¶¨Ä¿±êÑù±¾Êı£¬°´ 1kHz Ô¼ 1s */
 
-/* ======================== é™æ­¢è´¨é‡é˜ˆå€¼ ======================== */
-#define ACCEL_CALIBRATION_STD_G_WARN_MAX         (0.050f)   /* |a| æ ‡å‡†å·®å‘Šè­¦é˜ˆå€¼ï¼Œå•ä½ g */
-#define ACCEL_CALIBRATION_STD_G_FAIL_MAX         (0.080f)   /* |a| æ ‡å‡†å·®å¤±è´¥é˜ˆå€¼ï¼Œå•ä½ g */
+/* ======================== ¾²Ö¹ÖÊÁ¿ãĞÖµ ======================== */
+#define ACCEL_CALIBRATION_STD_G_WARN_MAX         (0.050f)   /* |a| ±ê×¼²î¸æ¾¯ãĞÖµ£¬µ¥Î» g */
+#define ACCEL_CALIBRATION_STD_G_FAIL_MAX         (0.080f)   /* |a| ±ê×¼²îÊ§°ÜãĞÖµ£¬µ¥Î» g */
 
-/* æ¯”åŠ›æ–¹å‘çº¦å®šï¼šé™æ­¢å¹³æ”¾æ—¶ az çº¦ä¸º -1gï¼ˆåŠ é€Ÿåº¦è®¡æµ‹é‡çš„æ˜¯æ¯”åŠ›ï¼Œä¸æ˜¯åŠ é€Ÿåº¦ï¼‰ */
+/* ±ÈÁ¦·½ÏòÔ¼¶¨£º¾²Ö¹Æ½·ÅÊ± az Ô¼Îª -1g£¨¼ÓËÙ¶È¼Æ²âÁ¿µÄÊÇ±ÈÁ¦£¬²»ÊÇ¼ÓËÙ¶È£© */
 #define ACCEL_CALIBRATION_STATIC_SPECIFIC_FORCE_SIGN (-1.0f)
 
-/* æ°´å¹³ç³»æŠ•å½±å¼€å…³ï¼š0=ä»… roll/pitch å»å€¾æ–œï¼Œ1=é¢å¤–åš yaw æ—‹è½¬ */
+/* Ë®Æ½ÏµÍ¶Ó°¿ª¹Ø£º0=½ö roll/pitch È¥ÇãĞ±£¬1=¶îÍâ×ö yaw Ğı×ª */
 #define ACCEL_CALIBRATION_LEVEL_USE_YAW          (0U) /* Keep 0 for odometer; odometer applies yaw itself. */
 
-/* ======================== æœºä½“ç³»æ–¹å‘ç¬¦å·çº¦å®š ======================== */
-/* æœºä½“ç³» FRDï¼ˆForward-Right-Downï¼‰ï¼š+X å‘å‰ï¼Œ+Y å‘å³ï¼Œ+Z å‘ä¸‹ */
+/* ======================== »úÌåÏµ·½Ïò·ûºÅÔ¼¶¨ ======================== */
+/* »úÌåÏµ FRD£¨Forward-Right-Down£©£º+X ÏòÇ°£¬+Y ÏòÓÒ£¬+Z ÏòÏÂ */
 #define ACCEL_CALIBRATION_BODY_AXIS_X_FORWARD    (+1.0f)
 #define ACCEL_CALIBRATION_BODY_AXIS_Y_RIGHT      (+1.0f)
 #define ACCEL_CALIBRATION_BODY_AXIS_Z_DOWN       (+1.0f)
-#define ACCEL_CALIBRATION_OUTPUT_DOWN_SIGN       (+1.0f)    /* Down æ–¹å‘è¾“å‡ºä¸ºæ­£ */
-#define ACCEL_CALIBRATION_OUTPUT_UP_SIGN         (-1.0f)    /* Up æ–¹å‘è¾“å‡ºä¸ºè´Ÿ */
+#define ACCEL_CALIBRATION_OUTPUT_DOWN_SIGN       (+1.0f)    /* Down ·½ÏòÊä³öÎªÕı */
+#define ACCEL_CALIBRATION_OUTPUT_UP_SIGN         (-1.0f)    /* Up ·½ÏòÊä³öÎª¸º */
 
-/* ======================== åŠ é€Ÿåº¦æ ¡å‡†è¿è¡Œæ€ ======================== */
-/* g_accel_calibration æ˜¯å…¨å±€å•ä¾‹ï¼Œè¢« odometerã€EKFã€å§¿æ€è§£ç®—ç­‰æ¨¡å—è¯»å– */
+/* ======================== ¼ÓËÙ¶ÈĞ£×¼ÔËĞĞÌ¬ ======================== */
+/* g_accel_calibration ÊÇÈ«¾Öµ¥Àı£¬±» odometer¡¢EKF¡¢×ËÌ¬½âËãµÈÄ£¿é¶ÁÈ¡ */
 typedef struct
 {
-    bool is_calibrated;              /* 1=å·²æœ‰æœ‰æ•ˆæ ¡å‡†å‚æ•° */
-    uint16_t sample_count;           /* æ ‡å®šå·²é‡‡é›†æ ·æœ¬è®¡æ•° */
+    bool is_calibrated;              /* 1=ÒÑÓĞÓĞĞ§Ğ£×¼²ÎÊı */
+    uint16_t sample_count;           /* ±ê¶¨ÒÑ²É¼¯Ñù±¾¼ÆÊı */
 
-    /* --- æœºä½“ç³»æ ¡å‡†å‚æ•°ï¼ˆFlash æŒä¹…åŒ–ï¼‰ --- */
-    float accel_bias_g[3];           /* åŠ é€Ÿåº¦åç½®ï¼Œå•ä½ gï¼Œä¸‰è½´ */
-    float accel_scale[3];            /* åŠ é€Ÿåº¦ç¼©æ”¾å› å­ï¼ˆå¯¹è§’çŸ©é˜µæ—¶ä½¿ç”¨ï¼‰ */
-    float accel_corr_matrix[3][3];   /* åŠ é€Ÿåº¦ 3x3 æ ¡æ­£çŸ©é˜µï¼ˆæ¤­çƒæ‹Ÿåˆæ—¶ä¸ºå®Œæ•´çŸ©é˜µï¼‰ */
-    uint8_t use_full_matrix;         /* 1=ä½¿ç”¨å®Œæ•´æ ¡æ­£çŸ©é˜µï¼Œ0=ä»…å¯¹è§’ç¼©æ”¾ */
+    /* --- »úÌåÏµĞ£×¼²ÎÊı£¨Flash ³Ö¾Ã»¯£© --- */
+    float accel_bias_g[3];           /* ¼ÓËÙ¶ÈÆ«ÖÃ£¬µ¥Î» g£¬ÈıÖá */
+    float accel_scale[3];            /* ¼ÓËÙ¶ÈËõ·ÅÒò×Ó£¨¶Ô½Ç¾ØÕóÊ±Ê¹ÓÃ£© */
+    float accel_corr_matrix[3][3];   /* ¼ÓËÙ¶È 3x3 Ğ£Õı¾ØÕó£¨ÍÖÇòÄâºÏÊ±ÎªÍêÕû¾ØÕó£© */
+    uint8_t use_full_matrix;         /* 1=Ê¹ÓÃÍêÕûĞ£Õı¾ØÕó£¬0=½ö¶Ô½ÇËõ·Å */
 
-    /* --- æ¯å¸§ä¼ æ„Ÿå™¨æ•°æ® --- */
-    float accel_raw_body_g[3];       /* æœºä½“ç³»åŸå§‹åŠ é€Ÿåº¦ï¼ˆå«åç½®ï¼‰ï¼Œå•ä½ g */
-    float accel_corrected_body_g[3]; /* æœºä½“ç³»æ ¡æ­£ååŠ é€Ÿåº¦ï¼ˆå»åç½®+ç¼©æ”¾ï¼‰ï¼Œå•ä½ g */
-    float gyro_raw_body_dps[3];      /* æœºä½“ç³»åŸå§‹è§’é€Ÿåº¦ï¼Œå•ä½ dpsï¼ˆå·²æ‰£é™¤é™€èºä»ªé›¶åï¼‰ */
+    /* --- Ã¿Ö¡´«¸ĞÆ÷Êı¾İ --- */
+    float accel_raw_body_g[3];       /* »úÌåÏµÔ­Ê¼¼ÓËÙ¶È£¨º¬Æ«ÖÃ£©£¬µ¥Î» g */
+    float accel_corrected_body_g[3]; /* »úÌåÏµĞ£Õıºó¼ÓËÙ¶È£¨È¥Æ«ÖÃ+Ëõ·Å£©£¬µ¥Î» g */
+    float gyro_raw_body_dps[3];      /* »úÌåÏµÔ­Ê¼½ÇËÙ¶È£¬µ¥Î» dps£¨ÒÑ¿Û³ıÍÓÂİÒÇÁãÆ«£© */
 
-    /* --- æœºä½“ç³»çº¿æ€§åŠ é€Ÿåº¦ï¼ˆå»é‡åŠ›ï¼‰ï¼Œä¾›é‡Œç¨‹è®¡ä½¿ç”¨ --- */
-    float accel_real_body_mps2[3];   /* æœºä½“ç³»çº¿æ€§åŠ é€Ÿåº¦ï¼Œå•ä½ m/s^2 */
+    /* --- »úÌåÏµÏßĞÔ¼ÓËÙ¶È£¨È¥ÖØÁ¦£©£¬¹©Àï³Ì¼ÆÊ¹ÓÃ --- */
+    float accel_real_body_mps2[3];   /* »úÌåÏµÏßĞÔ¼ÓËÙ¶È£¬µ¥Î» m/s^2 */
 
-    /* --- æ°´å¹³ç³»çº¿æ€§åŠ é€Ÿåº¦ï¼ˆå»å€¾æ–œï¼‰ï¼Œä¾› EKF ä½¿ç”¨ --- */
-    float accel_level_mps2[3];       /* æ°´å¹³ç³»çº¿æ€§åŠ é€Ÿåº¦ï¼Œ+X æœºå¤´æ–¹å‘ï¼Œ+Y å³ä¾§ï¼Œ+Z Downï¼Œå•ä½ m/s^2 */
+    /* --- Ë®Æ½ÏµÏßĞÔ¼ÓËÙ¶È£¨È¥ÇãĞ±£©£¬¹© EKF Ê¹ÓÃ --- */
+    float accel_level_mps2[3];       /* Ë®Æ½ÏµÏßĞÔ¼ÓËÙ¶È£¬+X »úÍ··½Ïò£¬+Y ÓÒ²à£¬+Z Down£¬µ¥Î» m/s^2 */
 
-    /* --- Down æ–¹å‘åŠ é€Ÿåº¦è¾“å‡º --- */
-    float accel_down_for_ekf_mps2;   /* ç»™ EKF ç”¨çš„ Down åŠ é€Ÿåº¦ï¼Œå•ä½ m/s^2 */
-    float accel_down_for_output_mps2;/* ç»™æ˜¾ç¤º/æ—¥å¿—ç”¨çš„ Down åŠ é€Ÿåº¦ï¼Œå•ä½ m/s^2 */
+    /* --- Down ·½Ïò¼ÓËÙ¶ÈÊä³ö --- */
+    float accel_down_for_ekf_mps2;   /* ¸ø EKF ÓÃµÄ Down ¼ÓËÙ¶È£¬µ¥Î» m/s^2 */
+    float accel_down_for_output_mps2;/* ¸øÏÔÊ¾/ÈÕÖ¾ÓÃµÄ Down ¼ÓËÙ¶È£¬µ¥Î» m/s^2 */
 
-    /* --- å‚ç›´æ–¹å‘ç§¯åˆ†ï¼ˆUp ä¸ºæ­£ï¼‰ï¼Œå¯ç”¨äºç®€æ˜“é«˜åº¦ä¼°è®¡ --- */
-    float vel_up_mps;                /* å‚ç›´é€Ÿåº¦ï¼ŒUp ä¸ºæ­£ï¼Œå•ä½ m/s */
-    float pos_up_m;                  /* å‚ç›´ä½ç½®ï¼ŒUp ä¸ºæ­£ï¼Œå•ä½ m */
+    /* --- ´¹Ö±·½Ïò»ı·Ö£¨Up ÎªÕı£©£¬¿ÉÓÃÓÚ¼òÒ×¸ß¶È¹À¼Æ --- */
+    float vel_up_mps;                /* ´¹Ö±ËÙ¶È£¬Up ÎªÕı£¬µ¥Î» m/s */
+    float pos_up_m;                  /* ´¹Ö±Î»ÖÃ£¬Up ÎªÕı£¬µ¥Î» m */
 
-    /* --- å®‰è£…æ—‹è½¬çŸ©é˜µï¼šä¼ æ„Ÿå™¨åæ ‡ç³» -> æœºä½“åæ ‡ç³» --- */
-    float imu_to_body[3][3];         /* æ—‹è½¬çŸ©é˜µï¼Œå•ä½çŸ©é˜µæ—¶è¡¨ç¤º IMU ä¸æœºä½“å¯¹é½ */
-    bool imu_to_body_identity;       /* å¿«æ·åˆ¤æ–­ï¼Œé¿å…æ¯æ¬¡åšçŸ©é˜µä¹˜æ³• */
+    /* --- °²×°Ğı×ª¾ØÕó£º´«¸ĞÆ÷×ø±êÏµ -> »úÌå×ø±êÏµ --- */
+    float imu_to_body[3][3];         /* Ğı×ª¾ØÕó£¬µ¥Î»¾ØÕóÊ±±íÊ¾ IMU Óë»úÌå¶ÔÆë */
+    bool imu_to_body_identity;       /* ¿ì½İÅĞ¶Ï£¬±ÜÃâÃ¿´Î×ö¾ØÕó³Ë·¨ */
 
-    /* --- è¿è¡Œè´¨é‡æŒ‡æ ‡ï¼ˆç”¨äº UI æ˜¾ç¤ºå’Œè°ƒè¯•ï¼‰ --- */
-    float accel_norm_mean_g;         /* |a| çš„æ»‘åŠ¨å‡å€¼ï¼Œå•ä½ g */
-    float accel_norm_std_g;          /* |a| çš„æ»‘åŠ¨æ ‡å‡†å·®ï¼Œå•ä½ g */
+    /* --- ÔËĞĞÖÊÁ¿Ö¸±ê£¨ÓÃÓÚ UI ÏÔÊ¾ºÍµ÷ÊÔ£© --- */
+    float accel_norm_mean_g;         /* |a| µÄ»¬¶¯¾ùÖµ£¬µ¥Î» g */
+    float accel_norm_std_g;          /* |a| µÄ»¬¶¯±ê×¼²î£¬µ¥Î» g */
 
-    float gravity_mps2;              /* å½“å‰é‡åŠ›æ ‡ç§°å€¼ï¼Œé€šå¸¸ 9.80665 m/s^2 */
-    uint32_t invalid_sample_count;   /* æ— æ•ˆæ ·æœ¬ç´¯è®¡è®¡æ•° */
-    uint8_t realtime_sample_valid;   /* 1=å½“å‰å¸§æ•°æ®æœ‰æ•ˆ */
+    float gravity_mps2;              /* µ±Ç°ÖØÁ¦±ê³ÆÖµ£¬Í¨³£ 9.80665 m/s^2 */
+    uint32_t invalid_sample_count;   /* ÎŞĞ§Ñù±¾ÀÛ¼Æ¼ÆÊı */
+    uint8_t realtime_sample_valid;   /* 1=µ±Ç°Ö¡Êı¾İÓĞĞ§ */
 } AccelCalibration_t;
 
-/* æ ¡å‡†å‚æ•°å¿«ç…§ï¼Œç”¨äº Load/Get/Flash ä¹‹é—´ä¼ é€’ */
+/* Ğ£×¼²ÎÊı¿ìÕÕ£¬ÓÃÓÚ Load/Get/Flash Ö®¼ä´«µİ */
 typedef struct
 {
-    float accel_bias_g[3];           /* åç½®ï¼Œå•ä½ g */
-    float accel_scale[3];            /* å¯¹è§’ç¼©æ”¾å› å­ */
-    float accel_corr_matrix[3][3];   /* å®Œæ•´æ ¡æ­£çŸ©é˜µ */
-    uint8_t use_full_matrix;         /* 1=å®Œæ•´çŸ©é˜µï¼Œ0=ä»…å¯¹è§’ */
-    float imu_to_body[3][3];         /* å®‰è£…æ—‹è½¬çŸ©é˜µ */
-    float gravity_mps2;              /* é‡åŠ›æ ‡ç§°å€¼ */
+    float accel_bias_g[3];           /* Æ«ÖÃ£¬µ¥Î» g */
+    float accel_scale[3];            /* ¶Ô½ÇËõ·ÅÒò×Ó */
+    float accel_corr_matrix[3][3];   /* ÍêÕûĞ£Õı¾ØÕó */
+    uint8_t use_full_matrix;         /* 1=ÍêÕû¾ØÕó£¬0=½ö¶Ô½Ç */
+    float imu_to_body[3][3];         /* °²×°Ğı×ª¾ØÕó */
+    float gravity_mps2;              /* ÖØÁ¦±ê³ÆÖµ */
 } AccelCalibrationParams_t;
 
-/* ======================== Flash æŒä¹…åŒ–å‚æ•° ======================== */
-#define IMU_CALIB_FLASH_MAGIC                (0x43414C49UL) /* æ ¡å‡†æ•°æ®é­”æ•° "CALI" */
-#define IMU_CALIB_FLASH_VERSION_V1           (1U)           /* æ—§ç‰ˆå¸ƒå±€ï¼ˆä»…æœ‰å¯¹è§’ç¼©æ”¾ï¼‰ */
-#define IMU_CALIB_FLASH_VERSION              (2U)           /* å½“å‰å¸ƒå±€ï¼ˆæ”¯æŒå®Œæ•´æ ¡æ­£çŸ©é˜µï¼‰ */
-#define IMU_CALIB_FLASH_PAGE                 (95U)          /* å­˜å‚¨é¡µå· */
+/* ======================== Flash ³Ö¾Ã»¯²ÎÊı ======================== */
+#define IMU_CALIB_FLASH_MAGIC                (0x43414C49UL) /* Ğ£×¼Êı¾İÄ§Êı "CALI" */
+#define IMU_CALIB_FLASH_VERSION_V1           (1U)           /* ¾É°æ²¼¾Ö£¨½öÓĞ¶Ô½ÇËõ·Å£© */
+#define IMU_CALIB_FLASH_VERSION              (2U)           /* µ±Ç°²¼¾Ö£¨Ö§³ÖÍêÕûĞ£Õı¾ØÕó£© */
+#define IMU_CALIB_FLASH_PAGE                 (95U)          /* ´æ´¢Ò³ºÅ */
 
-/* ======================== æ ¡å‡†æ¨¡å¼æšä¸¾ ======================== */
-#define IMU_CALIB_STATUS_MODE_IDLE           (0U)           /* ç©ºé—² */
-#define IMU_CALIB_STATUS_MODE_GYRO           (1U)           /* é™€èºä»ªé™æ€æ ¡å‡† */
-#define IMU_CALIB_STATUS_MODE_ACC6           (2U)           /* å…­é¢åŠ é€Ÿåº¦æ ¡å‡† */
-#define IMU_CALIB_STATUS_MODE_ALL            (3U)           /* å…ˆé™€èºåå…­é¢ */
-#define IMU_CALIB_STATUS_MODE_ELLIP          (4U)           /* è‡ªåŠ¨æ¤­çƒåŠ é€Ÿåº¦æ ¡å‡† */
-#define IMU_CALIB_STATUS_MODE_ELLIP_MANUAL   (5U)           /* æ‰‹åŠ¨æ¤­çƒåŠ é€Ÿåº¦æ ¡å‡† */
+/* ======================== Ğ£×¼Ä£Ê½Ã¶¾Ù ======================== */
+#define IMU_CALIB_STATUS_MODE_IDLE           (0U)           /* ¿ÕÏĞ */
+#define IMU_CALIB_STATUS_MODE_GYRO           (1U)           /* ÍÓÂİÒÇ¾²Ì¬Ğ£×¼ */
+#define IMU_CALIB_STATUS_MODE_ACC6           (2U)           /* ÁùÃæ¼ÓËÙ¶ÈĞ£×¼ */
+#define IMU_CALIB_STATUS_MODE_ALL            (3U)           /* ÏÈÍÓÂİºóÁùÃæ */
+#define IMU_CALIB_STATUS_MODE_ELLIP          (4U)           /* ×Ô¶¯ÍÖÇò¼ÓËÙ¶ÈĞ£×¼ */
+#define IMU_CALIB_STATUS_MODE_ELLIP_MANUAL   (5U)           /* ÊÖ¶¯ÍÖÇò¼ÓËÙ¶ÈĞ£×¼ */
 
-/* æ‰‹åŠ¨æ¤­çƒæ ¡å‡†å­çŠ¶æ€ */
-#define IMU_CALIB_MANUAL_SUBSTATE_NONE       (0U)           /* æœªå¼€å§‹ */
-#define IMU_CALIB_MANUAL_SUBSTATE_READY      (1U)           /* å‡†å¤‡æ€ï¼Œç­‰å¾…ç”¨æˆ·è§¦å‘é‡‡é›† */
-#define IMU_CALIB_MANUAL_SUBSTATE_WAIT_STATIC (2U)          /* ç­‰å¾…é™æ­¢é€šè¿‡ */
-#define IMU_CALIB_MANUAL_SUBSTATE_COLLECTING (3U)           /* æ­£åœ¨é‡‡é›†å½“å‰å§¿æ€ç‚¹ */
-#define IMU_CALIB_MANUAL_SUBSTATE_SOLVING    (4U)           /* å·²åœæ­¢é‡‡ç‚¹ï¼Œæ­£åœ¨æ±‚è§£ */
+/* ÊÖ¶¯ÍÖÇòĞ£×¼×Ó×´Ì¬ */
+#define IMU_CALIB_MANUAL_SUBSTATE_NONE       (0U)           /* Î´¿ªÊ¼ */
+#define IMU_CALIB_MANUAL_SUBSTATE_READY      (1U)           /* ×¼±¸Ì¬£¬µÈ´ıÓÃ»§´¥·¢²É¼¯ */
+#define IMU_CALIB_MANUAL_SUBSTATE_WAIT_STATIC (2U)          /* µÈ´ı¾²Ö¹Í¨¹ı */
+#define IMU_CALIB_MANUAL_SUBSTATE_COLLECTING (3U)           /* ÕıÔÚ²É¼¯µ±Ç°×ËÌ¬µã */
+#define IMU_CALIB_MANUAL_SUBSTATE_SOLVING    (4U)           /* ÒÑÍ£Ö¹²Éµã£¬ÕıÔÚÇó½â */
 
-/* é™€èºä»ªé™æ­¢åˆ¤å®šå¤±è´¥åŸå› ï¼Œç”¨äºçŠ¶æ€æŸ¥è¯¢è¯Šæ–­ */
-#define IMU_CALIB_GYRO_STATIC_FAIL_NONE       (0U)           /* å½“å‰æ ·æœ¬æ»¡è¶³é™æ­¢æ¡ä»¶æˆ–å°šæœªå–å¾—æ ·æœ¬ */
-#define IMU_CALIB_GYRO_STATIC_FAIL_INVALID    (1U)           /* æ ·æœ¬åŒ…å« NaN/Inf ç­‰éæ³•å€¼ */
-#define IMU_CALIB_GYRO_STATIC_FAIL_GYRO       (2U)           /* è§’é€Ÿåº¦æ¨¡é•¿è¶…è¿‡é—¨é™ */
-#define IMU_CALIB_GYRO_STATIC_FAIL_ACCEL      (3U)           /* åŠ é€Ÿåº¦æ¨¡é•¿ä¸åœ¨å…è®¸èŒƒå›´ */
-#define IMU_CALIB_GYRO_STATIC_FAIL_BOTH       (4U)           /* è§’é€Ÿåº¦ä¸åŠ é€Ÿåº¦æ¡ä»¶åŒæ—¶ä¸æ»¡è¶³ */
+/* ÍÓÂİÒÇ¾²Ö¹ÅĞ¶¨Ê§°ÜÔ­Òò£¬ÓÃÓÚ×´Ì¬²éÑ¯Õï¶Ï */
+#define IMU_CALIB_GYRO_STATIC_FAIL_NONE       (0U)           /* µ±Ç°Ñù±¾Âú×ã¾²Ö¹Ìõ¼ş»òÉĞÎ´È¡µÃÑù±¾ */
+#define IMU_CALIB_GYRO_STATIC_FAIL_INVALID    (1U)           /* Ñù±¾°üº¬ NaN/Inf µÈ·Ç·¨Öµ */
+#define IMU_CALIB_GYRO_STATIC_FAIL_GYRO       (2U)           /* ½ÇËÙ¶ÈÄ£³¤³¬¹ıÃÅÏŞ */
+#define IMU_CALIB_GYRO_STATIC_FAIL_ACCEL      (3U)           /* ¼ÓËÙ¶ÈÄ£³¤²»ÔÚÔÊĞí·¶Î§ */
+#define IMU_CALIB_GYRO_STATIC_FAIL_BOTH       (4U)           /* ½ÇËÙ¶ÈÓë¼ÓËÙ¶ÈÌõ¼şÍ¬Ê±²»Âú×ã */
 
 typedef struct
 {
@@ -145,104 +145,104 @@ typedef struct
 
 typedef struct
 {
-    uint8_t busy;              /* å½“å‰æ˜¯å¦æ­£åœ¨æ‰§è¡Œæ ¡å‡† */
-    uint8_t mode;              /* å½“å‰æ ¡å‡†æ¨¡å¼ */
-    uint8_t pose_count;        /* åŠ é€Ÿåº¦æ ¡å‡†å·²å®Œæˆçš„å§¿æ€ç‚¹æ•°é‡ */
-    uint8_t substate;          /* æ‰‹åŠ¨æ ¡å‡†å­çŠ¶æ€ */
-    uint32_t progress_percent; /* å½“å‰æ ¡å‡†è¿›åº¦ç™¾åˆ†æ¯” */
-    uint32_t current_samples;  /* å½“å‰å­é˜¶æ®µç´¯è®¡æ ·æœ¬æ•° */
-    uint32_t target_samples;   /* å½“å‰å­é˜¶æ®µç›®æ ‡æ ·æœ¬æ•° */
-    uint32_t gyro_pre_stable_samples; /* é™€èºä»ªé¢„ç¨³å®šè¿ç»­æœ‰æ•ˆæ ·æœ¬æ•° */
-    uint32_t gyro_pre_stable_target;  /* é™€èºä»ªé¢„ç¨³å®šç›®æ ‡æ ·æœ¬æ•° */
-    float gyro_norm_dps;       /* å½“å‰åŸå§‹ä¸‰è½´è§’é€Ÿåº¦æ¨¡é•¿ï¼Œå•ä½ dps */
-    float accel_norm_g;        /* å½“å‰åŸå§‹ä¸‰è½´åŠ é€Ÿåº¦æ¨¡é•¿ï¼Œå•ä½ g */
-    uint8_t gyro_static_ok;    /* å½“å‰æ ·æœ¬æ˜¯å¦æ»¡è¶³é™€èºä»ªé™æ­¢åˆ¤å®š */
-    uint8_t gyro_static_fail_reason; /* å½“å‰é™æ­¢åˆ¤å®šå¤±è´¥åŸå›  */
+    uint8_t busy;              /* µ±Ç°ÊÇ·ñÕıÔÚÖ´ĞĞĞ£×¼ */
+    uint8_t mode;              /* µ±Ç°Ğ£×¼Ä£Ê½ */
+    uint8_t pose_count;        /* ¼ÓËÙ¶ÈĞ£×¼ÒÑÍê³ÉµÄ×ËÌ¬µãÊıÁ¿ */
+    uint8_t substate;          /* ÊÖ¶¯Ğ£×¼×Ó×´Ì¬ */
+    uint32_t progress_percent; /* µ±Ç°Ğ£×¼½ø¶È°Ù·Ö±È */
+    uint32_t current_samples;  /* µ±Ç°×Ó½×¶ÎÀÛ¼ÆÑù±¾Êı */
+    uint32_t target_samples;   /* µ±Ç°×Ó½×¶ÎÄ¿±êÑù±¾Êı */
+    uint32_t gyro_pre_stable_samples; /* ÍÓÂİÒÇÔ¤ÎÈ¶¨Á¬ĞøÓĞĞ§Ñù±¾Êı */
+    uint32_t gyro_pre_stable_target;  /* ÍÓÂİÒÇÔ¤ÎÈ¶¨Ä¿±êÑù±¾Êı */
+    float gyro_norm_dps;       /* µ±Ç°Ô­Ê¼ÈıÖá½ÇËÙ¶ÈÄ£³¤£¬µ¥Î» dps */
+    float accel_norm_g;        /* µ±Ç°Ô­Ê¼ÈıÖá¼ÓËÙ¶ÈÄ£³¤£¬µ¥Î» g */
+    uint8_t gyro_static_ok;    /* µ±Ç°Ñù±¾ÊÇ·ñÂú×ãÍÓÂİÒÇ¾²Ö¹ÅĞ¶¨ */
+    uint8_t gyro_static_fail_reason; /* µ±Ç°¾²Ö¹ÅĞ¶¨Ê§°ÜÔ­Òò */
 } IMUCalibStatus_t;
 
 typedef struct
 {
-    uint8_t valid;                 /* Flash ä¸­æ˜¯å¦å­˜åœ¨æœ‰æ•ˆæ ¡å‡†æ•°æ® */
-    uint8_t use_full_matrix;       /* 1 è¡¨ç¤ºä½¿ç”¨å®Œæ•´ 3x3 æ ¡æ­£çŸ©é˜µ */
-    uint16_t version;              /* Flash ä¸­æ ¡å‡†æ•°æ®ç‰ˆæœ¬ */
-    float gyro_bias_dps[3];        /* é™€èºä»ªé›¶åï¼Œå•ä½ dps */
-    float accel_bias_g[3];         /* åŠ é€Ÿåº¦åç½®ï¼Œå•ä½ g */
-    float accel_corr_matrix[3][3]; /* åŠ é€Ÿåº¦ 3x3 æ ¡æ­£çŸ©é˜µ */
-    float imu_to_body[3][3];       /* IMU åˆ°æœºä½“çš„å®‰è£…æ—‹è½¬çŸ©é˜µ */
+    uint8_t valid;                 /* Flash ÖĞÊÇ·ñ´æÔÚÓĞĞ§Ğ£×¼Êı¾İ */
+    uint8_t use_full_matrix;       /* 1 ±íÊ¾Ê¹ÓÃÍêÕû 3x3 Ğ£Õı¾ØÕó */
+    uint16_t version;              /* Flash ÖĞĞ£×¼Êı¾İ°æ±¾ */
+    float gyro_bias_dps[3];        /* ÍÓÂİÒÇÁãÆ«£¬µ¥Î» dps */
+    float accel_bias_g[3];         /* ¼ÓËÙ¶ÈÆ«ÖÃ£¬µ¥Î» g */
+    float accel_corr_matrix[3][3]; /* ¼ÓËÙ¶È 3x3 Ğ£Õı¾ØÕó */
+    float imu_to_body[3][3];       /* IMU µ½»úÌåµÄ°²×°Ğı×ª¾ØÕó */
 } IMUCalibFlashInfo_t;
 
 typedef void (*IMUCalibTextSink_t)(const char *text);
 
-/* ======================== å…¨å±€å¯¹è±¡ ======================== */
-extern AccelCalibration_t g_accel_calibration; /* å…¨å±€åŠ é€Ÿåº¦æ ¡å‡†è¿è¡Œæ€ï¼Œodometer/EKF è¯»å–æ­¤å¯¹è±¡ */
+/* ======================== È«¾Ö¶ÔÏó ======================== */
+extern AccelCalibration_t g_accel_calibration; /* È«¾Ö¼ÓËÙ¶ÈĞ£×¼ÔËĞĞÌ¬£¬odometer/EKF ¶ÁÈ¡´Ë¶ÔÏó */
 
-/* ======================== åŠ é€Ÿåº¦æ ¡å‡† API ======================== */
-void AccelCalibration_Init(void);                          /* åˆå§‹åŒ–æ¨¡å—ï¼Œå°è¯•ä» Flash åŠ è½½æ ¡å‡†å‚æ•° */
-void AccelCalibration_Reset(void);                         /* é‡ç½®è¿è¡Œæ€ï¼ˆä¿ç•™æ ¡å‡†å‚æ•°ä¸å˜ï¼‰ */
-bool AccelCalibration_Start(void);                         /* å¯åŠ¨é™æ­¢è‡ªåŠ¨æ ‡å®šï¼ˆéœ€é™æ­¢æ”¾ç½®ï¼‰ */
+/* ======================== ¼ÓËÙ¶ÈĞ£×¼ API ======================== */
+void AccelCalibration_Init(void);                          /* ³õÊ¼»¯Ä£¿é£¬³¢ÊÔ´Ó Flash ¼ÓÔØĞ£×¼²ÎÊı */
+void AccelCalibration_Reset(void);                         /* ÖØÖÃÔËĞĞÌ¬£¨±£ÁôĞ£×¼²ÎÊı²»±ä£© */
+bool AccelCalibration_Start(void);                         /* Æô¶¯¾²Ö¹×Ô¶¯±ê¶¨£¨Ğè¾²Ö¹·ÅÖÃ£© */
 void AccelCalibration_ApplySensorCorrection(float *ax, float *ay, float *az);
-                                                           /* å¯¹ä¼ æ„Ÿå™¨åæ ‡ç³»åŸå§‹åŠ é€Ÿåº¦åšå®‰è£…æ—‹è½¬ + åç½®/ç¼©æ”¾è¡¥å¿ï¼Œ
-                                                              è¾“å…¥è¾“å‡ºå•ä½ gï¼Œç”± IMU_Update_1kHz è°ƒç”¨ */
-void AccelCalibration_Update_1000HZ(void);                 /* 1kHz æ›´æ–°ï¼šå»é‡åŠ›ã€æŠ•å½±æ°´å¹³ç³»ã€ç§¯åˆ†å‚ç›´é€Ÿåº¦ */
+                                                           /* ¶Ô´«¸ĞÆ÷×ø±êÏµÔ­Ê¼¼ÓËÙ¶È×ö°²×°Ğı×ª + Æ«ÖÃ/Ëõ·Å²¹³¥£¬
+                                                              ÊäÈëÊä³öµ¥Î» g£¬ÓÉ IMU_Update_1kHz µ÷ÓÃ */
+void AccelCalibration_Update_1000HZ(void);                 /* 1kHz ¸üĞÂ£ºÈ¥ÖØÁ¦¡¢Í¶Ó°Ë®Æ½Ïµ¡¢»ı·Ö´¹Ö±ËÙ¶È */
 
-void AccelCalibration_SetImuToBodyMatrix(const float matrix[3][3]);     /* ç›´æ¥è®¾ç½® IMU->æœºä½“æ—‹è½¬çŸ©é˜µ */
+void AccelCalibration_SetImuToBodyMatrix(const float matrix[3][3]);     /* Ö±½ÓÉèÖÃ IMU->»úÌåĞı×ª¾ØÕó */
 void AccelCalibration_SetImuToBodyEulerDeg(float roll_deg, float pitch_deg, float yaw_deg);
-                                                           /* æŒ‰æ¬§æ‹‰è§’ï¼ˆåº¦ï¼‰è®¾ç½®å®‰è£…æ—‹è½¬ */
+                                                           /* °´Å·À­½Ç£¨¶È£©ÉèÖÃ°²×°Ğı×ª */
 
-/* ======================== çŠ¶æ€æŸ¥è¯¢ API ======================== */
-bool AccelCalibration_IsCalibrated(void);                  /* 1=å·²æœ‰æœ‰æ•ˆæ ¡å‡†å‚æ•° */
-uint8_t AccelCalibration_IsRealtimeDataValid(void);        /* 1=å½“å‰å¸§ä¼ æ„Ÿå™¨æ•°æ®æœ‰æ•ˆ */
-float AccelCalibration_GetGravityMps2(void);               /* è¿”å›é‡åŠ›æ ‡ç§°å€¼ï¼Œå•ä½ m/s^2 */
+/* ======================== ×´Ì¬²éÑ¯ API ======================== */
+bool AccelCalibration_IsCalibrated(void);                  /* 1=ÒÑÓĞÓĞĞ§Ğ£×¼²ÎÊı */
+uint8_t AccelCalibration_IsRealtimeDataValid(void);        /* 1=µ±Ç°Ö¡´«¸ĞÆ÷Êı¾İÓĞĞ§ */
+float AccelCalibration_GetGravityMps2(void);               /* ·µ»ØÖØÁ¦±ê³ÆÖµ£¬µ¥Î» m/s^2 */
 
-/* ======================== å‚ç›´æ–¹å‘ APIï¼ˆUp ä¸ºæ­£ï¼‰ ======================== */
-float AccelCalibration_GetVerticalAccelUpMps2(void);       /* Up æ–¹å‘çº¿æ€§åŠ é€Ÿåº¦ï¼Œå•ä½ m/s^2 */
-float AccelCalibration_GetVerticalVelocityUpMps(void);     /* Up æ–¹å‘é€Ÿåº¦ï¼ˆç§¯åˆ†ï¼‰ï¼Œå•ä½ m/s */
-float AccelCalibration_GetVerticalPositionUpM(void);       /* Up æ–¹å‘ä½ç½®ï¼ˆäºŒæ¬¡ç§¯åˆ†ï¼‰ï¼Œå•ä½ m */
+/* ======================== ´¹Ö±·½Ïò API£¨Up ÎªÕı£© ======================== */
+float AccelCalibration_GetVerticalAccelUpMps2(void);       /* Up ·½ÏòÏßĞÔ¼ÓËÙ¶È£¬µ¥Î» m/s^2 */
+float AccelCalibration_GetVerticalVelocityUpMps(void);     /* Up ·½ÏòËÙ¶È£¨»ı·Ö£©£¬µ¥Î» m/s */
+float AccelCalibration_GetVerticalPositionUpM(void);       /* Up ·½ÏòÎ»ÖÃ£¨¶ş´Î»ı·Ö£©£¬µ¥Î» m */
 
-/* ======================== Down æ–¹å‘ API ======================== */
-float AccelCalibration_GetAccelDownMps2(void);             /* Down æ–¹å‘åŠ é€Ÿåº¦ï¼Œå•ä½ m/s^2 */
-float AccelCalibration_GetAccelDownForEkfMps2(void);       /* ç»™ EKF ç”¨çš„ Down åŠ é€Ÿåº¦ï¼ˆæ»¤æ³¢åï¼‰ */
-float AccelCalibration_GetAccelDownForOutputMps2(void);    /* ç»™è¾“å‡º/æ˜¾ç¤ºç”¨çš„ Down åŠ é€Ÿåº¦ï¼ˆæ›´å¹³æ»‘ï¼‰ */
+/* ======================== Down ·½Ïò API ======================== */
+float AccelCalibration_GetAccelDownMps2(void);             /* Down ·½Ïò¼ÓËÙ¶È£¬µ¥Î» m/s^2 */
+float AccelCalibration_GetAccelDownForEkfMps2(void);       /* ¸ø EKF ÓÃµÄ Down ¼ÓËÙ¶È£¨ÂË²¨ºó£© */
+float AccelCalibration_GetAccelDownForOutputMps2(void);    /* ¸øÊä³ö/ÏÔÊ¾ÓÃµÄ Down ¼ÓËÙ¶È£¨¸üÆ½»¬£© */
 
-/* ======================== æœºä½“ç³»æ•°æ® API ======================== */
+/* ======================== »úÌåÏµÊı¾İ API ======================== */
 void AccelCalibration_GetBodyAccelMps2(float *ax, float *ay, float *az);
-                                                           /* æœºä½“ç³»çº¿æ€§åŠ é€Ÿåº¦ï¼ˆå»é‡åŠ›ï¼‰ï¼Œå•ä½ m/s^2 */
+                                                           /* »úÌåÏµÏßĞÔ¼ÓËÙ¶È£¨È¥ÖØÁ¦£©£¬µ¥Î» m/s^2 */
 void AccelCalibration_GetBodyGyroDps(float *gx, float *gy, float *gz);
-                                                           /* æœºä½“ç³»è§’é€Ÿåº¦ï¼ˆå·²å»é›¶åï¼‰ï¼Œå•ä½ dps */
+                                                           /* »úÌåÏµ½ÇËÙ¶È£¨ÒÑÈ¥ÁãÆ«£©£¬µ¥Î» dps */
 void AccelCalibration_GetCorrectedSpecificForceG(float *ax_g, float *ay_g, float *az_g);
-                                                           /* æœºä½“ç³»æ ¡æ­£åæ¯”åŠ›ï¼Œå•ä½ gï¼ˆå«é‡åŠ›ï¼Œé™æ­¢çº¦ -1g Downï¼‰ */
+                                                           /* »úÌåÏµĞ£Õıºó±ÈÁ¦£¬µ¥Î» g£¨º¬ÖØÁ¦£¬¾²Ö¹Ô¼ -1g Down£© */
 
-/* ======================== æ°´å¹³ç³»æ•°æ® API ======================== */
+/* ======================== Ë®Æ½ÏµÊı¾İ API ======================== */
 void AccelCalibration_GetLevelAccelMps2(float *ax_level, float *ay_level, float *az_level);
-                                                           /* æ°´å¹³ç³»çº¿æ€§åŠ é€Ÿåº¦ï¼ˆå»å€¾æ–œ+é‡åŠ›ï¼‰ï¼Œå•ä½ m/s^2 */
+                                                           /* Ë®Æ½ÏµÏßĞÔ¼ÓËÙ¶È£¨È¥ÇãĞ±+ÖØÁ¦£©£¬µ¥Î» m/s^2 */
 void AccelCalibration_GetBodyLevelAccelNoYawMps2(float *ax_forward, float *ay_right);
 void AccelCalibration_GetHorizontalAccelMps2(float *ax_h, float *ay_h);
-                                                           /* æ°´å¹³é¢ X/Y çº¿æ€§åŠ é€Ÿåº¦ï¼Œå•ä½ m/s^2 */
+                                                           /* Ë®Æ½Ãæ X/Y ÏßĞÔ¼ÓËÙ¶È£¬µ¥Î» m/s^2 */
 void AccelCalibration_RotateImuToBody(const float vec_sensor[3], float vec_body[3]);
-                                                           /* ä¼ æ„Ÿå™¨åæ ‡ç³» -> æœºä½“åæ ‡ç³»å‘é‡æ—‹è½¬ */
+                                                           /* ´«¸ĞÆ÷×ø±êÏµ -> »úÌå×ø±êÏµÏòÁ¿Ğı×ª */
 
-/* ======================== å‚æ•°åŠ è½½/è¯»å– ======================== */
-bool AccelCalibration_LoadParams(const AccelCalibrationParams_t *params); /* åŠ è½½æ ¡å‡†å‚æ•°åˆ°è¿è¡Œæ€ */
-void AccelCalibration_GetParams(AccelCalibrationParams_t *params);       /* è¯»å–å½“å‰æ ¡å‡†å‚æ•° */
+/* ======================== ²ÎÊı¼ÓÔØ/¶ÁÈ¡ ======================== */
+bool AccelCalibration_LoadParams(const AccelCalibrationParams_t *params); /* ¼ÓÔØĞ£×¼²ÎÊıµ½ÔËĞĞÌ¬ */
+void AccelCalibration_GetParams(AccelCalibrationParams_t *params);       /* ¶ÁÈ¡µ±Ç°Ğ£×¼²ÎÊı */
 
-/* ======================== IMU æ ¡å‡†çŠ¶æ€æœº API ======================== */
-void IMUCalib_Init(void);                                  /* åˆå§‹åŒ–æ ¡å‡†å­ç³»ç»Ÿï¼Œå°è¯•ä» Flash æ¢å¤ */
-void IMUCalib_Update_1000HZ(const imudata_t *sample);      /* æ ¡å‡†çŠ¶æ€æœºæ›´æ–°ï¼Œç”±ä¸»å¾ªç¯æœåŠ¡è°ƒç”¨ */
-uint8_t IMUCalib_LoadFromFlashAndApply(void);              /* ä» Flash åŠ è½½å¹¶åº”ç”¨ */
-uint8_t IMUCalib_SaveCurrentToFlash(void);                 /* ä¿å­˜å½“å‰å‚æ•°åˆ° Flash */
-uint8_t IMUCalib_ClearFlash(void);                         /* æ“¦é™¤ Flash ä¸­çš„æ ¡å‡†æ•°æ® */
-uint8_t IMUCalib_IsBusy(void);                             /* 1=æ ¡å‡†æ­£åœ¨è¿›è¡Œ */
-void IMUCalib_SetTextSink(IMUCalibTextSink_t sink);        /* è®¾ç½®æ–‡æœ¬è¾“å‡ºå›è°ƒï¼ˆWiFi ä¸²å£ç­‰ï¼‰ */
-uint8_t IMUCalib_ReadFlashInfo(IMUCalibFlashInfo_t *info); /* è¯»å– Flash æ ¡å‡†ä¿¡æ¯ */
+/* ======================== IMU Ğ£×¼×´Ì¬»ú API ======================== */
+void IMUCalib_Init(void);                                  /* ³õÊ¼»¯Ğ£×¼×ÓÏµÍ³£¬³¢ÊÔ´Ó Flash »Ö¸´ */
+void IMUCalib_Update_1000HZ(const imudata_t *sample);      /* Ğ£×¼×´Ì¬»ú¸üĞÂ£¬ÓÉÖ÷Ñ­»··şÎñµ÷ÓÃ */
+uint8_t IMUCalib_LoadFromFlashAndApply(void);              /* ´Ó Flash ¼ÓÔØ²¢Ó¦ÓÃ */
+uint8_t IMUCalib_SaveCurrentToFlash(void);                 /* ±£´æµ±Ç°²ÎÊıµ½ Flash */
+uint8_t IMUCalib_ClearFlash(void);                         /* ²Á³ı Flash ÖĞµÄĞ£×¼Êı¾İ */
+uint8_t IMUCalib_IsBusy(void);                             /* 1=Ğ£×¼ÕıÔÚ½øĞĞ */
+void IMUCalib_SetTextSink(IMUCalibTextSink_t sink);        /* ÉèÖÃÎÄ±¾Êä³ö»Øµ÷£¨WiFi ´®¿ÚµÈ£© */
+uint8_t IMUCalib_ReadFlashInfo(IMUCalibFlashInfo_t *info); /* ¶ÁÈ¡ Flash Ğ£×¼ĞÅÏ¢ */
 
-/* ======================== æ ¡å‡†å¯åŠ¨å‘½ä»¤ ======================== */
-uint8_t IMUCalib_StartGyro(void);                          /* å¯åŠ¨é™€èºä»ªé™æ€æ ¡å‡†ï¼ˆéœ€é™æ­¢ï¼‰ */
-uint8_t IMUCalib_StartAccel(void);                         /* å¯åŠ¨è‡ªåŠ¨æ¤­çƒåŠ é€Ÿåº¦æ ¡å‡† */
-uint8_t IMUCalib_StartAccelManual(void);                   /* å¯åŠ¨æ‰‹åŠ¨æ¤­çƒåŠ é€Ÿåº¦æ ¡å‡† */
-uint8_t IMUCalib_ManualCollect(void);                      /* æ‰‹åŠ¨æ¨¡å¼ï¼šè§¦å‘ä¸€æ¬¡å§¿æ€ç‚¹é‡‡é›† */
-uint8_t IMUCalib_ManualStop(void);                         /* æ‰‹åŠ¨æ¨¡å¼ï¼šåœæ­¢é‡‡ç‚¹ï¼Œå¼€å§‹æ±‚è§£ */
-void IMUCalib_GetStatus(IMUCalibStatus_t *status);         /* è¯»å–å½“å‰æ ¡å‡†çŠ¶æ€ */
-void IMUCalib_CommandPoll(void);                           /* è½®è¯¢è°ƒè¯•ä¸²å£æ ¡å‡†å‘½ä»¤ */
+/* ======================== Ğ£×¼Æô¶¯ÃüÁî ======================== */
+uint8_t IMUCalib_StartGyro(void);                          /* Æô¶¯ÍÓÂİÒÇ¾²Ì¬Ğ£×¼£¨Ğè¾²Ö¹£© */
+uint8_t IMUCalib_StartAccel(void);                         /* Æô¶¯×Ô¶¯ÍÖÇò¼ÓËÙ¶ÈĞ£×¼ */
+uint8_t IMUCalib_StartAccelManual(void);                   /* Æô¶¯ÊÖ¶¯ÍÖÇò¼ÓËÙ¶ÈĞ£×¼ */
+uint8_t IMUCalib_ManualCollect(void);                      /* ÊÖ¶¯Ä£Ê½£º´¥·¢Ò»´Î×ËÌ¬µã²É¼¯ */
+uint8_t IMUCalib_ManualStop(void);                         /* ÊÖ¶¯Ä£Ê½£ºÍ£Ö¹²Éµã£¬¿ªÊ¼Çó½â */
+void IMUCalib_GetStatus(IMUCalibStatus_t *status);         /* ¶ÁÈ¡µ±Ç°Ğ£×¼×´Ì¬ */
+void IMUCalib_CommandPoll(void);                           /* ÂÖÑ¯µ÷ÊÔ´®¿ÚĞ£×¼ÃüÁî */
 
 #ifdef __cplusplus
 }

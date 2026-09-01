@@ -5,7 +5,7 @@
 #define NEGATIVE_PRESSURE_DUTY_MIN    (4000U)
 #define NEGATIVE_PRESSURE_DUTY_MAX    (8000U)
 
-/* P05_0ï¼ˆP50ï¼‰ä¸ºå·¦ç”µè°ƒï¼ŒP05_2ï¼ˆP52ï¼‰ä¸ºå³ç”µè°ƒã€‚ */
+/* P05_0£¨P50£©Îª×óµçµ÷£¬P05_2£¨P52£©ÎªÓÒµçµ÷¡£ */
 static const pwm_channel_enum s_negative_pressure_pwm[NEGATIVE_PRESSURE_MOTOR_COUNT] =
 {
     TCPWM_CH09_P05_0,
@@ -55,7 +55,7 @@ void negative_pressure_init(void)
                  NEGATIVE_PRESSURE_DUTY_MIN);
     }
 
-    /* ç”µè°ƒä¸Šç”µåŽéœ€è¦æŒç»­æŽ¥æ”¶ä¸€æ®µæ—¶é—´çš„æœ€ä½Žæ²¹é—¨ä¿¡å·ã€‚ */
+    /* µçµ÷ÉÏµçºóÐèÒª³ÖÐø½ÓÊÕÒ»¶ÎÊ±¼äµÄ×îµÍÓÍÃÅÐÅºÅ¡£ */
     system_delay_ms(NEGATIVE_PRESSURE_ESC_ARM_DELAY_MS);
 }
 

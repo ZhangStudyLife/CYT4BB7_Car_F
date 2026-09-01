@@ -34,15 +34,15 @@
 #define ICM42688_ID_CHECK_INTERVAL     (100U)
 #define ICM42688_FROZEN_FRAME_LIMIT    (100U)
 
-/* zf_driver_spi.c ä¸­çš„æ¨¡å—è¡¨ï¼›ICM42688 ä»…ä½¿ç”¨ç‹¬å çš„ SPI2/SCB9ã€‚ */
+/* zf_driver_spi.c ÖĞµÄÄ£¿é±í£»ICM42688 ½öÊ¹ÓÃ¶ÀÕ¼µÄ SPI2/SCB9¡£ */
 extern volatile stc_SCB_t *spi_module[4];
 
 /*
- * ICM42688 é»˜è®¤é…ç½®ï¼ˆ1kHzï¼‰
- * 1) é™€èºä»ªé‡ç¨‹ 2000dpsï¼Œè¦†ç›–å°è½¦å¸¸è§è§’é€Ÿåº¦
- * 2) åŠ é€Ÿåº¦é‡ç¨‹ 16gï¼Œè¦†ç›–å¸¸è§åŠ¨æ€èŒƒå›´
- * 3) ä¸‰é˜¶æ»¤æ³¢ + Bandwidth_Factor_2ï¼Œå…¼é¡¾å™ªå£°ä¸å»¶è¿Ÿ
- * 4) ä¸Šç”µåè¿›å…¥ LNï¼ˆLow Noiseï¼‰æ¨¡å¼
+ * ICM42688 Ä¬ÈÏÅäÖÃ£¨1kHz£©
+ * 1) ÍÓÂİÒÇÁ¿³Ì 2000dps£¬¸²¸ÇĞ¡³µ³£¼û½ÇËÙ¶È
+ * 2) ¼ÓËÙ¶ÈÁ¿³Ì 16g£¬¸²¸Ç³£¼û¶¯Ì¬·¶Î§
+ * 3) Èı½×ÂË²¨ + Bandwidth_Factor_2£¬¼æ¹ËÔëÉùÓëÑÓ³Ù
+ * 4) ÉÏµçºó½øÈë LN£¨Low Noise£©Ä£Ê½
  */
 ICM42688_CONFIG_STRUCT ICM42688_CONFIG = {
     GYRO_2000DPS,
@@ -57,8 +57,8 @@ ICM42688_CONFIG_STRUCT ICM42688_CONFIG = {
 };
 
 float Gyro_Sensitivity, Acc_Sensitivity;
-ICM42688_RAW_DATA ICM42688_RAW;      /* åŸå§‹ LSB æ•°æ® */
-ICM42688_real_data ICM42688;         /* æ¢ç®—åçš„ç‰©ç†é‡ */
+ICM42688_RAW_DATA ICM42688_RAW;      /* Ô­Ê¼ LSB Êı¾İ */
+ICM42688_real_data ICM42688;         /* »»ËãºóµÄÎïÀíÁ¿ */
 volatile float ICM42688_Bias_gyro_x = 0;
 volatile float ICM42688_Bias_gyro_y = 0;
 volatile float ICM42688_Bias_gyro_z = 0;
@@ -104,7 +104,7 @@ static void ICM42688_SPI_Recover(void)
     module->unCTRL.stcField.u1ENABLED = 0U;
     Cy_SCB_SPI_ClearTxFifo(module);
     Cy_SCB_SPI_ClearRxFifo(module);
-    /* SPI2 ä¸º IMU ç‹¬å ï¼›è¿è¡ŒæœŸæ¢å¤å¿…é¡»æ˜ç¡®é‡æ–°å¯ç”¨ï¼Œé¿å…æ°¸ä¹…ç¦»çº¿ã€‚ */
+    /* SPI2 Îª IMU ¶ÀÕ¼£»ÔËĞĞÆÚ»Ö¸´±ØĞëÃ÷È·ÖØĞÂÆôÓÃ£¬±ÜÃâÓÀ¾ÃÀëÏß¡£ */
     module->unCTRL.stcField.u1ENABLED = 1U;
 }
 
@@ -136,7 +136,7 @@ static uint8 ICM42688_SPI_Transfer8_Timeout(const uint8 *write_buffer,
         return 0U;
     }
 
-    /* åˆå§‹åŒ–å¯„å­˜å™¨è®¿é—®ä½¿ç”¨ 16bitï¼Œé‡‡æ ·çªå‘è¯»å–å‰åˆ‡å› 8bitã€‚ */
+    /* ³õÊ¼»¯¼Ä´æÆ÷·ÃÎÊÊ¹ÓÃ 16bit£¬²ÉÑùÍ»·¢¶ÁÈ¡Ç°ÇĞ»Ø 8bit¡£ */
     module->unCTRL.u32Register &= 0xFFFF3FFFU;
     module->unTX_CTRL.u32Register &= 0xFFFFFFE0U;
     module->unTX_CTRL.u32Register |= 0x00000007U;
@@ -173,7 +173,7 @@ static uint8 ICM42688_SPI_Transfer8_Timeout(const uint8 *write_buffer,
     return 1U;
 }
 
-/* åˆå§‹åŒ– SPI ä¸ç‰‡é€‰ GPIO */
+/* ³õÊ¼»¯ SPI ÓëÆ¬Ñ¡ GPIO */
 static void ICM42688_SPI_HardWare_Init(void)
 {
     spi_init(ICM42688_SPI, SPI_MODE0, ICM42688_SPEED,
@@ -181,7 +181,7 @@ static void ICM42688_SPI_HardWare_Init(void)
     gpio_init(ICM42688_CS_Pin, GPO, 1, GPO_PUSH_PULL);
 }
 
-/* å‘é€å¹¶æ¥æ”¶ 16bit SPI æ•°æ® */
+/* ·¢ËÍ²¢½ÓÊÕ 16bit SPI Êı¾İ */
 static uint16_t SPI_Transfer_16bit(uint16_t dout)
 {
     uint16_t return_data;
@@ -194,8 +194,8 @@ static uint16_t SPI_Transfer_16bit(uint16_t dout)
 }
 
 /*
- * è¿ç»­è¯»å–åŠ é€Ÿåº¦ä¸é™€èºä»ªåŸå§‹å€¼
- * æ•°æ®é¡ºåºï¼šax ay az gx gy gz
+ * Á¬Ğø¶ÁÈ¡¼ÓËÙ¶ÈÓëÍÓÂİÒÇÔ­Ê¼Öµ
+ * Êı¾İË³Ğò£ºax ay az gx gy gz
  */
 static uint8 ICM42688_Read_Burst(ICM42688_RAW_DATA *raw)
 {
@@ -291,7 +291,7 @@ static uint8 ICM42688_CheckIdentityBounded(void)
     return 1U;
 }
 
-/* è¯»å–å¹¶æ ¡éªŒèŠ¯ç‰‡ ID */
+/* ¶ÁÈ¡²¢Ğ£ÑéĞ¾Æ¬ ID */
 static void Find_ICM42688(void)
 {
     SPI_Transfer_16bit(WHO_AM_I);
@@ -306,7 +306,7 @@ static void Find_ICM42688(void)
     }
 }
 
-/* é…ç½®é™€èºä»ªé‡ç¨‹ä¸è¾“å‡ºé€Ÿç‡ */
+/* ÅäÖÃÍÓÂİÒÇÁ¿³ÌÓëÊä³öËÙÂÊ */
 static void ICM42688_SET_GYRO(GYRO_FSR gyro_fsr, GYRO_ODR gyro_odr)
 {
     uint8 WRITE_GYRO_CONFIG0 = 0x4F;
@@ -402,7 +402,7 @@ static void ICM42688_SET_GYRO(GYRO_FSR gyro_fsr, GYRO_ODR gyro_odr)
     }
 }
 
-/* é…ç½®åŠ é€Ÿåº¦è®¡é‡ç¨‹ä¸è¾“å‡ºé€Ÿç‡ */
+/* ÅäÖÃ¼ÓËÙ¶È¼ÆÁ¿³ÌÓëÊä³öËÙÂÊ */
 static void ICM42688_SET_ACC(ACC_FSR acc_fsr, ACC_ODR acc_odr)
 {
     uint8 WRITE_ACCEL_CONFIG0 = 0x50;
@@ -482,7 +482,7 @@ static void ICM42688_SET_ACC(ACC_FSR acc_fsr, ACC_ODR acc_odr)
     }
 }
 
-/* é…ç½®é™€èºä»ª/åŠ é€Ÿåº¦è®¡æ•°å­—æ»¤æ³¢å™¨ */
+/* ÅäÖÃÍÓÂİÒÇ/¼ÓËÙ¶È¼ÆÊı×ÖÂË²¨Æ÷ */
 static void ICM42688_SET_FILTER(Bandwidth_Factor Gyro_Bandwidth_Factor,
                                 Filter_Order Gyro_Filter_Order,
                                 Bandwidth_Factor Acc_Bandwidth_Factor,
@@ -594,14 +594,14 @@ static void ICM42688_SET_FILTER(Bandwidth_Factor Gyro_Bandwidth_Factor,
     SPI_Transfer_16bit(((uint16)WRITE_ACCEL_CONFIG1 << 8 | Acc_Filter_Ord_Config));
 }
 
-/* å¤ä½ ICM42688ï¼ˆè½¯å¤ä½è·¯å¾„ï¼‰ */
+/* ¸´Î» ICM42688£¨Èí¸´Î»Â·¾¶£© */
 static void Rest_ICM42688(void)
 {
     uint8 WRITE_PWR_MGMT0 = 0X4E;
     SPI_Transfer_16bit(((uint16)WRITE_PWR_MGMT0 << 8 | 0X00));
 }
 
-/* è¿›å…¥ Low Noise æ¨¡å¼ï¼ˆé™€èºä»ª + åŠ é€Ÿåº¦è®¡ï¼‰ */
+/* ½øÈë Low Noise Ä£Ê½£¨ÍÓÂİÒÇ + ¼ÓËÙ¶È¼Æ£© */
 static void Set_ICM42688_LN_Mode(void)
 {
     uint8 WRITE_PWR_MGMT0 = 0X4E;
@@ -609,8 +609,8 @@ static void Set_ICM42688_LN_Mode(void)
 }
 
 /*
- * è¯»å–ä¸€æ¬¡ä¼ æ„Ÿå™¨æ•°æ®ï¼Œå­˜å…¥ ICM42688ï¼ˆç‰©ç†é‡ï¼‰å’Œ ICM42688_RAWï¼ˆLSBï¼‰
- * æµç¨‹ï¼šburst è¯» 13 å­—èŠ‚ -> LSB/çµæ•åº¦ -> ä¹˜è½´ç¬¦å· -> æ‰£é›¶åï¼ˆå¦‚æœå·²æ ‡å®šï¼‰
+ * ¶ÁÈ¡Ò»´Î´«¸ĞÆ÷Êı¾İ£¬´æÈë ICM42688£¨ÎïÀíÁ¿£©ºÍ ICM42688_RAW£¨LSB£©
+ * Á÷³Ì£ºburst ¶Á 13 ×Ö½Ú -> LSB/ÁéÃô¶È -> ³ËÖá·ûºÅ -> ¿ÛÁãÆ«£¨Èç¹ûÒÑ±ê¶¨£©
  */
 uint8 ICM42688_Get_Data(void)
 {
@@ -632,7 +632,7 @@ uint8 ICM42688_Get_Data(void)
     {
         if (ICM42688_CheckIdentityBounded() == 0U)
         {
-            /* èº«ä»½å¼‚å¸¸åé€å¸§å¤æ£€ï¼Œä½¿è¿ç»­å¤±è´¥èƒ½è§¦å‘ä¸Šå±‚ 5 å¸§æ•…éšœé—¨é™ã€‚ */
+            /* Éí·İÒì³£ºóÖğÖ¡¸´¼ì£¬Ê¹Á¬ĞøÊ§°ÜÄÜ´¥·¢ÉÏ²ã 5 Ö¡¹ÊÕÏÃÅÏŞ¡£ */
             s_icm42688_identity_check_divider =
                 ICM42688_ID_CHECK_INTERVAL - 1U;
             return 0U;
@@ -642,7 +642,7 @@ uint8 ICM42688_Get_Data(void)
 
     ICM42688_RAW = new_raw;
 
-    /* LSB -> ç‰©ç†å€¼ï¼ˆdps æˆ– gï¼‰ */
+    /* LSB -> ÎïÀíÖµ£¨dps »ò g£© */
     gyro_x_raw = ICM42688_RAW.gyro_x_lsb / Gyro_Sensitivity;
     gyro_y_raw = ICM42688_RAW.gyro_y_lsb / Gyro_Sensitivity;
     gyro_z_raw = ICM42688_RAW.gyro_z_lsb / Gyro_Sensitivity;
@@ -651,7 +651,7 @@ uint8 ICM42688_Get_Data(void)
     acc_y_raw = ICM42688_RAW.acc_y_lsb / Acc_Sensitivity;
     acc_z_raw = ICM42688_RAW.acc_z_lsb / Acc_Sensitivity;
 
-    /* ä¹˜è½´ç¬¦å·ï¼Œè½¬ä¸ºè½¦ä½“åæ ‡ç³» */
+    /* ³ËÖá·ûºÅ£¬×ªÎª³µÌå×ø±êÏµ */
     ICM42688.gyro_x = ICM42688_SIGN_GX * gyro_x_raw;
     ICM42688.gyro_y = ICM42688_SIGN_GY * gyro_y_raw;
     ICM42688.gyro_z = ICM42688_SIGN_GZ * gyro_z_raw;
@@ -660,7 +660,7 @@ uint8 ICM42688_Get_Data(void)
     ICM42688.acc_y = ICM42688_SIGN_AY * acc_y_raw;
     ICM42688.acc_z = ICM42688_SIGN_AZ * acc_z_raw;
 
-    /* å·²æ ‡å®šåˆ™æ‰£é™¤é™€èºé›¶å */
+    /* ÒÑ±ê¶¨Ôò¿Û³ıÍÓÂİÁãÆ« */
     if (ICM42688_Bias_Init_Flag == 1)
     {
         ICM42688.gyro_x -= ICM42688_Bias_gyro_x;
@@ -671,10 +671,10 @@ uint8 ICM42688_Get_Data(void)
 }
 
 /*
- * é™€èºä»ªé™æ€é›¶åæ ‡å®š
- * - æ ‡å®šæœŸé—´å¿…é¡»ä¿æŒè®¾å¤‡é™æ­¢ï¼
- * - times æœ€å° 500ï¼Œå»ºè®® 1000+ï¼Œæ ‡å®šè€—æ—¶çº¦ times/1000 ç§’
- * - ç»“æœå­˜å…¥ Bias_gyro_x/y/zï¼Œå¹¶ç½®ä½ Bias_Init_Flagï¼ˆåªèƒ½æ ‡å®šä¸€æ¬¡ï¼‰
+ * ÍÓÂİÒÇ¾²Ì¬ÁãÆ«±ê¶¨
+ * - ±ê¶¨ÆÚ¼ä±ØĞë±£³ÖÉè±¸¾²Ö¹£¡
+ * - times ×îĞ¡ 500£¬½¨Òé 1000+£¬±ê¶¨ºÄÊ±Ô¼ times/1000 Ãë
+ * - ½á¹û´æÈë Bias_gyro_x/y/z£¬²¢ÖÃÎ» Bias_Init_Flag£¨Ö»ÄÜ±ê¶¨Ò»´Î£©
  */
 void ICM42688_Bias_Init(uint32 times)
 {
@@ -718,7 +718,7 @@ void ICM42688_Bias_Init(uint32 times)
     ICM42688_Bias_Init_Flag = 1;
 }
 
-/* è®¾ç½®é™€èºé›¶åï¼ˆdpsï¼‰ï¼Œenable=0 æ—¶å…³é—­é›¶åè¡¥å¿ã€‚ç”¨äºä» Flash æ¢å¤æ ‡å®šå€¼ */
+/* ÉèÖÃÍÓÂİÁãÆ«£¨dps£©£¬enable=0 Ê±¹Ø±ÕÁãÆ«²¹³¥¡£ÓÃÓÚ´Ó Flash »Ö¸´±ê¶¨Öµ */
 void ICM42688_SetGyroBiasDps(float bx, float by, float bz, uint8 enable)
 {
     uint32 irq_state = interrupt_global_disable();
@@ -730,7 +730,7 @@ void ICM42688_SetGyroBiasDps(float bx, float by, float bz, uint8 enable)
     interrupt_global_enable(irq_state);
 }
 
-/* è¯»å–å½“å‰é™€èºé›¶åï¼ˆdpsï¼‰å’Œå¯ç”¨çŠ¶æ€ï¼Œç”¨äºä¿å­˜åˆ° Flash */
+/* ¶ÁÈ¡µ±Ç°ÍÓÂİÁãÆ«£¨dps£©ºÍÆôÓÃ×´Ì¬£¬ÓÃÓÚ±£´æµ½ Flash */
 void ICM42688_GetGyroBiasDps(float *bx, float *by, float *bz, uint8 *enable)
 {
     float local_bx;
@@ -763,7 +763,7 @@ void ICM42688_GetGyroBiasDps(float *bx, float *by, float *bz, uint8 *enable)
     }
 }
 
-/* åˆå§‹åŒ– ICM42688 å¹¶åŠ è½½é…ç½® */
+/* ³õÊ¼»¯ ICM42688 ²¢¼ÓÔØÅäÖÃ */
 void ICM42688_Init(ICM42688_CONFIG_STRUCT *ICM42688_CONFIG)
 {
     g_icm42688_spi_timeout_count = 0U;
@@ -788,7 +788,7 @@ void ICM42688_Init(ICM42688_CONFIG_STRUCT *ICM42688_CONFIG)
     Set_ICM42688_LN_Mode();
     system_delay_ms(500);
 
-    /* æ¸…é›¶è½¯ä»¶ä¾§é›¶åçŠ¶æ€ */
+    /* ÇåÁãÈí¼ş²àÁãÆ«×´Ì¬ */
     ICM42688_Bias_Init_Flag = 0;
     ICM42688_Bias_gyro_x = 0;
     ICM42688_Bias_gyro_y = 0;

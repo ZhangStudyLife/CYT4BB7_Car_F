@@ -4,20 +4,20 @@
 
 #define CAR_SAFETY_UPDATE_PERIOD_S                 (0.01f)
 
-/* ç›®æ ‡å½’é›¶åŽç­‰å¾…300 msï¼Œå†ç”¨300 msçª—å£åˆ¤æ–­é€Ÿåº¦æ˜¯å¦è‡³å°‘ä¸‹é™10%ã€‚ */
+/* Ä¿±ê¹éÁãºóµÈ´ý300 ms£¬ÔÙÓÃ300 ms´°¿ÚÅÐ¶ÏËÙ¶ÈÊÇ·ñÖÁÉÙÏÂ½µ10%¡£ */
 #define CAR_SAFETY_STOP_TARGET_MAX                 (5.0f)
 #define CAR_SAFETY_STOP_MOVING_SPEED_MIN           (20.0f)
 #define CAR_SAFETY_STOP_GRACE_CYCLES               (30U)
 #define CAR_SAFETY_STOP_TREND_CYCLES               (30U)
 #define CAR_SAFETY_STOP_MIN_DECEL_RATIO            (0.10f)
 
-/* ç”µæœºè¾“å‡ºè¶…è¿‡60%ï¼Œä½†ç›®æ ‡æœ‰æ•ˆä¸”åé¦ˆæŽ¥è¿‘é›¶æŒç»­500 msï¼Œåˆ¤å®šå µè½¬ã€‚ */
+/* µç»úÊä³ö³¬¹ý60%£¬µ«Ä¿±êÓÐÐ§ÇÒ·´À¡½Ó½üÁã³ÖÐø500 ms£¬ÅÐ¶¨¶Â×ª¡£ */
 #define CAR_SAFETY_STALL_OUTPUT_MIN                (4800.0f)
 #define CAR_SAFETY_STALL_TARGET_MIN                (50.0f)
 #define CAR_SAFETY_STALL_SPEED_MAX                 (5.0f)
 #define CAR_SAFETY_STALL_CYCLES                    (50U)
 
-/* åŒæ–¹å‘è§’é€Ÿåº¦ä¸ä½ŽäºŽ350Â°/sç´¯è®¡1080Â°ï¼Œæˆ–ä¸ä½ŽäºŽ500Â°/sæŒç»­2500 msã€‚ */
+/* Í¬·½Ïò½ÇËÙ¶È²»µÍÓÚ350¡ã/sÀÛ¼Æ1080¡ã£¬»ò²»µÍÓÚ500¡ã/s³ÖÐø2500 ms¡£ */
 #define CAR_SAFETY_ROTATION_RATE_MIN_DPS           (350.0f)
 #define CAR_SAFETY_ROTATION_ANGLE_LIMIT_DEG        (1080.0f)
 #define CAR_SAFETY_EXTREME_RATE_MIN_DPS            (500.0f)
@@ -310,7 +310,7 @@ void car_safety_update_100HZ(const car_safety_input_t *input)
                           (s_car_safety.previous_switch_on == 0U)) ? 1U : 0U;
     s_car_safety.previous_switch_on = input->run_switch_on;
 
-    /* å¤±è”æ—¶è¾“å…¥ä¼šè¢«ç½®ä½Žï¼Œä¸èƒ½æŠŠè¿™ä¸ªä½Žä½å½“ä½œäººå·¥å¤ä½ã€‚ */
+    /* Ê§ÁªÊ±ÊäÈë»á±»ÖÃµÍ£¬²»ÄÜ°ÑÕâ¸öµÍÎ»µ±×÷ÈË¹¤¸´Î»¡£ */
     if (input->link_up == 0U)
     {
         car_safety_trip(CAR_SAFETY_FAULT_REMOTE_LOSS);
@@ -329,7 +329,7 @@ void car_safety_update_100HZ(const car_safety_input_t *input)
         return;
     }
 
-    /* å¼€å…³å…³é—­å§‹ç»ˆæ€»åœï¼›é“¾è·¯æ­£å¸¸æ—¶æ‰å…è®¸è®°å½•äººå·¥å¤ä½å‡†å¤‡ã€‚ */
+    /* ¿ª¹Ø¹Ø±ÕÊ¼ÖÕ×ÜÍ££»Á´Â·Õý³£Ê±²ÅÔÊÐí¼ÇÂ¼ÈË¹¤¸´Î»×¼±¸¡£ */
     if (input->run_switch_on == 0U)
     {
         s_car_safety.output_allowed = 0U;

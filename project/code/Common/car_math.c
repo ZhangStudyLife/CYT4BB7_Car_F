@@ -1,6 +1,6 @@
 /**
  * @file car_math.c
- * @brief é€šç”¨æµ®ç‚¹æ•°å­¦å·¥å…·å®ç°
+ * @brief Í¨ÓÃ¸¡µãÊıÑ§¹¤¾ßÊµÏÖ
  */
 
 #include "car_math.h"
@@ -52,7 +52,7 @@ float car_math_limit_absf(float value, float limit)
     return value;
 }
 
-/* ç¡¬æ­»åŒºï¼šè½åœ¨ deadband èŒƒå›´å†…ç›´æ¥å½’é›¶ */
+/* Ó²ËÀÇø£ºÂäÔÚ deadband ·¶Î§ÄÚÖ±½Ó¹éÁã */
 float car_math_deadband(float value, float deadband)
 {
     if(car_math_absf(value) <= deadband)
@@ -63,7 +63,7 @@ float car_math_deadband(float value, float deadband)
     return value;
 }
 
-/* è½¯æ­»åŒºï¼šå»æ‰æ­»åŒºå®½åº¦åï¼Œå‰©ä½™é‡ä»é›¶å¼€å§‹è¾“å‡ºï¼Œä¿ç•™ç¬¦å· */
+/* ÈíËÀÇø£ºÈ¥µôËÀÇø¿í¶Èºó£¬Ê£ÓàÁ¿´ÓÁã¿ªÊ¼Êä³ö£¬±£Áô·ûºÅ */
 float car_math_soft_deadband(float value, float deadband)
 {
     float magnitude;
@@ -77,7 +77,7 @@ float car_math_soft_deadband(float value, float deadband)
     return (value >= 0.0f) ? magnitude : -magnitude;
 }
 
-/* çº¿æ€§æ˜ å°„ï¼Œin_max == in_min æ—¶è¿”å› out_min é¿å…é™¤é›¶ */
+/* ÏßĞÔÓ³Éä£¬in_max == in_min Ê±·µ»Ø out_min ±ÜÃâ³ıÁã */
 float car_math_map_linear(float value,
                           float in_min,
                           float in_max,

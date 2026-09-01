@@ -81,7 +81,7 @@ static menu_air_param_config_t s_air_params[MENU_AIR_MAX_PARAMS];
 static uint16 s_air_param_count;
 static uint8 s_air_param_dirty[MENU_AIR_MAX_PARAMS];
 static uint8 s_air_confirmed_valid[MENU_AIR_MAX_PARAMS];
-/* FULLåŒæ­¥ä¸­ä»å¾…ä¸‹å‘çš„å‚æ•°æ ‡è®°ã€‚ */
+/* FULLÍ¬²½ÖĞÈÔ´ıÏÂ·¢µÄ²ÎÊı±ê¼Ç¡£ */
 static uint8 s_air_full_pending[MENU_AIR_MAX_PARAMS];
 static uint32 s_air_slot_words[MENU_AIR_SLOT_SIZE * FLASH_PAGE_LENGTH];
 static menu_air_sync_status_t s_air_sync_status;
@@ -124,7 +124,7 @@ static const char * const s_air_screen_mode_labels[] =
     "Overlay"
 };
 
-/* 2BL3å›¾ä¼ å†…å®¹æ¨¡å¼ï¼Œä»…åœ¨Enterç¡®è®¤åä¸‹å‘ã€‚ */
+/* 2BL3Í¼´«ÄÚÈİÄ£Ê½£¬½öÔÚEnterÈ·ÈÏºóÏÂ·¢¡£ */
 static const char * const s_air_bl3_stream_mode_labels[] =
 {
     "Raw",
@@ -448,7 +448,7 @@ static uint16 menu_air_dirty_count(void)
     return count;
 }
 
-/* ç»Ÿè®¡æœ¬æ¬¡ç›®å½•æ‹‰å–ç¡®è®¤å¯ç”¨çš„å‚æ•°æ•°é‡ã€‚ */
+/* Í³¼Æ±¾´ÎÄ¿Â¼À­È¡È·ÈÏ¿ÉÓÃµÄ²ÎÊıÊıÁ¿¡£ */
 static uint16 menu_air_available_count(void)
 {
     uint16 index;
@@ -547,7 +547,7 @@ static uint8 menu_air_ack_failure_is_structural(uint16 active_index,
             (ack_status == AIR_COMM_STATUS_NOT_FOUND)) ? 1U : 0U;
 }
 
-/* å¯é€‰è¿œç¨‹å‚æ•°å¤±è´¥åªéš”ç¦»å½“å‰é¡¹ï¼Œåè®®ç±»å‹æˆ–å‚æ•°åé”™ä½ä»æŒ‰ç»“æ„æ€§æ•…éšœå¤„ç†ã€‚ */
+/* ¿ÉÑ¡Ô¶³Ì²ÎÊıÊ§°ÜÖ»¸ôÀëµ±Ç°Ïî£¬Ğ­ÒéÀàĞÍ»ò²ÎÊıÃû´íÎ»ÈÔ°´½á¹¹ĞÔ¹ÊÕÏ´¦Àí¡£ */
 static uint8 menu_air_optional_get_failure_can_skip(uint16 active_index,
                                                     uint8 ack_type,
                                                     uint8 ack_result,
@@ -799,7 +799,7 @@ static uint8 menu_air_slot_valid(uint8 slot, menu_air_slot_header_t *out_header)
     return 1U;
 }
 
-/* ä»Car Flashè¯»å–æŒ‡å®šAirå­˜æ¡£åˆ°æœ¬åœ°ç¼“å­˜ï¼Œä¸è§¦å‘ä¸²å£åŒæ­¥ã€‚ */
+/* ´ÓCar Flash¶ÁÈ¡Ö¸¶¨Air´æµµµ½±¾µØ»º´æ£¬²»´¥·¢´®¿ÚÍ¬²½¡£ */
 static uint8 menu_air_load_slot_values(uint8 slot)
 {
     uint32 offset;
@@ -849,7 +849,7 @@ static uint8 menu_air_load_slot_values(uint8 slot)
     return 0U;
 }
 
-/* ä»…è¯»å–ä¸€ä¸ªæŒ‰åç§°ä¿å­˜çš„å‚æ•°ï¼›æ—§å­˜æ¡£ç¼ºå°‘è¯¥å­—æ®µæ—¶ä¿æŒç›®æ ‡ç«¯å®é™…å€¼ã€‚ */
+/* ½ö¶ÁÈ¡Ò»¸ö°´Ãû³Æ±£´æµÄ²ÎÊı£»¾É´æµµÈ±ÉÙ¸Ã×Ö¶ÎÊ±±£³ÖÄ¿±ê¶ËÊµ¼ÊÖµ¡£ */
 static uint8 menu_air_load_slot_param_value(uint8 slot, const char *name, float *value)
 {
     uint32 offset;
@@ -1070,7 +1070,7 @@ static uint8 menu_air_full_candidate_is_safe(uint16 candidate_index)
     return 1U;
 }
 
-/* å…¨é‡å¯åŠ¨è¦†ç›–å…³é—­æ—¶ï¼Œä»…ä»å¯åŠ¨æ§½æ¢å¤æ ¸1å±å¹•æ¨¡å¼ã€‚ */
+/* È«Á¿Æô¶¯¸²¸Ç¹Ø±ÕÊ±£¬½ö´ÓÆô¶¯²Û»Ö¸´ºË1ÆÁÄ»Ä£Ê½¡£ */
 static uint8 menu_air_start_boot_screen_restore(void)
 {
     uint16 index;

@@ -163,7 +163,7 @@ float PID_Update(pid_t *pid, float setpoint, float measurement)
     output_saturated = pid_clampf(output_unsaturated,
                                   pid->output_min, pid->output_max);
 
-    /* è¾“å‡ºé¥±å’Œä¸”è¯¯å·®ç»§ç»­æ¨åŠ¨é¥±å’Œæ—¶å†»ç»“ç§¯åˆ†ã€‚ */
+    /* Êä³ö±¥ºÍÇÒÎó²î¼ÌĞøÍÆ¶¯±¥ºÍÊ±¶³½á»ı·Ö¡£ */
     if (((output_unsaturated > pid->output_max) && (new_error > 0.0f)) ||
         ((output_unsaturated < pid->output_min) && (new_error < 0.0f)))
     {
@@ -220,7 +220,7 @@ float PID_UpdateIncremental(pid_t *pid, float setpoint, float measurement)
     correction_candidate = pid->incremental_output + delta_output;
     output_unsaturated = pid->ff_term + correction_candidate;
 
-    /* æœ€ç»ˆè¾“å‡ºé¥±å’Œæ—¶ï¼Œæ’¤é”€ç»§ç»­æ¨åŠ¨é¥±å’Œçš„ç§¯åˆ†å¢é‡ã€‚ */
+    /* ×îÖÕÊä³ö±¥ºÍÊ±£¬³·Ïú¼ÌĞøÍÆ¶¯±¥ºÍµÄ»ı·ÖÔöÁ¿¡£ */
     if (((output_unsaturated > pid->output_max) && (pid->i_term > 0.0f)) ||
         ((output_unsaturated < pid->output_min) && (pid->i_term < 0.0f)))
     {
@@ -288,7 +288,7 @@ float PID_UpdatePositionLimited(pid_t *pid, float setpoint,
                                            pid->incremental_limit);
     }
 
-    /* é¥±å’Œæˆ–PWMæ­¥è¿›é™åˆ¶é˜»æ­¢è¾“å‡ºæ—¶ï¼Œå†»ç»“ç»§ç»­æ¨åŠ¨é™åˆ¶å™¨çš„ç§¯åˆ†ã€‚ */
+    /* ±¥ºÍ»òPWM²½½øÏŞÖÆ×èÖ¹Êä³öÊ±£¬¶³½á¼ÌĞøÍÆ¶¯ÏŞÖÆÆ÷µÄ»ı·Ö¡£ */
     if (((output_unsaturated > output) &&
          (integral_delta > 0.0f)) ||
         ((output_unsaturated < output) &&

@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* ç”µè°ƒä½¿ç”¨ 400 Hz PWMï¼Œ1000~2000 us è„‰å®½å¯¹åº” duty 4000~8000ã€‚ */
+/* µçµ÷Ê¹ÓÃ 400 Hz PWM£¬1000~2000 us Âö¿í¶ÔÓ¦ duty 4000~8000¡£ */
 #define NEGATIVE_PRESSURE_PWM_FREQ              (400U)
 #define NEGATIVE_PRESSURE_INPUT_MAX             (10000U)
 #define NEGATIVE_PRESSURE_THROTTLE_LIMIT_MAX    (6000U)
@@ -21,31 +21,31 @@ typedef enum
 } negative_pressure_motor_e;
 
 /**
- * @brief åˆå§‹åŒ–å·¦å³è´Ÿå‹ç”µè°ƒ PWMï¼Œå¹¶ä¿æŒæœ€ä½æ²¹é—¨å®Œæˆä¸Šç”µè¯†åˆ«ã€‚
- * @note  å·¦ç”µè°ƒä¿¡å·å£ä¸º P05_0ï¼ˆP50ï¼‰ï¼Œå³ç”µè°ƒä¿¡å·å£ä¸º P05_2ï¼ˆP52ï¼‰ã€‚
+ * @brief ³õÊ¼»¯×óÓÒ¸ºÑ¹µçµ÷ PWM£¬²¢±£³Ö×îµÍÓÍÃÅÍê³ÉÉÏµçÊ¶±ğ¡£
+ * @note  ×óµçµ÷ĞÅºÅ¿ÚÎª P05_0£¨P50£©£¬ÓÒµçµ÷ĞÅºÅ¿ÚÎª P05_2£¨P52£©¡£
  */
 void negative_pressure_init(void);
 
-/** @brief è§£é”è´Ÿå‹ç”µæœºè¾“å‡ºï¼›è§£é”åä»ä¿æŒæœ€ä½æ²¹é—¨ã€‚ */
+/** @brief ½âËø¸ºÑ¹µç»úÊä³ö£»½âËøºóÈÔ±£³Ö×îµÍÓÍÃÅ¡£ */
 void negative_pressure_enable(void);
 
-/** @brief é”å®šå¹¶ç«‹å³å°†å·¦å³ç”µè°ƒæ¢å¤åˆ°æœ€ä½æ²¹é—¨ã€‚ */
+/** @brief Ëø¶¨²¢Á¢¼´½«×óÓÒµçµ÷»Ö¸´µ½×îµÍÓÍÃÅ¡£ */
 void negative_pressure_disable(void);
 
-/** @return 1 è¡¨ç¤ºå·²è§£é”ï¼Œ0 è¡¨ç¤ºå·²é”å®šã€‚ */
+/** @return 1 ±íÊ¾ÒÑ½âËø£¬0 ±íÊ¾ÒÑËø¶¨¡£ */
 uint8 negative_pressure_is_enabled(void);
 
 /**
- * @brief è®¾ç½®å•è·¯è´Ÿå‹ç”µæœºæ²¹é—¨ã€‚
- * @param motor å·¦/å³è´Ÿå‹ç”µæœºã€‚
- * @param throttle è¾“å…¥èŒƒå›´ 0~10000ï¼Œå½“å‰å®‰å…¨ä¸Šé™ä¸º 6000ã€‚
+ * @brief ÉèÖÃµ¥Â·¸ºÑ¹µç»úÓÍÃÅ¡£
+ * @param motor ×ó/ÓÒ¸ºÑ¹µç»ú¡£
+ * @param throttle ÊäÈë·¶Î§ 0~10000£¬µ±Ç°°²È«ÉÏÏŞÎª 6000¡£
  */
 void negative_pressure_set_motor(negative_pressure_motor_e motor, uint16 throttle);
 
 /**
- * @brief åŒæ—¶è®¾ç½®å·¦å³è´Ÿå‹ç”µæœºæ²¹é—¨ã€‚
- * @param left_throttle å·¦ç”µè°ƒæ²¹é—¨ï¼Œè¾“å…¥èŒƒå›´ 0~10000ã€‚
- * @param right_throttle å³ç”µè°ƒæ²¹é—¨ï¼Œè¾“å…¥èŒƒå›´ 0~10000ã€‚
+ * @brief Í¬Ê±ÉèÖÃ×óÓÒ¸ºÑ¹µç»úÓÍÃÅ¡£
+ * @param left_throttle ×óµçµ÷ÓÍÃÅ£¬ÊäÈë·¶Î§ 0~10000¡£
+ * @param right_throttle ÓÒµçµ÷ÓÍÃÅ£¬ÊäÈë·¶Î§ 0~10000¡£
  */
 void negative_pressure_set_throttle(uint16 left_throttle, uint16 right_throttle);
 

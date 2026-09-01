@@ -33,34 +33,34 @@
 #define CODE_ICM42688_H_
 
 /*
- * ICM42688 6 è½´ IMU é©±åŠ¨
- * - SPI æ¥å£ï¼Œ10MHz æ—¶é’Ÿ
- * - é»˜è®¤é…ç½®ï¼šé™€èº 2000dps / åŠ é€Ÿåº¦ 16g / 1kHz è¾“å‡º
- * - é™€èºä»ªå•ä½ dpsï¼ˆåº¦/ç§’ï¼‰ï¼ŒåŠ é€Ÿåº¦å•ä½ gï¼ˆé‡åŠ›åŠ é€Ÿåº¦ï¼‰
- * - ä½¿ç”¨å‰å¿…é¡»è°ƒç”¨ ICM42688_Init()ï¼Œé‡‡æ ·å‰å¯é€‰ ICM42688_Bias_Init() åšé›¶åæ ‡å®š
+ * ICM42688 6 Öá IMU Çı¶¯
+ * - SPI ½Ó¿Ú£¬10MHz Ê±ÖÓ
+ * - Ä¬ÈÏÅäÖÃ£ºÍÓÂİ 2000dps / ¼ÓËÙ¶È 16g / 1kHz Êä³ö
+ * - ÍÓÂİÒÇµ¥Î» dps£¨¶È/Ãë£©£¬¼ÓËÙ¶Èµ¥Î» g£¨ÖØÁ¦¼ÓËÙ¶È£©
+ * - Ê¹ÓÃÇ°±ØĞëµ÷ÓÃ ICM42688_Init()£¬²ÉÑùÇ°¿ÉÑ¡ ICM42688_Bias_Init() ×öÁãÆ«±ê¶¨
  */
 
-/* é£æ§é»˜è®¤é…ç½®ï¼š1kHz è¾“å‡ºé€Ÿç‡ */
-#define ICM42688_SAMPLE_RATE_HZ          1000   /* IMU è¾“å‡ºé€Ÿç‡ï¼Œå•ä½ Hz */
-#define ICM42688_SAMPLE_INTERVAL_US      1000U  /* é‡‡æ ·å‘¨æœŸï¼Œå•ä½ usï¼ˆ= 1/Hz * 1e6ï¼‰ */
+/* ·É¿ØÄ¬ÈÏÅäÖÃ£º1kHz Êä³öËÙÂÊ */
+#define ICM42688_SAMPLE_RATE_HZ          1000   /* IMU Êä³öËÙÂÊ£¬µ¥Î» Hz */
+#define ICM42688_SAMPLE_INTERVAL_US      1000U  /* ²ÉÑùÖÜÆÚ£¬µ¥Î» us£¨= 1/Hz * 1e6£© */
 
-/* å¯„å­˜å™¨åœ°å€ï¼ˆSPI è¯»å†™æ—¶é«˜å­—èŠ‚æ”¾åœ°å€ï¼Œä½å­—èŠ‚æ”¾æ•°æ®ï¼‰ */
-#define WHO_AM_I                         0xF500  /* WHO_AM_I å¯„å­˜å™¨ï¼ˆè¯» 0xF5ï¼‰ï¼ŒæœŸæœ›è¿”å› 0x47 */
-#define ICM42688_ID                      0X47    /* èŠ¯ç‰‡ ID */
-#define READ_ACC_X_HIGH                  0X9F    /* åŠ é€Ÿåº¦ X é«˜å­—èŠ‚èµ·å§‹åœ°å€ï¼ˆburst è¯» 13 å­—èŠ‚ï¼‰ */
+/* ¼Ä´æÆ÷µØÖ·£¨SPI ¶ÁĞ´Ê±¸ß×Ö½Ú·ÅµØÖ·£¬µÍ×Ö½Ú·ÅÊı¾İ£© */
+#define WHO_AM_I                         0xF500  /* WHO_AM_I ¼Ä´æÆ÷£¨¶Á 0xF5£©£¬ÆÚÍû·µ»Ø 0x47 */
+#define ICM42688_ID                      0X47    /* Ğ¾Æ¬ ID */
+#define READ_ACC_X_HIGH                  0X9F    /* ¼ÓËÙ¶È X ¸ß×Ö½ÚÆğÊ¼µØÖ·£¨burst ¶Á 13 ×Ö½Ú£© */
 
-/* SPI å¼•è„šä¸é€Ÿç‡ */
+/* SPI Òı½ÅÓëËÙÂÊ */
 #define ICM42688_SPI                     (SPI_2)
 #define ICM42688_MOSI_Pin                (SPI2_MOSI_P15_1)
 #define ICM42688_MISO_Pin                (SPI2_MISO_P15_0)
-#define ICM42688_CS_Pin                  (P15_3)           /* ç‰‡é€‰ GPIOï¼ˆè½¯ä»¶æ§åˆ¶ï¼‰ */
+#define ICM42688_CS_Pin                  (P15_3)           /* Æ¬Ñ¡ GPIO£¨Èí¼ş¿ØÖÆ£© */
 #define ICM42688_SCK_Pin                 (SPI2_CLK_P15_2)
-#define ICM42688_SPEED                   (10 * 1000 * 1000) /* 10MHz SPI æ—¶é’Ÿ */
+#define ICM42688_SPEED                   (10 * 1000 * 1000) /* 10MHz SPI Ê±ÖÓ */
 
 /*
- * é™€èºä»ªçµæ•åº¦ï¼ˆLSB / dpsï¼‰
- * ä½¿ç”¨æ–¹æ³•ï¼šç‰©ç†å€¼ = åŸå§‹LSB / çµæ•åº¦
- * ä¾‹å¦‚ 2000dps æ¡£ä½çµæ•åº¦ 16.4ï¼Œè¯»åˆ° 1640 LSB -> 100 dps
+ * ÍÓÂİÒÇÁéÃô¶È£¨LSB / dps£©
+ * Ê¹ÓÃ·½·¨£ºÎïÀíÖµ = Ô­Ê¼LSB / ÁéÃô¶È
+ * ÀıÈç 2000dps µµÎ»ÁéÃô¶È 16.4£¬¶Áµ½ 1640 LSB -> 100 dps
  */
 #define SENSITIVITY_ICM42688_GYRO_15_625dps  2097.2
 #define SENSITIVITY_ICM42688_GYRO_31_25dps   1048.6
@@ -72,9 +72,9 @@
 #define SENSITIVITY_ICM42688_GYRO_2000dps    16.4
 
 /*
- * åŠ é€Ÿåº¦è®¡çµæ•åº¦ï¼ˆLSB / gï¼‰
- * ä½¿ç”¨æ–¹æ³•ï¼šç‰©ç†å€¼ = åŸå§‹LSB / çµæ•åº¦
- * ä¾‹å¦‚ 16g æ¡£ä½çµæ•åº¦ 2048ï¼Œè¯»åˆ° 2048 LSB -> 1g
+ * ¼ÓËÙ¶È¼ÆÁéÃô¶È£¨LSB / g£©
+ * Ê¹ÓÃ·½·¨£ºÎïÀíÖµ = Ô­Ê¼LSB / ÁéÃô¶È
+ * ÀıÈç 16g µµÎ»ÁéÃô¶È 2048£¬¶Áµ½ 2048 LSB -> 1g
  */
 #define SENSITIVITY_ICM42688_ACC_16G         2048
 #define SENSITIVITY_ICM42688_ACC_8G          4096
@@ -82,9 +82,9 @@
 #define SENSITIVITY_ICM42688_ACC_2G          16384
 
 /*
- * è½´ç¬¦å·æ ¡æ­£ï¼šèŠ¯ç‰‡åæ ‡ç³» -> è½¦ä½“åæ ‡ç³»
- * ä¹˜åˆ°ç‰©ç†å€¼ä¸Šï¼Œè°ƒæ•´ xyz æ­£æ–¹å‘
- * AGENTS çº¦å®š: é™æ­¢å¹³æ”¾ azâ‰ˆ-1gï¼ˆæ¯”åŠ›ï¼Œ+Z å‘ä¸‹ï¼‰
+ * Öá·ûºÅĞ£Õı£ºĞ¾Æ¬×ø±êÏµ -> ³µÌå×ø±êÏµ
+ * ³Ëµ½ÎïÀíÖµÉÏ£¬µ÷Õû xyz Õı·½Ïò
+ * AGENTS Ô¼¶¨: ¾²Ö¹Æ½·Å az¡Ö-1g£¨±ÈÁ¦£¬+Z ÏòÏÂ£©
  */
 #define ICM42688_SIGN_GX                     (-1.0f)
 #define ICM42688_SIGN_GY                     (1.0f)
@@ -93,7 +93,7 @@
 #define ICM42688_SIGN_AY                     (1.0f)
 #define ICM42688_SIGN_AZ                     (-1.0f)
 
-/* ä¼ æ„Ÿå™¨åŸå§‹æ•°æ®ï¼ˆå¯„å­˜å™¨ç›´æ¥è¯»å‡ºçš„ LSB å€¼ï¼‰ */
+/* ´«¸ĞÆ÷Ô­Ê¼Êı¾İ£¨¼Ä´æÆ÷Ö±½Ó¶Á³öµÄ LSB Öµ£© */
 typedef struct ICM42688_RAW_DATA {
     int16 acc_x_lsb;
     int16 acc_y_lsb;
@@ -101,10 +101,10 @@ typedef struct ICM42688_RAW_DATA {
     int16 gyro_x_lsb;
     int16 gyro_y_lsb;
     int16 gyro_z_lsb;
-    int16 temp_lsb;     /* å½“å‰é©±åŠ¨æœªå¯ç”¨æ¸©åº¦æ¢ç®— */
+    int16 temp_lsb;     /* µ±Ç°Çı¶¯Î´ÆôÓÃÎÂ¶È»»Ëã */
 } ICM42688_RAW_DATA;
 
-/* ç‰©ç†é‡æ•°æ®ï¼ˆé™€èºä»ªï¼šdpsï¼ŒåŠ é€Ÿåº¦ï¼šgï¼‰ */
+/* ÎïÀíÁ¿Êı¾İ£¨ÍÓÂİÒÇ£ºdps£¬¼ÓËÙ¶È£ºg£© */
 typedef struct ICM42688_real_data {
     float acc_x;
     float acc_y;
@@ -112,10 +112,10 @@ typedef struct ICM42688_real_data {
     float gyro_x;
     float gyro_y;
     float gyro_z;
-    float temp;         /* å½“å‰é©±åŠ¨æœªå¯ç”¨æ¸©åº¦æ¢ç®— */
+    float temp;         /* µ±Ç°Çı¶¯Î´ÆôÓÃÎÂ¶È»»Ëã */
 } ICM42688_real_data;
 
-/* ODRï¼šOutput Data Rateï¼ˆè¾“å‡ºæ•°æ®é€Ÿç‡ï¼‰ */
+/* ODR£ºOutput Data Rate£¨Êä³öÊı¾İËÙÂÊ£© */
 typedef enum {
     GYRO_ODR_12_5HZ,
     GYRO_ODR_25HZ,
@@ -146,7 +146,7 @@ typedef enum {
     ACC_ODR_32000HZ,
 } ACC_ODR;
 
-/* FSRï¼šFull Scale Rangeï¼ˆæ»¡é‡ç¨‹ï¼‰ */
+/* FSR£ºFull Scale Range£¨ÂúÁ¿³Ì£© */
 typedef enum {
     GYRO_2000DPS,
     GYRO_1000DPS,
@@ -165,14 +165,14 @@ typedef enum {
     ACC_2G,
 } ACC_FSR;
 
-/* æ•°å­—ä½é€šæ»¤æ³¢å™¨é˜¶æ•° */
+/* Êı×ÖµÍÍ¨ÂË²¨Æ÷½×Êı */
 typedef enum {
     _1st,
     _2st,
     _3st,
 } Filter_Order;
 
-/* å¸¦å®½å› å­ï¼ˆè¯¦ç»†å«ä¹‰è¯·å‚è€ƒæ•°æ®æ‰‹å†Œæ»¤æ³¢ç« èŠ‚ï¼‰ */
+/* ´ø¿íÒò×Ó£¨ÏêÏ¸º¬ÒåÇë²Î¿¼Êı¾İÊÖ²áÂË²¨ÕÂ½Ú£© */
 typedef enum {
     Bandwidth_Factor_2,
     Bandwidth_Factor_4,
@@ -186,13 +186,13 @@ typedef enum {
     Low_Latency_2,
 } Bandwidth_Factor;
 
-/* æ˜¯å¦å¯ç”¨èŠ¯ç‰‡å†…éƒ¨é›¶åä¼°è®¡ */
+/* ÊÇ·ñÆôÓÃĞ¾Æ¬ÄÚ²¿ÁãÆ«¹À¼Æ */
 typedef enum {
     Bias_On_Chip_On,
     Bias_On_Chip_Off,
 } Bias_On_Chip;
 
-/* ICM42688 åˆå§‹åŒ–å‚æ•°é›†åˆ */
+/* ICM42688 ³õÊ¼»¯²ÎÊı¼¯ºÏ */
 typedef struct ICM42688_CONFIG_STRUCT {
     GYRO_FSR GYRO_FSR;
     GYRO_ODR GYRO_ODR;
@@ -205,19 +205,19 @@ typedef struct ICM42688_CONFIG_STRUCT {
     Bias_On_Chip Bias_On_Chip;
 } ICM42688_CONFIG_STRUCT;
 
-extern ICM42688_CONFIG_STRUCT ICM42688_CONFIG;   /* åˆå§‹åŒ–é…ç½®ï¼ˆå…¨å±€ï¼Œå¯åœ¨ Init å‰ä¿®æ”¹ï¼‰ */
-extern float Gyro_Sensitivity;                   /* å½“å‰é™€èºçµæ•åº¦ï¼ˆLSB/dpsï¼‰ */
-extern float Acc_Sensitivity;                    /* å½“å‰åŠ é€Ÿåº¦çµæ•åº¦ï¼ˆLSB/gï¼‰ */
-extern ICM42688_RAW_DATA ICM42688_RAW;           /* æœ€è¿‘ä¸€æ¬¡åŸå§‹ LSB æ•°æ® */
-extern volatile float ICM42688_Bias_gyro_x;      /* é™€èºé›¶åï¼ˆdpsï¼‰ */
+extern ICM42688_CONFIG_STRUCT ICM42688_CONFIG;   /* ³õÊ¼»¯ÅäÖÃ£¨È«¾Ö£¬¿ÉÔÚ Init Ç°ĞŞ¸Ä£© */
+extern float Gyro_Sensitivity;                   /* µ±Ç°ÍÓÂİÁéÃô¶È£¨LSB/dps£© */
+extern float Acc_Sensitivity;                    /* µ±Ç°¼ÓËÙ¶ÈÁéÃô¶È£¨LSB/g£© */
+extern ICM42688_RAW_DATA ICM42688_RAW;           /* ×î½üÒ»´ÎÔ­Ê¼ LSB Êı¾İ */
+extern volatile float ICM42688_Bias_gyro_x;      /* ÍÓÂİÁãÆ«£¨dps£© */
 extern volatile float ICM42688_Bias_gyro_y;
 extern volatile float ICM42688_Bias_gyro_z;
-extern volatile uint8 ICM42688_Bias_Init_Flag;   /* 1=å·²æ ‡å®šï¼ŒGet_Data ä¼šè‡ªåŠ¨æ‰£é›¶å */
-extern ICM42688_real_data ICM42688;              /* æœ€è¿‘ä¸€æ¬¡ç‰©ç†é‡æ•°æ®ï¼ˆdps / gï¼‰ */
+extern volatile uint8 ICM42688_Bias_Init_Flag;   /* 1=ÒÑ±ê¶¨£¬Get_Data »á×Ô¶¯¿ÛÁãÆ« */
+extern ICM42688_real_data ICM42688;              /* ×î½üÒ»´ÎÎïÀíÁ¿Êı¾İ£¨dps / g£© */
 
 /*
- * åˆå§‹åŒ– ICM42688ï¼šSPI ç¡¬ä»¶ -> è½¯å¤ä½ -> æ ¡éªŒ ID -> é…ç½®é‡ç¨‹/ODR/æ»¤æ³¢å™¨ -> LN æ¨¡å¼
- * config: é…ç½®ç»“æ„ä½“æŒ‡é’ˆï¼Œä¼ å…¥å‰å¯æŒ‰éœ€ä¿®æ”¹å­—æ®µ
+ * ³õÊ¼»¯ ICM42688£ºSPI Ó²¼ş -> Èí¸´Î» -> Ğ£Ñé ID -> ÅäÖÃÁ¿³Ì/ODR/ÂË²¨Æ÷ -> LN Ä£Ê½
+ * config: ÅäÖÃ½á¹¹ÌåÖ¸Õë£¬´«ÈëÇ°¿É°´ĞèĞŞ¸Ä×Ö¶Î
  */
 extern volatile uint32 g_icm42688_spi_timeout_count;
 extern volatile uint32 g_icm42688_invalid_frame_count;
@@ -226,21 +226,21 @@ extern volatile uint32 g_icm42688_identity_error_count;
 void ICM42688_Init(ICM42688_CONFIG_STRUCT *ICM42688_CONFIG);
 
 /*
- * é™€èºä»ªé™æ€é›¶åæ ‡å®š
- * times: é‡‡æ ·æ¬¡æ•°ï¼ˆæœ€å° 500ï¼Œå»ºè®® 1000+ï¼‰
- * è°ƒç”¨å‰å¿…é¡»ä¿æŒè®¾å¤‡é™æ­¢ï¼æ ‡å®šç»“æœå­˜å…¥ Bias_gyro_x/y/z
+ * ÍÓÂİÒÇ¾²Ì¬ÁãÆ«±ê¶¨
+ * times: ²ÉÑù´ÎÊı£¨×îĞ¡ 500£¬½¨Òé 1000+£©
+ * µ÷ÓÃÇ°±ØĞë±£³ÖÉè±¸¾²Ö¹£¡±ê¶¨½á¹û´æÈë Bias_gyro_x/y/z
  */
 void ICM42688_Bias_Init(uint32 times);
 
 /*
- * è¯»å–ä¸€æ¬¡ä¼ æ„Ÿå™¨æ•°æ®
- * è¯»å– ICM42688_RAW -> é™¤ä»¥çµæ•åº¦ -> ä¹˜è½´ç¬¦å· -> å­˜å…¥ ICM42688
- * è‹¥ Bias_Init_Flag==1ï¼Œè‡ªåŠ¨æ‰£é™¤é™€èºé›¶å
- * è°ƒç”¨è€…ï¼šIMU é‡‡æ ·ä¸­æ–­æˆ–ä¸»å¾ªç¯
+ * ¶ÁÈ¡Ò»´Î´«¸ĞÆ÷Êı¾İ
+ * ¶ÁÈ¡ ICM42688_RAW -> ³ıÒÔÁéÃô¶È -> ³ËÖá·ûºÅ -> ´æÈë ICM42688
+ * Èô Bias_Init_Flag==1£¬×Ô¶¯¿Û³ıÍÓÂİÁãÆ«
+ * µ÷ÓÃÕß£ºIMU ²ÉÑùÖĞ¶Ï»òÖ÷Ñ­»·
  */
 uint8 ICM42688_Get_Data(void);
 
-/* å¤–éƒ¨è®¾ç½®/è¯»å–é™€èºé›¶åï¼ˆdpsï¼‰ï¼Œç”¨äºä» Flash æ¢å¤æ ‡å®šå€¼ */
+/* Íâ²¿ÉèÖÃ/¶ÁÈ¡ÍÓÂİÁãÆ«£¨dps£©£¬ÓÃÓÚ´Ó Flash »Ö¸´±ê¶¨Öµ */
 void ICM42688_SetGyroBiasDps(float bx, float by, float bz, uint8 enable);
 void ICM42688_GetGyroBiasDps(float *bx, float *by, float *bz, uint8 *enable);
 

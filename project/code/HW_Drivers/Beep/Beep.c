@@ -1,28 +1,28 @@
 #include "Beep.h"
 
 /*
- * èœ‚é¸£å™¨éé˜»å¡é©±åŠ¨ï¼ˆ100HzèŠ‚æ‹ï¼‰
- * - é€šè¿‡å ç©ºæ¯”æ§åˆ¶"å“/é™"æ—¶é—´æ¯”ä¾‹
- * - é€šè¿‡å‘¨æœŸæ—¶é•¿ + å‘¨æœŸæ¬¡æ•°æ§åˆ¶æ€»æ’­æ”¾æ—¶é•¿
+ * ·äÃùÆ÷·Ç×èÈûÇı¶¯£¨100Hz½ÚÅÄ£©
+ * - Í¨¹ıÕ¼¿Õ±È¿ØÖÆ"Ïì/¾²"Ê±¼ä±ÈÀı
+ * - Í¨¹ıÖÜÆÚÊ±³¤ + ÖÜÆÚ´ÎÊı¿ØÖÆ×Ü²¥·ÅÊ±³¤
  */
 #define BEEP_TICK_HZ            (100U)
 #define BEEP_MAX_CYCLE_TIME_S   (600.0f)
 #define BEEP_MAX_CYCLE_COUNT    (600U)
 
-/* è¿è¡ŒçŠ¶æ€ */
+/* ÔËĞĞ×´Ì¬ */
 static uint8  s_beep_active = 0U;
-/* å½“å‰å ç©ºæ¯”ï¼ˆ0~100ï¼‰ */
+/* µ±Ç°Õ¼¿Õ±È£¨0~100£© */
 static uint8  s_beep_duty_percent = 0U;
-/* å•ä¸ªå‘¨æœŸæ€»tickæ•°ï¼ˆcycle_time_s * 100Hzï¼‰ */
+/* µ¥¸öÖÜÆÚ×ÜtickÊı£¨cycle_time_s * 100Hz£© */
 static uint32 s_beep_cycle_ticks = 0U;
-/* å½“å‰å‘¨æœŸå†…å·²è¿è¡Œtick */
+/* µ±Ç°ÖÜÆÚÄÚÒÑÔËĞĞtick */
 static uint32 s_beep_tick_in_cycle = 0U;
-/* ç›®æ ‡æ’­æ”¾å‘¨æœŸæ•° */
+/* Ä¿±ê²¥·ÅÖÜÆÚÊı */
 static uint16 s_beep_cycle_count = 0U;
-/* å·²å®Œæˆå‘¨æœŸæ•° */
+/* ÒÑÍê³ÉÖÜÆÚÊı */
 static uint16 s_beep_cycle_done = 0U;
 
-/* å ç©ºæ¯”é™å¹…åˆ°0~100 */
+/* Õ¼¿Õ±ÈÏŞ·ùµ½0~100 */
 static uint8 Beep_ClampDuty(uint8 duty_percent)
 {
     if (duty_percent > 100U)
@@ -34,14 +34,14 @@ static uint8 Beep_ClampDuty(uint8 duty_percent)
 
 void Beep_Init(void)
 {
-    /* åˆå§‹åŒ–ä¸ºæ¨æŒ½è¾“å‡ºï¼Œé»˜è®¤ä½ç”µå¹³ï¼ˆé™éŸ³ï¼‰ */
+    /* ³õÊ¼»¯ÎªÍÆÍìÊä³ö£¬Ä¬ÈÏµÍµçÆ½£¨¾²Òô£© */
     gpio_init(BUZZER_PIN, GPO, GPIO_LOW, GPO_PUSH_PULL);
     Beep_Stop();
 }
 
 void Beep_Stop(void)
 {
-    /* æ¸…ç©ºæ’­æ”¾çŠ¶æ€å¹¶æ‹‰ä½èœ‚é¸£å™¨å¼•è„š */
+    /* Çå¿Õ²¥·Å×´Ì¬²¢À­µÍ·äÃùÆ÷Òı½Å */
     s_beep_active = 0U;
     s_beep_duty_percent = 0U;
     s_beep_cycle_ticks = 0U;
@@ -75,7 +75,7 @@ void Beep_Disable(void)
 
 void Beep_Play(uint8 duty_percent, float cycle_time_s, uint16 cycle_count)
 {
-    /* å‚æ•°ä¿æŠ¤ï¼šé™åˆ¶æœ€å¤§æ’­æ”¾æ—¶é•¿ä¸æ¬¡æ•°ï¼Œé˜²æ­¢å¼‚å¸¸é•¿ä»»åŠ¡ */
+    /* ²ÎÊı±£»¤£ºÏŞÖÆ×î´ó²¥·ÅÊ±³¤Óë´ÎÊı£¬·ÀÖ¹Òì³£³¤ÈÎÎñ */
     if (cycle_time_s > BEEP_MAX_CYCLE_TIME_S)
     {
         cycle_time_s = BEEP_MAX_CYCLE_TIME_S;
@@ -87,7 +87,7 @@ void Beep_Play(uint8 duty_percent, float cycle_time_s, uint16 cycle_count)
 
     Beep_Stop();
 
-    /* å°†ç§’è½¬æ¢ä¸º100HzèŠ‚æ‹ä¸‹çš„tick */
+    /* ½«Ãë×ª»»Îª100Hz½ÚÅÄÏÂµÄtick */
     s_beep_duty_percent = Beep_ClampDuty(duty_percent);
     if (cycle_time_s <= 0.0f)
     {
@@ -102,7 +102,7 @@ void Beep_Play(uint8 duty_percent, float cycle_time_s, uint16 cycle_count)
         s_beep_cycle_ticks = 1U;
     }
 
-    /* ä»»ä¸€å‚æ•°ä¸º0è¡¨ç¤ºä¸æ’­æ”¾ */
+    /* ÈÎÒ»²ÎÊıÎª0±íÊ¾²»²¥·Å */
     if (0U == s_beep_cycle_count)
     {
         return;
@@ -115,16 +115,16 @@ void Beep_Update_100HZ(void)
 {
     uint32 on_ticks;
 
-    /* ç©ºé—²æ—¶ç›´æ¥è¿”å›ï¼Œä¿æŒéé˜»å¡ */
+    /* ¿ÕÏĞÊ±Ö±½Ó·µ»Ø£¬±£³Ö·Ç×èÈû */
     if (0U == s_beep_active)
     {
         return;
     }
 
-    /* æŒ‰å ç©ºæ¯”è®¡ç®—æœ¬å‘¨æœŸåº”å“tickæ•° */
+    /* °´Õ¼¿Õ±È¼ÆËã±¾ÖÜÆÚÓ¦ÏìtickÊı */
     on_ticks = ((uint32)s_beep_duty_percent * s_beep_cycle_ticks) / 100U;
 
-    /* å‘¨æœŸå‰åŠæ®µ(å ç©ºæ¯”éƒ¨åˆ†)æ‹‰é«˜ï¼ŒååŠæ®µæ‹‰ä½ */
+    /* ÖÜÆÚÇ°°ë¶Î(Õ¼¿Õ±È²¿·Ö)À­¸ß£¬ºó°ë¶ÎÀ­µÍ */
     if ((on_ticks > 0U) && (s_beep_tick_in_cycle < on_ticks))
     {
         gpio_high(BUZZER_PIN);
@@ -137,12 +137,12 @@ void Beep_Update_100HZ(void)
     s_beep_tick_in_cycle++;
     if (s_beep_tick_in_cycle >= s_beep_cycle_ticks)
     {
-        /* è¿›å…¥ä¸‹ä¸€ä¸ªå‘¨æœŸå¹¶ç»Ÿè®¡å®Œæˆæ¬¡æ•° */
+        /* ½øÈëÏÂÒ»¸öÖÜÆÚ²¢Í³¼ÆÍê³É´ÎÊı */
         s_beep_tick_in_cycle = 0U;
         s_beep_cycle_done++;
         if (s_beep_cycle_done >= s_beep_cycle_count)
         {
-            /* è¾¾åˆ°ç›®æ ‡æ¬¡æ•°åè‡ªåŠ¨åœæ­¢ */
+            /* ´ïµ½Ä¿±ê´ÎÊıºó×Ô¶¯Í£Ö¹ */
             Beep_Stop();
         }
     }

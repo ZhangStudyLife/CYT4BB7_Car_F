@@ -1,8 +1,8 @@
 /**
  * @file car_math.h
- * @brief é€šç”¨æµ®ç‚¹æ•°å­¦å·¥å…·ï¼Œç»™æ§åˆ¶å™¨/ä¼°è®¡å™¨/èœå•ç­‰æ¨¡å—ä½¿ç”¨
+ * @brief Í¨ÓÃ¸¡µãÊıÑ§¹¤¾ß£¬¸ø¿ØÖÆÆ÷/¹À¼ÆÆ÷/²Ëµ¥µÈÄ£¿éÊ¹ÓÃ
  *
- * å…¨éƒ¨ float ç‰ˆæœ¬ï¼Œå•ä½ç”±è°ƒç”¨æ–¹ä¿è¯ä¸€è‡´ã€‚
+ * È«²¿ float °æ±¾£¬µ¥Î»ÓÉµ÷ÓÃ·½±£Ö¤Ò»ÖÂ¡£
  */
 
 #ifndef CAR_MATH_H
@@ -10,38 +10,38 @@
 
 #include "zf_common_headfile.h"
 
-/** å–ç»å¯¹å€¼ï¼ˆfloat ç‰ˆï¼‰ï¼ŒPID è¯¯å·®è®¡ç®—ã€æ­»åŒºåˆ¤æ–­ç­‰åœºæ™¯å¸¸ç”¨ */
+/** È¡¾ø¶ÔÖµ£¨float °æ£©£¬PID Îó²î¼ÆËã¡¢ËÀÇøÅĞ¶ÏµÈ³¡¾°³£ÓÃ */
 float car_math_absf(float value);
 
-/** è¿”å›ä¸¤æ•°ä¸­çš„è¾ƒå°å€¼ */
+/** ·µ»ØÁ½ÊıÖĞµÄ½ÏĞ¡Öµ */
 float car_math_minf(float a, float b);
 
-/** è¿”å›ä¸¤æ•°ä¸­çš„è¾ƒå¤§å€¼ */
+/** ·µ»ØÁ½ÊıÖĞµÄ½Ï´óÖµ */
 float car_math_maxf(float a, float b);
 
-/** é™å¹…ï¼šå°† value é’³åˆ¶åˆ° [min_value, max_value]ï¼ŒPID è¾“å‡ºã€å‚æ•°æ ¡éªŒå¸¸ç”¨ */
+/** ÏŞ·ù£º½« value Ç¯ÖÆµ½ [min_value, max_value]£¬PID Êä³ö¡¢²ÎÊıĞ£Ñé³£ÓÃ */
 float car_math_clampf(float value, float min_value, float max_value);
 
-/** å¯¹ç§°é™å¹…ï¼šå°† value é’³åˆ¶åˆ° [-limit, limit]ï¼Œlimit é€šå¸¸ä¸ºæ­£æ•° */
+/** ¶Ô³ÆÏŞ·ù£º½« value Ç¯ÖÆµ½ [-limit, limit]£¬limit Í¨³£ÎªÕıÊı */
 float car_math_limit_absf(float value, float limit);
 
 /**
- * ç¡¬æ­»åŒºï¼š|value| <= deadband æ—¶è¿”å› 0ï¼Œå¦åˆ™åŸæ ·è¿”å›
- * ç”¨äºé¥æ§å™¨æ‘‡æ†ã€UWB è¯¯å·®ç­‰å™ªå£°è¿‡æ»¤
+ * Ó²ËÀÇø£º|value| <= deadband Ê±·µ»Ø 0£¬·ñÔòÔ­Ñù·µ»Ø
+ * ÓÃÓÚÒ£¿ØÆ÷Ò¡¸Ë¡¢UWB Îó²îµÈÔëÉù¹ıÂË
  */
 float car_math_deadband(float value, float deadband);
 
 /**
- * è½¯æ­»åŒºï¼ˆå»æ­»åŒºå¹³ç§»ï¼‰ï¼šå»æ‰ deadband åçš„å‰©ä½™é‡æ˜ å°„åˆ°åŸç‚¹å¼€å§‹
- * ä¾‹ï¼švalue=3, deadband=1 â†’ è¿”å› 2ï¼›value=0.5, deadband=1 â†’ è¿”å› 0
- * é€‚ç”¨äºéœ€è¦"æ­»åŒºå¤–ä»é›¶å¼€å§‹çº¿æ€§è¾“å‡º"çš„åœºæ™¯ï¼Œå¦‚ç¼–ç å™¨é€Ÿåº¦
+ * ÈíËÀÇø£¨È¥ËÀÇøÆ½ÒÆ£©£ºÈ¥µô deadband ºóµÄÊ£ÓàÁ¿Ó³Éäµ½Ô­µã¿ªÊ¼
+ * Àı£ºvalue=3, deadband=1 ¡ú ·µ»Ø 2£»value=0.5, deadband=1 ¡ú ·µ»Ø 0
+ * ÊÊÓÃÓÚĞèÒª"ËÀÇøÍâ´ÓÁã¿ªÊ¼ÏßĞÔÊä³ö"µÄ³¡¾°£¬Èç±àÂëÆ÷ËÙ¶È
  */
 float car_math_soft_deadband(float value, float deadband);
 
 /**
- * çº¿æ€§æ˜ å°„ï¼šå°† value ä» [in_min, in_max] çº¿æ€§æ˜ å°„åˆ° [out_min, out_max]
- * æ³¨æ„ï¼šin_max == in_min æ—¶ç›´æ¥è¿”å› out_min é¿å…é™¤é›¶
- * ç”¨äºé¥æ§å™¨é€šé“å€¼æ˜ å°„ã€ä¼ æ„Ÿå™¨æ ‡å®šç­‰
+ * ÏßĞÔÓ³Éä£º½« value ´Ó [in_min, in_max] ÏßĞÔÓ³Éäµ½ [out_min, out_max]
+ * ×¢Òâ£ºin_max == in_min Ê±Ö±½Ó·µ»Ø out_min ±ÜÃâ³ıÁã
+ * ÓÃÓÚÒ£¿ØÆ÷Í¨µÀÖµÓ³Éä¡¢´«¸ĞÆ÷±ê¶¨µÈ
  */
 float car_math_map_linear(float value,
                           float in_min,

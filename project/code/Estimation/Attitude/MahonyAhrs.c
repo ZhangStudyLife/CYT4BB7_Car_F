@@ -1,18 +1,18 @@
 /********************************************************************
- * æ–‡ä»¶å  : MahonyAhrs.c
- * æ¨¡å—    : Mahony AHRS å§¿æ€è§£ç®—å®ç°
- * ä½ç½®    : Estimation/Attitude
- * æ•°æ®æµ  :
- *   è¾“å…¥: æœºä½“ç³»è§’é€Ÿåº¦ dps + æ¯”åŠ› gï¼ˆæ¥è‡ª 1kHz æ»¤æ³¢å™¨è¾“å‡ºï¼‰
- *   å¤„ç†: é™€èºç§¯åˆ† + åŠ é€Ÿåº¦è®¡ä¿®æ­£ï¼ˆP æ§åˆ¶å™¨ï¼‰-> å››å…ƒæ•°æ›´æ–°
- *   è¾“å‡º: å§¿æ€å››å…ƒæ•° -> æ¬§æ‹‰è§’ï¼ˆåº¦ï¼‰ï¼Œä¾› odometer/EKF/æ§åˆ¶ä½¿ç”¨
- * è°ƒç”¨æ–¹  : IMU_TOP.c IMU_Update_1000HZ()
- * å•ä½    : é™€èº dpsï¼ŒåŠ é€Ÿåº¦ gï¼Œè¾“å‡ºè§’åº¦ åº¦
+ * ÎÄ¼şÃû  : MahonyAhrs.c
+ * Ä£¿é    : Mahony AHRS ×ËÌ¬½âËãÊµÏÖ
+ * Î»ÖÃ    : Estimation/Attitude
+ * Êı¾İÁ÷  :
+ *   ÊäÈë: »úÌåÏµ½ÇËÙ¶È dps + ±ÈÁ¦ g£¨À´×Ô 1kHz ÂË²¨Æ÷Êä³ö£©
+ *   ´¦Àí: ÍÓÂİ»ı·Ö + ¼ÓËÙ¶È¼ÆĞŞÕı£¨P ¿ØÖÆÆ÷£©-> ËÄÔªÊı¸üĞÂ
+ *   Êä³ö: ×ËÌ¬ËÄÔªÊı -> Å·À­½Ç£¨¶È£©£¬¹© odometer/EKF/¿ØÖÆÊ¹ÓÃ
+ * µ÷ÓÃ·½  : IMU_TOP.c IMU_Update_1000HZ()
+ * µ¥Î»    : ÍÓÂİ dps£¬¼ÓËÙ¶È g£¬Êä³ö½Ç¶È ¶È
  ********************************************************************/
 #include "MahonyAhrs.h"
 
 
-/* æœ¬åœ°å·®å¼‚å±‚: Mahony è§£ç®—å‰å¯¹ Z è½´é™€èºè¾“å…¥æ–½åŠ å¯¹ç§°æ­»åŒºï¼Œå•ä½ dps */
+/* ±¾µØ²îÒì²ã: Mahony ½âËãÇ°¶Ô Z ÖáÍÓÂİÊäÈëÊ©¼Ó¶Ô³ÆËÀÇø£¬µ¥Î» dps */
 #define MAHONY_GYRO_Z_DEADBAND_DPS  0.4f
 
 static float Mahony_ApplyDeadband(float value, float deadband)
@@ -25,7 +25,7 @@ static float Mahony_ApplyDeadband(float value, float deadband)
     return value;
 }
 
-/* æ£€æŸ¥æµ®ç‚¹æ•°æ˜¯å¦æœ‰é™ï¼ˆæ’é™¤ NaN å’Œè¿‡å¤§å€¼ï¼‰ */
+/* ¼ì²é¸¡µãÊıÊÇ·ñÓĞÏŞ£¨ÅÅ³ı NaN ºÍ¹ı´óÖµ£© */
 static uint8_t Mahony_IsFinite(float value)
 {
     if (value != value)
@@ -41,13 +41,13 @@ static uint8_t Mahony_IsFinite(float value)
     return 1U;
 }
 
-/* è®¡ç®—å‘é‡æ¨¡é•¿å¹³æ–¹ï¼Œé¿å…å¼€æ–¹ */
+/* ¼ÆËãÏòÁ¿Ä£³¤Æ½·½£¬±ÜÃâ¿ª·½ */
 static float Mahony_VectorMagnitudeSquared(float x, float y, float z)
 {
     return x * x + y * y + z * z;
 }
 
-/* è®¡ç®—å‘é‡æ¨¡é•¿ï¼Œæ¨¡é•¿è¿‡å°è¿”å› 0ï¼ˆMAHONY_VECTOR_NORM_MIN=1e-6 é˜ˆå€¼ï¼‰ */
+/* ¼ÆËãÏòÁ¿Ä£³¤£¬Ä£³¤¹ıĞ¡·µ»Ø 0£¨MAHONY_VECTOR_NORM_MIN=1e-6 ãĞÖµ£© */
 static float Mahony_VectorMagnitude(float x, float y, float z)
 {
     float mag_sq = Mahony_VectorMagnitudeSquared(x, y, z);
@@ -135,7 +135,7 @@ static void Mahony_UpdateStaticState(MahonyAhrs_t *ahrs, float gyro_abs_dps, flo
 {
     float acc_err_g = fabsf(accel_mag - 1.0f);
 
-    /* æœ¬åœ°å·®å¼‚å±‚: è¯¥é™æ­¢åˆ¤å®šä¾›æœºä½“ä¾§é€»è¾‘ä½¿ç”¨ï¼Œä¸å‚ä¸ iNav ä¸» AHRS å…¬å¼æœ¬èº« */
+    /* ±¾µØ²îÒì²ã: ¸Ã¾²Ö¹ÅĞ¶¨¹©»úÌå²àÂß¼­Ê¹ÓÃ£¬²»²ÎÓë iNav Ö÷ AHRS ¹«Ê½±¾Éí */
 
     if ((gyro_abs_dps < MAHONY_STATIC_GYRO_DPS_TH) &&
         (accel_mag > MAHONY_ACCEL_MIN_MAGNITUDE) &&
@@ -333,17 +333,17 @@ void MahonyAhrs_Update(MahonyAhrs_t *ahrs,
 
     ahrs->elapsed_time_s += dt;
 
-    /* Z è½´é›¶åå­¦ä¹ å’Œæ­»åŒºåœ¨ rad/s åŸŸå¤„ç†ï¼Œé¿å…é¢„å¤„ç†å½±å“é™æ­¢åˆ¤å®šã€‚ */
-    // ç®—æ¨¡é•¿
+    /* Z ÖáÁãÆ«Ñ§Ï°ºÍËÀÇøÔÚ rad/s Óò´¦Àí£¬±ÜÃâÔ¤´¦ÀíÓ°Ïì¾²Ö¹ÅĞ¶¨¡£ */
+    // ËãÄ£³¤
     accel_mag = Mahony_VectorMagnitude(accel_x, accel_y, accel_z);
     ahrs->accel_magnitude = accel_mag;
     ahrs->acc_weight_nearness = 0.0f;
     ahrs->acc_weight_rate_ignore = 0.0f;
     ahrs->acc_weight_final = 0.0f;
 
-    // æ¨¡é•¿å’Œé™€èºç»å¯¹å€¼ç”¨äºé™æ­¢åˆ¤å®š
+    // Ä£³¤ºÍÍÓÂİ¾ø¶ÔÖµÓÃÓÚ¾²Ö¹ÅĞ¶¨
     gyro_abs_dps = Mahony_VectorMagnitude(gyro_x, gyro_y, gyro_z);
-    // æ›´æ–°é™æ­¢çŠ¶æ€
+    // ¸üĞÂ¾²Ö¹×´Ì¬
     Mahony_UpdateStaticState(ahrs, gyro_abs_dps, accel_mag);
 
     measured_gx = gyro_x * DEGREES_TO_RADIANS;
@@ -512,7 +512,7 @@ void MahonyAhrs_GetEuler(const MahonyAhrs_t *ahrs,
     float q2 = ahrs->q2;
     float q3 = ahrs->q3;
     float sin_pitch;
-    
+
 
     *roll = atan2f(2.0f * (q0 * q1 + q2 * q3),
                    1.0f - 2.0f * (q1 * q1 + q2 * q2));

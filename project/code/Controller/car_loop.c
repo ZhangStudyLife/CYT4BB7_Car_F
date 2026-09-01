@@ -4,16 +4,16 @@
 #include "../Common/car_math.h"
 #include "../negative_pressure_motor.h"
 
-#define CAR_IMU_STALE_CONTROL_LIMIT (3U) /* IMUè¿ç»­æœªæ›´æ–°çš„æ§åˆ¶å‘¨æœŸä¸Šé™ */
-#define CAR_PIT_TICKS_PER_US        (8U) /* PITæ¯å¾®ç§’è®¡æ•°å€¼ */
-#define AIR_RUN_DATA_CRITICAL_LEGACY_COUNT   (16U) /* æ—§é£è¡Œå…³é”®æ•°æ®æ•°é‡ */
-#define AIR_RUN_DATA_CRITICAL_COUNT          (17U) /* å½“å‰é£è¡Œå…³é”®æ•°æ®æ•°é‡ */
-#define AIR_RUN_DATA_CRITICAL_VACUUM_ENABLE  (16U) /* é£æœºè´Ÿå‹è®¸å¯å­—æ®µç´¢å¼• */
-#define AIR_RUN_DATA_DIAGNOSTIC_LEGACY_COUNT (45U) /* æ—§è¯Šæ–­æ•°æ®æ•°é‡ */
-#define AIR_RUN_DATA_DIAGNOSTIC_V1_COUNT     (48U) /* V1è¯Šæ–­æ•°æ®æ•°é‡ */
-#define AIR_RUN_DATA_DIAGNOSTIC_COUNT        (52U) /* å½“å‰è¯Šæ–­æ•°æ®æ•°é‡ */
-#define AIR_MENU_STATE_INIT                  (0.0f) /* é£æœºåˆå§‹åŒ–çŠ¶æ€ */
-#define AIR_MENU_STATE_STANDBY               (1.0f) /* é£æœºå¾…æœºçŠ¶æ€ */
+#define CAR_IMU_STALE_CONTROL_LIMIT (3U) /* IMUÁ¬ĞøÎ´¸üĞÂµÄ¿ØÖÆÖÜÆÚÉÏÏŞ */
+#define CAR_PIT_TICKS_PER_US        (8U) /* PITÃ¿Î¢Ãë¼ÆÊıÖµ */
+#define AIR_RUN_DATA_CRITICAL_LEGACY_COUNT   (16U) /* ¾É·ÉĞĞ¹Ø¼üÊı¾İÊıÁ¿ */
+#define AIR_RUN_DATA_CRITICAL_COUNT          (17U) /* µ±Ç°·ÉĞĞ¹Ø¼üÊı¾İÊıÁ¿ */
+#define AIR_RUN_DATA_CRITICAL_VACUUM_ENABLE  (16U) /* ·É»ú¸ºÑ¹Ğí¿É×Ö¶ÎË÷Òı */
+#define AIR_RUN_DATA_DIAGNOSTIC_LEGACY_COUNT (45U) /* ¾ÉÕï¶ÏÊı¾İÊıÁ¿ */
+#define AIR_RUN_DATA_DIAGNOSTIC_V1_COUNT     (48U) /* V1Õï¶ÏÊı¾İÊıÁ¿ */
+#define AIR_RUN_DATA_DIAGNOSTIC_COUNT        (52U) /* µ±Ç°Õï¶ÏÊı¾İÊıÁ¿ */
+#define AIR_MENU_STATE_INIT                  (0.0f) /* ·É»ú³õÊ¼»¯×´Ì¬ */
+#define AIR_MENU_STATE_STANDBY               (1.0f) /* ·É»ú´ı»ú×´Ì¬ */
 
 volatile uint32 tick_1000us_cnt = 0U;
 volatile uint32 g_car_background_100hz_generation = 0U;
@@ -76,7 +76,7 @@ static volatile int16 s_car_pwm_test_left_pwm = 0;
 static volatile int16 s_car_pwm_test_right_pwm = 0;
 static uint16 s_negative_pressure_ramp_tick = 0U;
 static car_mode_e s_negative_pressure_mode = CAR_MODE_0;
-static volatile float s_air_vacuum_enable = 0.0f; /* é£æœºä¸‹å‘çš„è´Ÿå‹è®¸å¯ï¼Œé»˜è®¤å…³é—­ã€‚ */
+static volatile float s_air_vacuum_enable = 0.0f; /* ·É»úÏÂ·¢µÄ¸ºÑ¹Ğí¿É£¬Ä¬ÈÏ¹Ø±Õ¡£ */
 
 static void car_loop_update_air_runtime_state(float air_state)
 {
@@ -553,12 +553,12 @@ static void car_loop_background_100HZ(void)
     car_data[0] = 0.0f;
     car_data[1] = car_speed_encoder_cnt_to_mps(
         0.5f * (g_car_speed_left_filtered + g_car_speed_right_filtered));
-    car_data[2] = car_diag.yaw_target_deg; /* å½“å‰æ¨¡å¼yawæ§åˆ¶ç›®æ ‡ */
+    car_data[2] = car_diag.yaw_target_deg; /* µ±Ç°Ä£Ê½yaw¿ØÖÆÄ¿±ê */
     car_data[3] = g_car_yaw_feedback_deg;
     car_data[4] = g_car_gyroz_feedback_dps;
     car_data[5] = 0.0f;
     car_data[6] = car_speed_encoder_cnt_to_mps(g_car_base_speed_target);
-    car_data[7] = (float)car_diag.large_turn_state; /* 0æ­£å¸¸ 1åˆ¹è½¦ 2åŸåœ°è½¬ 3é€€å‡º */
+    car_data[7] = (float)car_diag.large_turn_state; /* 0Õı³£ 1É²³µ 2Ô­µØ×ª 3ÍË³ö */
     car_data[8] = 0.0f;
     car_data[9] = 0.0f;
     car_data[10] = (float)s_system_time_ms;

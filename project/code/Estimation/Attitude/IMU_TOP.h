@@ -1,12 +1,12 @@
 /********************************************************************
- * æ–‡ä»¶å  : IMU_TOP.h
- * æ¨¡å—    : IMU é¡¶å±‚è°ƒåº¦ï¼ˆé©±åŠ¨ + æ»¤æ³¢ + å§¿æ€ + æ ¡å‡†ï¼‰
- * ä½ç½®    : Estimation/Attitude
- * èŒè´£    :
- *   1) åˆå§‹åŒ– ICM42688 + ä¸Šç”µè‡ªæ£€
- *   2) 1kHz ä¸»å¾ªç¯ï¼šè¯»ä¼ æ„Ÿå™¨ -> æ ¡å‡†è¡¥å¿ -> æ»¤æ³¢ -> å§¿æ€è§£ç®—
- *   3) å¯¹å¤–æä¾›åŸå§‹ IMU å¿«ç…§ï¼ˆä¾›æ ¡å‡†é“¾è¯»å–ï¼‰
- * è°ƒç”¨æ–¹  : main.c / timer ISRï¼ˆ1kHz ä¸­æ–­æˆ–ä¸»å¾ªç¯è°ƒç”¨ï¼‰
+ * ÎÄ¼şÃû  : IMU_TOP.h
+ * Ä£¿é    : IMU ¶¥²ãµ÷¶È£¨Çı¶¯ + ÂË²¨ + ×ËÌ¬ + Ğ£×¼£©
+ * Î»ÖÃ    : Estimation/Attitude
+ * Ö°Ôğ    :
+ *   1) ³õÊ¼»¯ ICM42688 + ÉÏµç×Ô¼ì
+ *   2) 1kHz Ö÷Ñ­»·£º¶Á´«¸ĞÆ÷ -> Ğ£×¼²¹³¥ -> ÂË²¨ -> ×ËÌ¬½âËã
+ *   3) ¶ÔÍâÌá¹©Ô­Ê¼ IMU ¿ìÕÕ£¨¹©Ğ£×¼Á´¶ÁÈ¡£©
+ * µ÷ÓÃ·½  : main.c / timer ISR£¨1kHz ÖĞ¶Ï»òÖ÷Ñ­»·µ÷ÓÃ£©
  ********************************************************************/
 #include "zf_common_headfile.h"
 #ifndef IMU_TOP_H_
@@ -27,23 +27,23 @@ typedef struct
     uint8 healthy;
 } imu_realtime_snapshot_t;
 
-/* ======================== IMU åˆå§‹åŒ–å‚æ•° ======================== */
-#define IMU_WARMUP_DISCARD_SAMPLES   (1000U)          /* æš–æœºä¸¢å¼ƒå¸§æ•°ï¼Œ1kHz ä¸‹çº¦ 1sï¼Œè®©æ»¤æ³¢å™¨ç¨³å®š */
-#define IMU_UPDATE_DT_SEC            (1.0f / IMU_SAMPLE_RATE_HZ) /* æ›´æ–°å‘¨æœŸï¼Œ1ms */
+/* ======================== IMU ³õÊ¼»¯²ÎÊı ======================== */
+#define IMU_WARMUP_DISCARD_SAMPLES   (1000U)          /* Å¯»ú¶ªÆúÖ¡Êı£¬1kHz ÏÂÔ¼ 1s£¬ÈÃÂË²¨Æ÷ÎÈ¶¨ */
+#define IMU_UPDATE_DT_SEC            (1.0f / IMU_SAMPLE_RATE_HZ) /* ¸üĞÂÖÜÆÚ£¬1ms */
 
-/* ======================== ä¸Šç”µè‡ªæ£€å‚æ•° ======================== */
-#define IMU_SELFTEST_SAMPLE_COUNT        (200U)        /* è‡ªæ£€é‡‡æ ·æ•° */
-#define IMU_SELFTEST_GYRO_MEAN_MAX_DPS   (8.0f)       /* é™æ­¢æ—¶é™€èºä»ªå¹³å‡æ¨¡é•¿ä¸Šé™ï¼Œå•ä½ dps */
-#define IMU_SELFTEST_ACC_MIN_G           (0.75f)       /* åŠ é€Ÿåº¦æ¨¡é•¿ä¸‹é™ï¼Œå•ä½ g */
-#define IMU_SELFTEST_ACC_MAX_G           (1.25f)       /* åŠ é€Ÿåº¦æ¨¡é•¿ä¸Šé™ï¼Œå•ä½ g */
+/* ======================== ÉÏµç×Ô¼ì²ÎÊı ======================== */
+#define IMU_SELFTEST_SAMPLE_COUNT        (200U)        /* ×Ô¼ì²ÉÑùÊı */
+#define IMU_SELFTEST_GYRO_MEAN_MAX_DPS   (8.0f)       /* ¾²Ö¹Ê±ÍÓÂİÒÇÆ½¾ùÄ£³¤ÉÏÏŞ£¬µ¥Î» dps */
+#define IMU_SELFTEST_ACC_MIN_G           (0.75f)       /* ¼ÓËÙ¶ÈÄ£³¤ÏÂÏŞ£¬µ¥Î» g */
+#define IMU_SELFTEST_ACC_MAX_G           (1.25f)       /* ¼ÓËÙ¶ÈÄ£³¤ÉÏÏŞ£¬µ¥Î» g */
 
-/* g_imufilter_1000hz åœ¨ IMU_Filtter.h ä¸­å£°æ˜ï¼Œæ˜¯ 1kHz æ»¤æ³¢åè¾“å‡º */
-extern MahonyAhrs_t g_mahony_ahrs;    /* Mahony å§¿æ€è§£ç®—å™¨çŠ¶æ€ */
-extern MahonyAhrs_Euler_t g_euler;    /* å½“å‰æ¬§æ‹‰è§’ï¼ˆåº¦ï¼‰ï¼Œroll/pitch/yaw + sin/cos ç¼“å­˜ */
-extern uint8 g_imu_ready;             /* 1=IMU åˆå§‹åŒ–ä¸æš–æœºå®Œæˆï¼›å¥åº·çŠ¶æ€è§ IMU_RuntimeHealthy */
+/* g_imufilter_1000hz ÔÚ IMU_Filtter.h ÖĞÉùÃ÷£¬ÊÇ 1kHz ÂË²¨ºóÊä³ö */
+extern MahonyAhrs_t g_mahony_ahrs;    /* Mahony ×ËÌ¬½âËãÆ÷×´Ì¬ */
+extern MahonyAhrs_Euler_t g_euler;    /* µ±Ç°Å·À­½Ç£¨¶È£©£¬roll/pitch/yaw + sin/cos »º´æ */
+extern uint8 g_imu_ready;             /* 1=IMU ³õÊ¼»¯ÓëÅ¯»úÍê³É£»½¡¿µ×´Ì¬¼û IMU_RuntimeHealthy */
 
-/* è¯»å–å½“å‰å¸§åŸå§‹ IMU å¿«ç…§ï¼Œä¾›æ ¡å‡†é“¾ä½¿ç”¨ */
-/* gx/gy/gz è¾“å‡ºé™€èºä»ªè§’é€Ÿåº¦ dpsï¼ˆå·²å»é›¶åï¼‰ï¼Œax/ay/az è¾“å‡ºåŠ é€Ÿåº¦è®¡æ¯”åŠ› g */
+/* ¶ÁÈ¡µ±Ç°Ö¡Ô­Ê¼ IMU ¿ìÕÕ£¬¹©Ğ£×¼Á´Ê¹ÓÃ */
+/* gx/gy/gz Êä³öÍÓÂİÒÇ½ÇËÙ¶È dps£¨ÒÑÈ¥ÁãÆ«£©£¬ax/ay/az Êä³ö¼ÓËÙ¶È¼Æ±ÈÁ¦ g */
 extern volatile uint32 g_imu_update_count;
 extern volatile uint32 g_imu_read_error_count;
 extern volatile uint32 g_imu_processing_error_count;
@@ -56,16 +56,16 @@ extern volatile uint8 g_imu_startup_selftest_fault;
 void IMU_GetRawSampleForCalibration(float *gx, float *gy, float *gz,
                                      float *ax, float *ay, float *az);
 
-/* åˆå§‹åŒ– IMU å…¨å¥—ï¼šé©±åŠ¨ -> è‡ªæ£€ -> æ»¤æ³¢å™¨ -> å§¿æ€è§£ç®—å™¨ -> æš–æœº */
+/* ³õÊ¼»¯ IMU È«Ì×£ºÇı¶¯ -> ×Ô¼ì -> ÂË²¨Æ÷ -> ×ËÌ¬½âËãÆ÷ -> Å¯»ú */
 void IMU_Init_All(void);
-/* 1kHz ä¸»æ›´æ–°ï¼šè¯»ä¼ æ„Ÿå™¨ -> æ ¡å‡†è¡¥å¿ -> æ»¤æ³¢ -> Mahony å§¿æ€è§£ç®— */
+/* 1kHz Ö÷¸üĞÂ£º¶Á´«¸ĞÆ÷ -> Ğ£×¼²¹³¥ -> ÂË²¨ -> Mahony ×ËÌ¬½âËã */
 uint8 IMU_Update_1000HZ(void);
 void IMU_ServicePoll(void);
 uint8 IMU_GetRealtimeSnapshot(imu_realtime_snapshot_t *snapshot);
 uint8 IMU_RuntimeHealthy(void);
-/* é‡ç½® yaw è§’ä¸º 0ï¼Œä¿ç•™ roll/pitchï¼ˆå®‰å…¨å½±å“ï¼šæ”¹å˜èˆªå‘åŸºå‡†ï¼‰ */
+/* ÖØÖÃ yaw ½ÇÎª 0£¬±£Áô roll/pitch£¨°²È«Ó°Ïì£º¸Ä±äº½Ïò»ù×¼£© */
 void IMU_ResetYaw(void);
-/* æŸ¥è¯¢ IMU æ˜¯å¦å°±ç»ªï¼ˆ1=åˆå§‹åŒ–å®Œæˆä¸”è‡ªæ£€é€šè¿‡ï¼‰ */
+/* ²éÑ¯ IMU ÊÇ·ñ¾ÍĞ÷£¨1=³õÊ¼»¯Íê³ÉÇÒ×Ô¼ìÍ¨¹ı£© */
 uint8 IMU_Is_Ready(void);
 
 

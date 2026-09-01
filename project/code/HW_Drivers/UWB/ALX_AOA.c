@@ -1,11 +1,11 @@
 #include "ALX_AOA.h"
 
 /*
- * å¸§æ ¼å¼ï¼ˆå¤§ç«¯å­—èŠ‚åºï¼‰ï¼š
+ * Ö¡¸ñÊ½£¨´ó¶Ë×Ö½ÚĞò£©£º
  * FF FF FF FF | PacketLength(2) | SequenceID(2) | RequestCommand(2) | VersionID(2) |
  * AnchorID(4) | TagID(4) | Distance(4) | Azimuth(2s) | Elevation(2s) | TagStatus |
  * BatchSn | Reserve | Xor
- * æ³¨æ„ï¼šCommand åœ¨ byte offset 8ï¼Œä¸æ˜¯ 6
+ * ×¢Òâ£ºCommand ÔÚ byte offset 8£¬²»ÊÇ 6
  */
 
 #define ALX_AOA_OFFSET_PACKET_LENGTH        (4)
@@ -46,7 +46,7 @@ static uint8  alx_aoa_filt_init     = 0;
 static uint8  alx_aoa_outlier_count = 0;
 static uint32 alx_aoa_last_filt_ms  = 0;
 
-/* ç¯å½¢ç¼“å†²åŒºè¾…åŠ©ï¼šç´¢å¼•é€’å¢ï¼ˆåˆ°å°¾åˆ™å›ç»•ï¼‰ */
+/* »·ĞÎ»º³åÇø¸¨Öú£ºË÷ÒıµİÔö£¨µ½Î²Ôò»ØÈÆ£© */
 static uint16 alx_aoa_next_index (uint16 index)
 {
     index ++;
@@ -57,7 +57,7 @@ static uint16 alx_aoa_next_index (uint16 index)
     return index;
 }
 
-/* è¿”å›ç¯å½¢ç¼“å†²åŒºä¸­å¾…å¤„ç†å­—èŠ‚æ•° */
+/* ·µ»Ø»·ĞÎ»º³åÇøÖĞ´ı´¦Àí×Ö½ÚÊı */
 static uint16 alx_aoa_rx_count (void)
 {
     uint16 head = alx_aoa_rx_head;
@@ -71,7 +71,7 @@ static uint16 alx_aoa_rx_count (void)
     return (uint16)(ALX_AOA_RX_BUFFER_SIZE - tail + head);
 }
 
-/* ä»ç¯å½¢ç¼“å†²åŒºå¼¹å‡ºä¸€ä¸ªå­—èŠ‚ï¼Œè¿”å› 1=æˆåŠŸï¼Œ0=ç©º */
+/* ´Ó»·ĞÎ»º³åÇøµ¯³öÒ»¸ö×Ö½Ú£¬·µ»Ø 1=³É¹¦£¬0=¿Õ */
 static uint8 alx_aoa_pop_byte (uint8 *dat)
 {
     if(alx_aoa_rx_head == alx_aoa_rx_tail)
@@ -85,13 +85,13 @@ static uint8 alx_aoa_pop_byte (uint8 *dat)
     return 1;
 }
 
-/* å¤§ç«¯ 16 ä½æ— ç¬¦å· */
+/* ´ó¶Ë 16 Î»ÎŞ·ûºÅ */
 static uint16 alx_aoa_read_be16 (const uint8 *dat)
 {
     return (uint16)(((uint16)dat[0] << 8) | dat[1]);
 }
 
-/* å¤§ç«¯ 32 ä½æ— ç¬¦å· */
+/* ´ó¶Ë 32 Î»ÎŞ·ûºÅ */
 static uint32 alx_aoa_read_be32 (const uint8 *dat)
 {
     return (((uint32)dat[0] << 24) |
@@ -100,7 +100,7 @@ static uint32 alx_aoa_read_be32 (const uint8 *dat)
             ((uint32)dat[3]));
 }
 
-/* å¤§ç«¯ 16 ä½æœ‰ç¬¦å·ï¼ˆè¡¥ç è½¬æ¢ï¼‰ */
+/* ´ó¶Ë 16 Î»ÓĞ·ûºÅ£¨²¹Âë×ª»»£© */
 static int16 alx_aoa_read_s16 (const uint8 *dat)
 {
     uint16 value = alx_aoa_read_be16(dat);
@@ -123,14 +123,14 @@ static int32 alx_aoa_float_to_s32 (float value)
     return (int32)(value - 0.5f);
 }
 
-/* è§’åº¦ï¼ˆæ•´æ•°åº¦ï¼‰-> å¼§åº¦ */
+/* ½Ç¶È£¨ÕûÊı¶È£©-> »¡¶È */
 static float alx_aoa_angle_to_rad (int16 angle)
 {
     return (((float)angle) / ALX_AOA_ANGLE_SCALE) * ALX_AOA_DEG_TO_RAD;
 }
 
 /*
- * çƒåæ ‡ -> å¹³é¢ xy
+ * Çò×ø±ê -> Æ½Ãæ xy
  * x = distance * sin(azimuth)
  * y = -distance * sin(elevation)
  */
@@ -145,7 +145,7 @@ static void alx_aoa_calculate_xy (ALX_AOA_Position_t *position)
     position->z_cm = 0;
 }
 
-/* åŸå§‹æ•°æ®æœ‰æ•ˆæ€§æ£€æŸ¥ï¼šè·ç¦»ã€è§’åº¦ã€èŒƒå›´è¿‡æ»¤ */
+/* Ô­Ê¼Êı¾İÓĞĞ§ĞÔ¼ì²é£º¾àÀë¡¢½Ç¶È¡¢·¶Î§¹ıÂË */
 static uint8 alx_aoa_raw_valid (const ALX_AOA_Position_t *p)
 {
     if(0 == p->distance_cm)
@@ -247,11 +247,11 @@ static uint8 alx_aoa_observation_gate_ok (float rx, float ry)
 }
 
 /*
- * alpha-beta æ»¤æ³¢ + ä¸­å€¼æ»¤æ³¢ + è§‚æµ‹é—¨é™
- * ä¸‰ç§çŠ¶æ€ï¼š
- *   1) è§‚æµ‹æœ‰æ•ˆä¸”åœ¨é—¨é™å†… -> æ­£å¸¸ alpha-beta æ›´æ–°
- *   2) è§‚æµ‹æ— æ•ˆä¸”è¿ç»­ä¸¢ç‚¹ >= REACQUIRE_COUNT -> å¼ºåˆ¶é‡æ•è·
- *   3) å…¶ä»– -> ä»…é¢„æµ‹ï¼Œé€Ÿåº¦è¡°å‡
+ * alpha-beta ÂË²¨ + ÖĞÖµÂË²¨ + ¹Û²âÃÅÏŞ
+ * ÈıÖÖ×´Ì¬£º
+ *   1) ¹Û²âÓĞĞ§ÇÒÔÚÃÅÏŞÄÚ -> Õı³£ alpha-beta ¸üĞÂ
+ *   2) ¹Û²âÎŞĞ§ÇÒÁ¬Ğø¶ªµã >= REACQUIRE_COUNT -> Ç¿ÖÆÖØ²¶»ñ
+ *   3) ÆäËû -> ½öÔ¤²â£¬ËÙ¶ÈË¥¼õ
  */
 static void alx_aoa_filter_xy (const ALX_AOA_Position_t *p, uint32 now_ms)
 {
@@ -355,7 +355,7 @@ static void alx_aoa_filter_xy (const ALX_AOA_Position_t *p, uint32 now_ms)
     alx_aoa_y_cm = alx_aoa_filt_y_cm;
 }
 
-/* ä¸¢å¼ƒå¸§ç¼“å†²åŒºå‰ length å­—èŠ‚ï¼ˆå·²å¤„ç†ï¼‰ */
+/* ¶ªÆúÖ¡»º³åÇøÇ° length ×Ö½Ú£¨ÒÑ´¦Àí£© */
 static void alx_aoa_drop_frame_bytes (uint16 length)
 {
     if(length >= alx_aoa_frame_length)
@@ -428,7 +428,7 @@ static uint8 alx_aoa_seek_header (void)
     return 0;
 }
 
-/* è§£æä½ç½®å¸§ï¼šæå–è§’åº¦/è·ç¦» -> è®¡ç®— xy -> alpha-beta æ»¤æ³¢ */
+/* ½âÎöÎ»ÖÃÖ¡£ºÌáÈ¡½Ç¶È/¾àÀë -> ¼ÆËã xy -> alpha-beta ÂË²¨ */
 static void alx_aoa_parse_position (const uint8 *frame, uint32 now_ms)
 {
     alx_aoa_latest_position.base_id        = alx_aoa_read_be32(&frame[ALX_AOA_OFFSET_ANCHOR_ID]);
@@ -445,7 +445,7 @@ static void alx_aoa_parse_position (const uint8 *frame, uint32 now_ms)
     alx_aoa_stats.frame_total ++;
 }
 
-/* ä»å¸§ç¼“å†²åŒºå¾ªç¯è§£æï¼šæ‰¾å¸§å¤´ -> è¯»å‘½ä»¤ -> æŒ‰ç±»å‹å¤„ç† */
+/* ´ÓÖ¡»º³åÇøÑ­»·½âÎö£ºÕÒÖ¡Í· -> ¶ÁÃüÁî -> °´ÀàĞÍ´¦Àí */
 static uint8 alx_aoa_parse_stream (uint32 now_ms)
 {
     uint16 packet_length;

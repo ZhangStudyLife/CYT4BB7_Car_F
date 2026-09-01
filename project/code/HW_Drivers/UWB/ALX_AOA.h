@@ -3,136 +3,136 @@
 #define _ALX_AOA_H_
 
 /*
- * ALX AOA UWB å®šä½æ¨¡å—é©±åŠ¨
- * - UART 115200 æ¥æ”¶åŸºç«™å‘æ¥çš„å®šä½å¸§
- * - å¸§æ ¼å¼ï¼š4 å­—èŠ‚ 0xFF å¸§å¤´ + å‘½ä»¤å­— + æ•°æ® + å¼‚æˆ–æ ¡éªŒ
- * - æ”¯æŒä½ç½®å¸§ï¼ˆ0x2001ï¼‰å’Œå¿ƒè·³å¸§ï¼ˆ0x2002ï¼‰
- * - å†…ç½® alpha-beta æ»¤æ³¢å™¨ + 3 ç‚¹ä¸­å€¼æ»¤æ³¢ï¼Œè¾“å‡ºå¹³æ»‘çš„ x/y åæ ‡ï¼ˆcmï¼‰
- * - 25Hz æ›´æ–°ï¼ˆALX_AOA_Update_25HZï¼‰ï¼Œåœ¨å®šæ—¶ä¸­æ–­æˆ–ä¸»å¾ªç¯è°ƒç”¨
+ * ALX AOA UWB ¶¨Î»Ä£¿éÇı¶¯
+ * - UART 115200 ½ÓÊÕ»ùÕ¾·¢À´µÄ¶¨Î»Ö¡
+ * - Ö¡¸ñÊ½£º4 ×Ö½Ú 0xFF Ö¡Í· + ÃüÁî×Ö + Êı¾İ + Òì»òĞ£Ñé
+ * - Ö§³ÖÎ»ÖÃÖ¡£¨0x2001£©ºÍĞÄÌøÖ¡£¨0x2002£©
+ * - ÄÚÖÃ alpha-beta ÂË²¨Æ÷ + 3 µãÖĞÖµÂË²¨£¬Êä³öÆ½»¬µÄ x/y ×ø±ê£¨cm£©
+ * - 25Hz ¸üĞÂ£¨ALX_AOA_Update_25HZ£©£¬ÔÚ¶¨Ê±ÖĞ¶Ï»òÖ÷Ñ­»·µ÷ÓÃ
  */
 
-/* UART é…ç½® */
+/* UART ÅäÖÃ */
 #define ALX_AOA_UART_INDEX                 (UART_1)
 #define ALX_AOA_UART_TX_PIN                (UART1_TX_P04_1)
 #define ALX_AOA_UART_RX_PIN                (UART1_RX_P04_0)
 #define ALX_AOA_UART_BAUDRATE              (115200)
 
-/* æ¥æ”¶ç¼“å†²åŒºå’Œå¸§è§£æå‚æ•° */
-#define ALX_AOA_RX_BUFFER_SIZE             (256)   /* ç¯å½¢ç¼“å†²åŒºå¤§å°ï¼ˆå­—èŠ‚ï¼‰ */
-#define ALX_AOA_MAX_FRAME_SIZE             (64)    /* å•å¸§æœ€å¤§é•¿åº¦ */
+/* ½ÓÊÕ»º³åÇøºÍÖ¡½âÎö²ÎÊı */
+#define ALX_AOA_RX_BUFFER_SIZE             (256)   /* »·ĞÎ»º³åÇø´óĞ¡£¨×Ö½Ú£© */
+#define ALX_AOA_MAX_FRAME_SIZE             (64)    /* µ¥Ö¡×î´ó³¤¶È */
 
-/* å¸§å¤´ä¸å‘½ä»¤å­— */
-#define ALX_AOA_FRAME_HEADER_BYTE          (0xFF)  /* å¸§å¤´æ ‡è¯†ï¼ˆè¿ç»­ 4 ä¸ª 0xFFï¼‰ */
-#define ALX_AOA_CMD_POSITION               (0x2001) /* ä½ç½®å¸§å‘½ä»¤ */
-#define ALX_AOA_CMD_HEARTBEAT              (0x2002) /* å¿ƒè·³å¸§å‘½ä»¤ */
-#define ALX_AOA_POSITION_FRAME_SIZE        (37)    /* ä½ç½®å¸§æ€»é•¿åº¦ */
-#define ALX_AOA_HEARTBEAT_FRAME_SIZE       (16)    /* å¿ƒè·³å¸§æ€»é•¿åº¦ */
+/* Ö¡Í·ÓëÃüÁî×Ö */
+#define ALX_AOA_FRAME_HEADER_BYTE          (0xFF)  /* Ö¡Í·±êÊ¶£¨Á¬Ğø 4 ¸ö 0xFF£© */
+#define ALX_AOA_CMD_POSITION               (0x2001) /* Î»ÖÃÖ¡ÃüÁî */
+#define ALX_AOA_CMD_HEARTBEAT              (0x2002) /* ĞÄÌøÖ¡ÃüÁî */
+#define ALX_AOA_POSITION_FRAME_SIZE        (37)    /* Î»ÖÃÖ¡×Ü³¤¶È */
+#define ALX_AOA_HEARTBEAT_FRAME_SIZE       (16)    /* ĞÄÌøÖ¡×Ü³¤¶È */
 
-/* æ•°æ®æœ‰æ•ˆæ€§é—¨é™ */
-#define ALX_AOA_DIST_MIN_CM                (20)    /* æœ€å°æœ‰æ•ˆè·ç¦»ï¼ˆcmï¼‰ï¼Œä½äºæ­¤è§†ä¸ºæ— æ•ˆ */
-#define ALX_AOA_DIST_MAX_CM                (500)   /* æœ€å¤§æœ‰æ•ˆè·ç¦»ï¼ˆcmï¼‰ */
-#define ALX_AOA_EL_MAX_DEG                 (65)    /* ä¿¯ä»°è§’æœ‰æ•ˆèŒƒå›´ï¼ˆ+/- åº¦ï¼‰ */
+/* Êı¾İÓĞĞ§ĞÔÃÅÏŞ */
+#define ALX_AOA_DIST_MIN_CM                (20)    /* ×îĞ¡ÓĞĞ§¾àÀë£¨cm£©£¬µÍÓÚ´ËÊÓÎªÎŞĞ§ */
+#define ALX_AOA_DIST_MAX_CM                (500)   /* ×î´óÓĞĞ§¾àÀë£¨cm£© */
+#define ALX_AOA_EL_MAX_DEG                 (65)    /* ¸©Ñö½ÇÓĞĞ§·¶Î§£¨+/- ¶È£© */
 
 /*
- * alpha-beta æ»¤æ³¢å™¨å‚æ•°
- * ALPHAï¼šä½ç½®ä¿®æ­£å¢ç›Šï¼Œè¶Šå¤§å“åº”è¶Šå¿«ä½†å™ªå£°è¶Šå¤§
- * BETAï¼šé€Ÿåº¦ä¿®æ­£å¢ç›Šï¼Œæ§åˆ¶é€Ÿåº¦è·Ÿè¸ªçµæ•åº¦
- * VEL_DECAYï¼šæ— è§‚æµ‹æ—¶é€Ÿåº¦è¡°å‡ç³»æ•°ï¼ˆ0~1ï¼‰ï¼Œé˜²æ­¢å¤±æ§
- * GATEï¼šè§‚æµ‹é—¨é™ï¼Œæ®‹å·®è¶…è¿‡æ­¤å€¼è§†ä¸ºé‡ç‚¹ï¼Œæ‹’ç»æ›´æ–°
- * REACQUIRE_COUNTï¼šè¿ç»­ä¸¢ç‚¹ N æ¬¡åå¼ºåˆ¶é‡æ–°æ•è·
+ * alpha-beta ÂË²¨Æ÷²ÎÊı
+ * ALPHA£ºÎ»ÖÃĞŞÕıÔöÒæ£¬Ô½´óÏìÓ¦Ô½¿ìµ«ÔëÉùÔ½´ó
+ * BETA£ºËÙ¶ÈĞŞÕıÔöÒæ£¬¿ØÖÆËÙ¶È¸ú×ÙÁéÃô¶È
+ * VEL_DECAY£ºÎŞ¹Û²âÊ±ËÙ¶ÈË¥¼õÏµÊı£¨0~1£©£¬·ÀÖ¹Ê§¿Ø
+ * GATE£º¹Û²âÃÅÏŞ£¬²Ğ²î³¬¹ı´ËÖµÊÓÎªÒ°µã£¬¾Ü¾ø¸üĞÂ
+ * REACQUIRE_COUNT£ºÁ¬Ğø¶ªµã N ´ÎºóÇ¿ÖÆÖØĞÂ²¶»ñ
  */
-#define ALX_AOA_XY_GATE_X_CM               (30.0f) /* x æ–¹å‘è§‚æµ‹é—¨é™ï¼ˆcmï¼‰ */
-#define ALX_AOA_XY_GATE_Y_CM               (30.0f) /* y æ–¹å‘è§‚æµ‹é—¨é™ï¼ˆcmï¼‰ */
-#define ALX_AOA_XY_GATE_2D_CM              (50.0f) /* 2D åˆæˆé—¨é™ï¼ˆcmï¼‰ */
-#define ALX_AOA_AB_ALPHA                   (0.40f) /* alpha-beta æ»¤æ³¢ alpha */
-#define ALX_AOA_AB_BETA                    (0.020f) /* alpha-beta æ»¤æ³¢ beta */
-#define ALX_AOA_VEL_DECAY                  (0.90f) /* æ— è§‚æµ‹æ—¶é€Ÿåº¦è¡°å‡ */
-#define ALX_AOA_MEDIAN_SIZE                (3U)    /* ä¸­å€¼æ»¤æ³¢çª—å£å¤§å° */
-#define ALX_AOA_REACQUIRE_COUNT            (3U)    /* è¿ç»­ä¸¢ç‚¹é‡æ–°æ•è·é˜ˆå€¼ */
+#define ALX_AOA_XY_GATE_X_CM               (30.0f) /* x ·½Ïò¹Û²âÃÅÏŞ£¨cm£© */
+#define ALX_AOA_XY_GATE_Y_CM               (30.0f) /* y ·½Ïò¹Û²âÃÅÏŞ£¨cm£© */
+#define ALX_AOA_XY_GATE_2D_CM              (50.0f) /* 2D ºÏ³ÉÃÅÏŞ£¨cm£© */
+#define ALX_AOA_AB_ALPHA                   (0.40f) /* alpha-beta ÂË²¨ alpha */
+#define ALX_AOA_AB_BETA                    (0.020f) /* alpha-beta ÂË²¨ beta */
+#define ALX_AOA_VEL_DECAY                  (0.90f) /* ÎŞ¹Û²âÊ±ËÙ¶ÈË¥¼õ */
+#define ALX_AOA_MEDIAN_SIZE                (3U)    /* ÖĞÖµÂË²¨´°¿Ú´óĞ¡ */
+#define ALX_AOA_REACQUIRE_COUNT            (3U)    /* Á¬Ğø¶ªµãÖØĞÂ²¶»ñãĞÖµ */
 
-/* ä½ç½®æ•°æ®ï¼šåŸºç«™è§£æå‡ºçš„åŸå§‹è§’åº¦/è·ç¦» + è®¡ç®—å‡ºçš„ x/y åæ ‡ï¼ˆcmï¼‰ */
+/* Î»ÖÃÊı¾İ£º»ùÕ¾½âÎö³öµÄÔ­Ê¼½Ç¶È/¾àÀë + ¼ÆËã³öµÄ x/y ×ø±ê£¨cm£© */
 typedef struct
 {
-    uint32 tag_id;              /* æ ‡ç­¾ ID */
-    uint32 base_id;             /* åŸºç«™ ID */
-    uint32 distance_cm;         /* æ–œè·ï¼ˆcmï¼‰ */
-    int32  x_cm;                /* æ°´å¹³æŠ•å½± xï¼ˆcmï¼‰ï¼Œç”± azimuth + distance ç®—å‡º */
-    int32  y_cm;                /* æ°´å¹³æŠ•å½± yï¼ˆcmï¼‰ï¼Œç”± elevation + distance ç®—å‡º */
-    int32  z_cm;                /* zï¼ˆå½“å‰æœªç”¨ï¼Œå›ºå®š 0ï¼‰ */
-    int16  azimuth_deg;         /* æ–¹ä½è§’ï¼ˆåº¦ï¼Œsignedï¼‰ */
-    int16  elevation_deg;       /* ä¿¯ä»°è§’ï¼ˆåº¦ï¼Œsignedï¼‰ */
-    uint32 last_position_ms;    /* æœ€åä¸€æ¬¡æ”¶åˆ°ä½ç½®å¸§çš„æ—¶é—´æˆ³ï¼ˆmsï¼‰ */
-    uint8  valid;               /* 1=æ•°æ®æœ‰æ•ˆ */
+    uint32 tag_id;              /* ±êÇ© ID */
+    uint32 base_id;             /* »ùÕ¾ ID */
+    uint32 distance_cm;         /* Ğ±¾à£¨cm£© */
+    int32  x_cm;                /* Ë®Æ½Í¶Ó° x£¨cm£©£¬ÓÉ azimuth + distance Ëã³ö */
+    int32  y_cm;                /* Ë®Æ½Í¶Ó° y£¨cm£©£¬ÓÉ elevation + distance Ëã³ö */
+    int32  z_cm;                /* z£¨µ±Ç°Î´ÓÃ£¬¹Ì¶¨ 0£© */
+    int16  azimuth_deg;         /* ·½Î»½Ç£¨¶È£¬signed£© */
+    int16  elevation_deg;       /* ¸©Ñö½Ç£¨¶È£¬signed£© */
+    uint32 last_position_ms;    /* ×îºóÒ»´ÎÊÕµ½Î»ÖÃÖ¡µÄÊ±¼ä´Á£¨ms£© */
+    uint8  valid;               /* 1=Êı¾İÓĞĞ§ */
 }ALX_AOA_Position_t;
 
 typedef ALX_AOA_Position_t ALX_AOA_Data_t;
 
-/* å¿ƒè·³æ•°æ®ï¼šåŸºç«™å‘¨æœŸæ€§å‘é€çš„å¿ƒè·³åŒ… */
+/* ĞÄÌøÊı¾İ£º»ùÕ¾ÖÜÆÚĞÔ·¢ËÍµÄĞÄÌø°ü */
 typedef struct
 {
     uint32 base_id;
-    uint32 sequence;            /* å¿ƒè·³åºåˆ—å· */
+    uint32 sequence;            /* ĞÄÌøĞòÁĞºÅ */
     uint32 last_heartbeat_ms;
     uint8  valid;
 }ALX_AOA_Heartbeat_t;
 
-/* ç»Ÿè®¡è®¡æ•°å™¨ï¼šç”¨äºè°ƒè¯•å’Œè¯Šæ–­ï¼Œè®°å½•æ”¶å‘/é”™è¯¯å¸§æ•° */
+/* Í³¼Æ¼ÆÊıÆ÷£ºÓÃÓÚµ÷ÊÔºÍÕï¶Ï£¬¼ÇÂ¼ÊÕ·¢/´íÎóÖ¡Êı */
 typedef struct
 {
-    uint32 rx_bytes;            /* æ¥æ”¶æ€»å­—èŠ‚æ•° */
-    uint32 rx_overflow;         /* ç¯å½¢ç¼“å†²åŒºæº¢å‡ºæ¬¡æ•° */
-    uint8  rx_last_byte;        /* æœ€è¿‘æ”¶åˆ°çš„å­—èŠ‚ */
-    uint16 parser_frame_length; /* å½“å‰å¸§ç¼“å†²åŒºå·²ç´¯ç§¯é•¿åº¦ */
-    uint16 last_packet_length;  /* æœ€è¿‘å¸§çš„ packet_length å­—æ®µ */
-    uint16 last_command;        /* æœ€è¿‘å¸§çš„å‘½ä»¤å­— */
-    uint32 frame_total;         /* æˆåŠŸè§£æçš„æ€»å¸§æ•° */
-    uint32 position_count;      /* ä½ç½®å¸§æ•°é‡ */
-    uint32 heartbeat_count;     /* å¿ƒè·³å¸§æ•°é‡ */
-    uint32 frame_bad_header;    /* å¸§å¤´é”™è¯¯ï¼ˆä¸¢å¼ƒï¼‰ */
-    uint32 frame_bad_length;    /* å¸§é•¿é”™è¯¯ */
-    uint32 frame_bad_xor;       /* æ ¡éªŒé”™è¯¯ */
-    uint32 frame_unknown_cmd;   /* æœªçŸ¥å‘½ä»¤ */
+    uint32 rx_bytes;            /* ½ÓÊÕ×Ü×Ö½ÚÊı */
+    uint32 rx_overflow;         /* »·ĞÎ»º³åÇøÒç³ö´ÎÊı */
+    uint8  rx_last_byte;        /* ×î½üÊÕµ½µÄ×Ö½Ú */
+    uint16 parser_frame_length; /* µ±Ç°Ö¡»º³åÇøÒÑÀÛ»ı³¤¶È */
+    uint16 last_packet_length;  /* ×î½üÖ¡µÄ packet_length ×Ö¶Î */
+    uint16 last_command;        /* ×î½üÖ¡µÄÃüÁî×Ö */
+    uint32 frame_total;         /* ³É¹¦½âÎöµÄ×ÜÖ¡Êı */
+    uint32 position_count;      /* Î»ÖÃÖ¡ÊıÁ¿ */
+    uint32 heartbeat_count;     /* ĞÄÌøÖ¡ÊıÁ¿ */
+    uint32 frame_bad_header;    /* Ö¡Í·´íÎó£¨¶ªÆú£© */
+    uint32 frame_bad_length;    /* Ö¡³¤´íÎó */
+    uint32 frame_bad_xor;       /* Ğ£Ñé´íÎó */
+    uint32 frame_unknown_cmd;   /* Î´ÖªÃüÁî */
 }ALX_AOA_Stats_t;
 
-/* æ»¤æ³¢åçš„å…¨å±€åæ ‡ï¼ˆcmï¼‰ï¼Œä¸Šå±‚ç›´æ¥è¯»å–å³å¯ */
+/* ÂË²¨ºóµÄÈ«¾Ö×ø±ê£¨cm£©£¬ÉÏ²ãÖ±½Ó¶ÁÈ¡¼´¿É */
 extern float alx_aoa_x_cm;
 extern float alx_aoa_y_cm;
 
-/* åˆå§‹åŒ– UART + æ¸…ç©ºç¼“å†²åŒºï¼Œä¸Šç”µè°ƒç”¨ä¸€æ¬¡ */
+/* ³õÊ¼»¯ UART + Çå¿Õ»º³åÇø£¬ÉÏµçµ÷ÓÃÒ»´Î */
 void  ALX_AOA_Init              (void);
 
-/* é‡ç½®æ‰€æœ‰çŠ¶æ€ï¼ˆå«æ»¤æ³¢å™¨ï¼‰ï¼Œåˆ‡åŸºç«™æˆ–å¼‚å¸¸æ¢å¤æ—¶è°ƒç”¨ */
+/* ÖØÖÃËùÓĞ×´Ì¬£¨º¬ÂË²¨Æ÷£©£¬ÇĞ»ùÕ¾»òÒì³£»Ö¸´Ê±µ÷ÓÃ */
 void  ALX_AOA_Reset             (void);
 
-/* ä¸²å£æ¥æ”¶ä¸­æ–­å…¥å£ï¼šä¼ å…¥ä¸€ä¸ªå­—èŠ‚ï¼Œå†™å…¥ç¯å½¢ç¼“å†²åŒº */
+/* ´®¿Ú½ÓÊÕÖĞ¶ÏÈë¿Ú£º´«ÈëÒ»¸ö×Ö½Ú£¬Ğ´Èë»·ĞÎ»º³åÇø */
 void  ALX_AOA_InputByte         (uint8 dat);
 
-/* æ‰¹é‡å†™å…¥ï¼ˆå¯é€‰ï¼‰ï¼Œå¾ªç¯è°ƒç”¨ InputByte */
+/* ÅúÁ¿Ğ´Èë£¨¿ÉÑ¡£©£¬Ñ­»·µ÷ÓÃ InputByte */
 void  ALX_AOA_InputBytes        (const uint8 *dat, uint16 length);
 
 /*
- * 25Hz å¸§è§£æå…¥å£
- * now_ms: å½“å‰ç³»ç»Ÿæ—¶é—´æˆ³ï¼ˆmsï¼‰ï¼Œç”¨äºè¶…æ—¶åˆ¤æ–­å’Œæ»¤æ³¢ dt è®¡ç®—
- * è¿”å›å€¼ï¼š1=æœ¬è½®è§£æåˆ°ä½ç½®å¸§ï¼Œ0=æ— æ–°ä½ç½®
+ * 25Hz Ö¡½âÎöÈë¿Ú
+ * now_ms: µ±Ç°ÏµÍ³Ê±¼ä´Á£¨ms£©£¬ÓÃÓÚ³¬Ê±ÅĞ¶ÏºÍÂË²¨ dt ¼ÆËã
+ * ·µ»ØÖµ£º1=±¾ÂÖ½âÎöµ½Î»ÖÃÖ¡£¬0=ÎŞĞÂÎ»ÖÃ
  */
 uint8 ALX_AOA_Update_25HZ       (uint32 now_ms);
 
-/* è·å–æœ€è¿‘ä¸€æ¬¡åŸå§‹ä½ç½®æ•°æ®ï¼Œè¿”å› 1=æœ‰æ•ˆï¼Œ0=å°šæœªæ”¶åˆ°æœ‰æ•ˆå¸§ */
+/* »ñÈ¡×î½üÒ»´ÎÔ­Ê¼Î»ÖÃÊı¾İ£¬·µ»Ø 1=ÓĞĞ§£¬0=ÉĞÎ´ÊÕµ½ÓĞĞ§Ö¡ */
 uint8 ALX_AOA_GetLatest         (ALX_AOA_Position_t *data);
 
-/* è·å– alpha-beta æ»¤æ³¢åçš„ x/yï¼ˆcmï¼‰ï¼Œè¿”å› 1=å·²åˆå§‹åŒ–ï¼Œ0=å°šæœªå°±ç»ª */
+/* »ñÈ¡ alpha-beta ÂË²¨ºóµÄ x/y£¨cm£©£¬·µ»Ø 1=ÒÑ³õÊ¼»¯£¬0=ÉĞÎ´¾ÍĞ÷ */
 uint8 ALX_AOA_GetFilteredXY     (float *x_cm, float *y_cm);
 
-/* è·å–å¿ƒè·³æ•°æ®ï¼Œè¿”å› 1=æœ‰æ•ˆ */
+/* »ñÈ¡ĞÄÌøÊı¾İ£¬·µ»Ø 1=ÓĞĞ§ */
 uint8 ALX_AOA_GetHeartbeat      (ALX_AOA_Heartbeat_t *data);
 
-/* åˆ¤æ–­æ ‡ç­¾æ˜¯å¦åœ¨çº¿ï¼šæœ€è¿‘ä¸€æ¬¡ä½ç½®å¸§åœ¨ timeout_ms å†…åˆ™åœ¨çº¿ */
+/* ÅĞ¶Ï±êÇ©ÊÇ·ñÔÚÏß£º×î½üÒ»´ÎÎ»ÖÃÖ¡ÔÚ timeout_ms ÄÚÔòÔÚÏß */
 uint8 ALX_AOA_IsTagOnline       (uint32 now_ms, uint32 timeout_ms);
 
-/* è¯»å–ç»Ÿè®¡è®¡æ•°å™¨ */
+/* ¶ÁÈ¡Í³¼Æ¼ÆÊıÆ÷ */
 void  ALX_AOA_GetStats          (ALX_AOA_Stats_t *stats);
 
-/* æ¸…é›¶ç»Ÿè®¡è®¡æ•°å™¨ */
+/* ÇåÁãÍ³¼Æ¼ÆÊıÆ÷ */
 void  ALX_AOA_ResetStats        (void);
 
 #endif

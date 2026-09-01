@@ -48,7 +48,7 @@ volatile float mode4_exit_command_match_deg = 80.0f;
 volatile float mode4_brake_target_margin = 5.0f;
 volatile float mode4_brake_ff_fade_span = 40.0f;
 
-/* çºµå‘åŠ›æ¨¡å‹ç³»æ•°ï¼ša = b0*pwm_norm + b1*v + b2*sign(v) + b4ã€‚ */
+/* ×İÏòÁ¦Ä£ĞÍÏµÊı£ºa = b0*pwm_norm + b1*v + b2*sign(v) + b4¡£ */
 static const float mode4_ff_fan_table[8] =
     {0.0f, 2000.0f, 2500.0f, 3000.0f, 3500.0f, 4000.0f, 4500.0f, 5000.0f};
 static const float mode4_ff_model[8][4] = {

@@ -1,6 +1,6 @@
 /**
  * @file car_filter.c
- * @brief æ»¤æ³¢å·¥å…·å®ç°
+ * @brief ÂË²¨¹¤¾ßÊµÏÖ
  */
 
 #include "car_filter.h"
@@ -17,7 +17,7 @@ void car_filter_lpf1_reset(car_filter_lpf1_t *filter, float value)
     filter->ready = 1U;
 }
 
-/* æœ‰çŠ¶æ€ä½é€šï¼šalpha è‡ªåŠ¨ clamp åˆ° [0,1]ï¼Œé¦–æ¬¡è¾“å…¥è‡ªåŠ¨åˆå§‹åŒ– */
+/* ÓĞ×´Ì¬µÍÍ¨£ºalpha ×Ô¶¯ clamp µ½ [0,1]£¬Ê×´ÎÊäÈë×Ô¶¯³õÊ¼»¯ */
 float car_filter_lpf1_update(car_filter_lpf1_t *filter, float input, float alpha)
 {
     if(0 == filter)
@@ -45,7 +45,7 @@ float car_filter_lpf1_update(car_filter_lpf1_t *filter, float input, float alpha
     return filter->value;
 }
 
-/* æ— çŠ¶æ€ä½é€šï¼šå‚æ•°éæ³•æ—¶ç›´é€šè¿”å› inputï¼Œé¿å…é”™è¯¯æ»¤æ³¢ */
+/* ÎŞ×´Ì¬µÍÍ¨£º²ÎÊı·Ç·¨Ê±Ö±Í¨·µ»Ø input£¬±ÜÃâ´íÎóÂË²¨ */
 float car_filter_lpf1_apply(float previous, float input, float dt_s, float tau_s)
 {
     float alpha;
@@ -59,7 +59,7 @@ float car_filter_lpf1_apply(float previous, float input, float dt_s, float tau_s
     return previous + (alpha * (input - previous));
 }
 
-/* ä¸‰å€¼ä¸­å€¼ï¼šä¸‰æ¬¡æ¯”è¾ƒäº¤æ¢æ’åºåå–ä¸­é—´å€¼ */
+/* ÈıÖµÖĞÖµ£ºÈı´Î±È½Ï½»»»ÅÅĞòºóÈ¡ÖĞ¼äÖµ */
 float car_filter_median3f(float a, float b, float c)
 {
     float t;

@@ -4,10 +4,10 @@
 #include <stdint.h>
 
 /*
- * PID ç³»æ•°å‡ä¸ºæ¯é‡‡æ ·å‘¨æœŸçš„ç¦»æ•£ç³»æ•°ï¼š
- *   ä½ç½®å¼ I[k] = I[k-1] + Ki * e[k]
- *   ä½ç½®å¼ D[k] = Kd * (e[k] - e[k-1])
- * è°ƒç”¨æ¥å£ä¸ä¼ å…¥ dtï¼Œæ§åˆ¶å‘¨æœŸå˜åŒ–ååº”é‡æ–°æ•´å®š Kiã€Kdã€‚
+ * PID ÏµÊı¾ùÎªÃ¿²ÉÑùÖÜÆÚµÄÀëÉ¢ÏµÊı£º
+ *   Î»ÖÃÊ½ I[k] = I[k-1] + Ki * e[k]
+ *   Î»ÖÃÊ½ D[k] = Kd * (e[k] - e[k-1])
+ * µ÷ÓÃ½Ó¿Ú²»´«Èë dt£¬¿ØÖÆÖÜÆÚ±ä»¯ºóÓ¦ÖØĞÂÕû¶¨ Ki¡¢Kd¡£
  */
 typedef struct
 {
@@ -33,7 +33,7 @@ typedef struct
     float prev_sp;
     uint8_t initialized;
 
-    /* è°ƒè¯•ä¸é¥æµ‹é‡ã€‚å¢é‡å¼PIDä¸­ P/I/D ä¸ºæœ¬å‘¨æœŸè¾“å‡ºå¢é‡ã€‚ */
+    /* µ÷ÊÔÓëÒ£²âÁ¿¡£ÔöÁ¿Ê½PIDÖĞ P/I/D Îª±¾ÖÜÆÚÊä³öÔöÁ¿¡£ */
     float p_term;
     float i_term;
     float d_term;
@@ -43,37 +43,37 @@ typedef struct
     float sp_rate;
 } pid_t;
 
-/** åˆå§‹åŒ–ç¦»æ•£PIDï¼Œä¸éœ€è¦æ§åˆ¶å‘¨æœŸ dtã€‚ */
+/** ³õÊ¼»¯ÀëÉ¢PID£¬²»ĞèÒª¿ØÖÆÖÜÆÚ dt¡£ */
 void PID_Init(pid_t *pid, float kp, float ki, float kd, float kff,
               float i_limit);
 
-/** é…ç½®æœ€ç»ˆè¾“å‡ºé™å¹…ã€‚ */
+/** ÅäÖÃ×îÖÕÊä³öÏŞ·ù¡£ */
 void PID_SetOutputLimits(pid_t *pid, float output_min, float output_max);
 
-/** é…ç½®ä¸ç›®æ ‡æ–¹å‘ä¸€è‡´çš„é™æ€å‰é¦ˆç»å¯¹å€¼ã€‚ */
+/** ÅäÖÃÓëÄ¿±ê·½ÏòÒ»ÖÂµÄ¾²Ì¬Ç°À¡¾ø¶ÔÖµ¡£ */
 void PID_SetStaticFeedforward(pid_t *pid, float ff_static);
 
-/** é…ç½®ç›®æ ‡å‰é¦ˆæ­»åŒºå’Œå¹³æ»‘è¿‡æ¸¡ä¸Šé™ï¼Œè¿‡æ¸¡ä¸Šé™ä¸å¤§äºæ­»åŒºæ—¶ä»…ä½¿ç”¨æ­»åŒºã€‚ */
+/** ÅäÖÃÄ¿±êÇ°À¡ËÀÇøºÍÆ½»¬¹ı¶ÉÉÏÏŞ£¬¹ı¶ÉÉÏÏŞ²»´óÓÚËÀÇøÊ±½öÊ¹ÓÃËÀÇø¡£ */
 void PID_SetFeedforwardTransition(pid_t *pid, float deadband,
                                   float transition);
 
-/** é…ç½®å¤–éƒ¨åŠ¨æ€å‰é¦ˆï¼Œå¹¶ä¸ç›®æ ‡å‰é¦ˆå…±åŒç»è¿‡æ­»åŒºã€å¹³æ»‘å’Œæœ€ç»ˆè¾“å‡ºé™å¹…ã€‚ */
+/** ÅäÖÃÍâ²¿¶¯Ì¬Ç°À¡£¬²¢ÓëÄ¿±êÇ°À¡¹²Í¬¾­¹ıËÀÇø¡¢Æ½»¬ºÍ×îÖÕÊä³öÏŞ·ù¡£ */
 void PID_SetExternalFeedforward(pid_t *pid, float external_ff);
 
-/** é…ç½®å¢é‡å¼è¾“å‡ºå¢é‡æˆ–å—é™ä½ç½®å¼æœ€ç»ˆPWMæ­¥è¿›ï¼Œéæ­£å€¼è¡¨ç¤ºä¸é™å¹…ã€‚ */
+/** ÅäÖÃÔöÁ¿Ê½Êä³öÔöÁ¿»òÊÜÏŞÎ»ÖÃÊ½×îÖÕPWM²½½ø£¬·ÇÕıÖµ±íÊ¾²»ÏŞ·ù¡£ */
 void PID_SetIncrementLimit(pid_t *pid, float incremental_limit);
 
-/** ä½ç½®å¼ç¦»æ•£PIDï¼šå¯é€šè¿‡å°†æŸé¡¹ç³»æ•°è®¾ä¸º0å®ç°Pã€PIæˆ–PDæ§åˆ¶ã€‚ */
+/** Î»ÖÃÊ½ÀëÉ¢PID£º¿ÉÍ¨¹ı½«Ä³ÏîÏµÊıÉèÎª0ÊµÏÖP¡¢PI»òPD¿ØÖÆ¡£ */
 float PID_Update(pid_t *pid, float setpoint, float measurement);
 
-/** å¢é‡å¼ç¦»æ•£PIDã€‚ */
+/** ÔöÁ¿Ê½ÀëÉ¢PID¡£ */
 float PID_UpdateIncremental(pid_t *pid, float setpoint, float measurement);
 
-/** Mode4/Mode5ä¸“ç”¨çš„ç‹¬ç«‹ç§¯åˆ†ä½ç½®å¼PIDï¼Œå¸¦æœ€ç»ˆPWMæ­¥è¿›å’Œæ¡ä»¶æŠ—é¥±å’Œã€‚ */
+/** Mode4/Mode5×¨ÓÃµÄ¶ÀÁ¢»ı·ÖÎ»ÖÃÊ½PID£¬´ø×îÖÕPWM²½½øºÍÌõ¼ş¿¹±¥ºÍ¡£ */
 float PID_UpdatePositionLimited(pid_t *pid, float setpoint,
                                 float measurement);
 
-/** æ¸…é›¶PIDå†å²çŠ¶æ€å’Œè¾“å‡ºã€‚ */
+/** ÇåÁãPIDÀúÊ·×´Ì¬ºÍÊä³ö¡£ */
 void PID_Reset(pid_t *pid);
 
 #endif /* PID_CORE_H */

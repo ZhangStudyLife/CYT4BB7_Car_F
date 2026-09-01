@@ -1,15 +1,15 @@
 /********************************************************************
- * æ–‡ä»¶å  : IMU_TOP.c
- * æ¨¡å—    : IMU é¡¶å±‚è°ƒåº¦å®ç°
- * ä½ç½®    : Estimation/Attitude
- * æ•°æ®æµ  :
+ * ÎÄ¼şÃû  : IMU_TOP.c
+ * Ä£¿é    : IMU ¶¥²ãµ÷¶ÈÊµÏÖ
+ * Î»ÖÃ    : Estimation/Attitude
+ * Êı¾İÁ÷  :
  *   ICM42688_Get_Data()
- *     -> s_imu_raw_calib_1000hzï¼ˆåŸå§‹å¿«ç…§ï¼Œç»™æ ¡å‡†ç”¨ï¼‰
- *     -> AccelCalibration_ApplySensorCorrectionï¼ˆå®‰è£…æ—‹è½¬+åç½®è¡¥å¿ï¼‰
- *     -> IMUFilter_Updateï¼ˆæŠ—æ··å ->é™·æ³¢->ä½é€šï¼Œè¾“å‡º g_imufilter_1000hzï¼‰
- *     -> IMUCalib_Update / AccelCalibration_Updateï¼ˆæ ¡å‡†çŠ¶æ€æœºï¼‰
- *     -> MahonyAhrs_Updateï¼ˆå§¿æ€å››å…ƒæ•°ï¼‰
- *     -> MahonyAhrs_GetEulerDegreesï¼ˆè¾“å‡ºæ¬§æ‹‰è§’åˆ° g_eulerï¼‰
+ *     -> s_imu_raw_calib_1000hz£¨Ô­Ê¼¿ìÕÕ£¬¸øĞ£×¼ÓÃ£©
+ *     -> AccelCalibration_ApplySensorCorrection£¨°²×°Ğı×ª+Æ«ÖÃ²¹³¥£©
+ *     -> IMUFilter_Update£¨¿¹»ìµş->Ïİ²¨->µÍÍ¨£¬Êä³ö g_imufilter_1000hz£©
+ *     -> IMUCalib_Update / AccelCalibration_Update£¨Ğ£×¼×´Ì¬»ú£©
+ *     -> MahonyAhrs_Update£¨×ËÌ¬ËÄÔªÊı£©
+ *     -> MahonyAhrs_GetEulerDegrees£¨Êä³öÅ·À­½Çµ½ g_euler£©
  ********************************************************************/
 
 #include "IMU_TOP.h"
@@ -17,13 +17,13 @@
 #define IMU_RUNTIME_FAULT_THRESHOLD  (5U)
 #define IMU_RUNTIME_RECOVERY_SAMPLES (20U)
 
-/* ======================== IMU å…¨å±€çŠ¶æ€ ======================== */
-MahonyAhrs_t g_mahony_ahrs;       /* Mahony å§¿æ€è§£ç®—å™¨çŠ¶æ€ */
-MahonyAhrs_Euler_t g_euler;       /* å½“å‰å§¿æ€æ¬§æ‹‰è§’ï¼ˆå•ä½: åº¦ï¼‰ */
-uint8 g_imu_ready = 0U;           /* 1=IMU åˆå§‹åŒ–ä¸æš–æœºå®Œæˆï¼›å¥åº·çŠ¶æ€è§ IMU_RuntimeHealthy */
-static imudata_t s_imu_raw_calib_1000hz = {0}; /* å½“å‰å¸§åŸå§‹ IMU å¿«ç…§ï¼Œä¾›æ ¡å‡†é“¾è¯»å– */
-static uint8 s_imu_initializing = 0U;           /* 1=æ­£åœ¨åˆå§‹åŒ–ä¸­ï¼ˆæš–æœºé˜¶æ®µï¼‰ */
-/* ======================== æœ¬åœ°å·¥å…·å‡½æ•° ======================== */
+/* ======================== IMU È«¾Ö×´Ì¬ ======================== */
+MahonyAhrs_t g_mahony_ahrs;       /* Mahony ×ËÌ¬½âËãÆ÷×´Ì¬ */
+MahonyAhrs_Euler_t g_euler;       /* µ±Ç°×ËÌ¬Å·À­½Ç£¨µ¥Î»: ¶È£© */
+uint8 g_imu_ready = 0U;           /* 1=IMU ³õÊ¼»¯ÓëÅ¯»úÍê³É£»½¡¿µ×´Ì¬¼û IMU_RuntimeHealthy */
+static imudata_t s_imu_raw_calib_1000hz = {0}; /* µ±Ç°Ö¡Ô­Ê¼ IMU ¿ìÕÕ£¬¹©Ğ£×¼Á´¶ÁÈ¡ */
+static uint8 s_imu_initializing = 0U;           /* 1=ÕıÔÚ³õÊ¼»¯ÖĞ£¨Å¯»ú½×¶Î£© */
+/* ======================== ±¾µØ¹¤¾ßº¯Êı ======================== */
 volatile uint32 g_imu_update_count = 0U;
 volatile uint32 g_imu_read_error_count = 0U;
 volatile uint32 g_imu_processing_error_count = 0U;
@@ -99,7 +99,7 @@ static void IMU_RecordProcessingFailure(void)
 {
     g_imu_processing_error_count++;
     IMU_RecordFrameFailure();
-    /* éæœ‰é™å€¼æ„å‘³ç€è®¡ç®—é“¾å·²å¤±æ•ˆï¼Œä¸ç­‰å¾…è¿ç»­ 5 å¸§ï¼Œç«‹å³ç¦æ­¢è¾“å‡ºã€‚ */
+    /* ·ÇÓĞÏŞÖµÒâÎ¶×Å¼ÆËãÁ´ÒÑÊ§Ğ§£¬²»µÈ´ıÁ¬Ğø 5 Ö¡£¬Á¢¼´½ûÖ¹Êä³ö¡£ */
     g_imu_runtime_fault = 1U;
 }
 
@@ -126,62 +126,62 @@ static void IMU_RecordReadSuccess(void)
 
 static uint8 IMU_IsFiniteFloat(float value)
 {
-	if (value != value)
-	{
-		return 0U;
-	}
+    if (value != value)
+    {
+        return 0U;
+    }
 
-	if ((value > 1000000.0f) || (value < -1000000.0f))
-	{
-		return 0U;
-	}
+    if ((value > 1000000.0f) || (value < -1000000.0f))
+    {
+        return 0U;
+    }
 
-	return 1U;
+    return 1U;
 }
 
 /*
- * å‡½æ•°åŠŸèƒ½: è¯»å–å½“å‰ 1kHz å‘¨æœŸå†…ä¾›æ ¡å‡†ä½¿ç”¨çš„åŸå§‹ IMU ç‰©ç†é‡å¿«ç…§ã€‚
- * è¾“å…¥å‚æ•°:
- *   gx, gy, gz - è¾“å‡ºé™€èºä»ªåŸå§‹è§’é€Ÿåº¦ï¼Œå•ä½ dpsï¼›å·²åšç¬¦å·æ˜ å°„å¹¶æ‰£é™¤é™€èºä»ªé›¶å
- *   ax, ay, az - è¾“å‡ºåŠ é€Ÿåº¦è®¡åŸå§‹æ¯”åŠ›ï¼Œå•ä½ gï¼›ä»…åšé‡ç¨‹æ¢ç®—ä¸ç¬¦å·æ˜ å°„
- * è¾“å‡ºå‚æ•°/è¿”å›å€¼:
- *   é€šè¿‡æŒ‡é’ˆè¿”å›å½“å‰å¸§åŸå§‹ IMU å¿«ç…§ï¼›ç©ºæŒ‡é’ˆä¼šè¢«å¿½ç•¥
+ * º¯Êı¹¦ÄÜ: ¶ÁÈ¡µ±Ç° 1kHz ÖÜÆÚÄÚ¹©Ğ£×¼Ê¹ÓÃµÄÔ­Ê¼ IMU ÎïÀíÁ¿¿ìÕÕ¡£
+ * ÊäÈë²ÎÊı:
+ *   gx, gy, gz - Êä³öÍÓÂİÒÇÔ­Ê¼½ÇËÙ¶È£¬µ¥Î» dps£»ÒÑ×ö·ûºÅÓ³Éä²¢¿Û³ıÍÓÂİÒÇÁãÆ«
+ *   ax, ay, az - Êä³ö¼ÓËÙ¶È¼ÆÔ­Ê¼±ÈÁ¦£¬µ¥Î» g£»½ö×öÁ¿³Ì»»ËãÓë·ûºÅÓ³Éä
+ * Êä³ö²ÎÊı/·µ»ØÖµ:
+ *   Í¨¹ıÖ¸Õë·µ»Øµ±Ç°Ö¡Ô­Ê¼ IMU ¿ìÕÕ£»¿ÕÖ¸Õë»á±»ºöÂÔ
  */
 void IMU_GetRawSampleForCalibration(float *gx, float *gy, float *gz,
                                     float *ax, float *ay, float *az)
 {
-	imudata_t sample;
-	uint32 sequence;
+    imudata_t sample;
+    uint32 sequence;
 
-	if (IMU_CopyRawSample(&sample, &sequence) == 0U)
-	{
-		return;
-	}
+    if (IMU_CopyRawSample(&sample, &sequence) == 0U)
+    {
+        return;
+    }
 
-	if (gx != NULL)
-	{
-		*gx = sample.gyrox;
-	}
-	if (gy != NULL)
-	{
-		*gy = sample.gyroy;
-	}
-	if (gz != NULL)
-	{
-		*gz = sample.gyroz;
-	}
-	if (ax != NULL)
-	{
-		*ax = sample.accx;
-	}
-	if (ay != NULL)
-	{
-		*ay = sample.accy;
-	}
-	if (az != NULL)
-	{
-		*az = sample.accz;
-	}
+    if (gx != NULL)
+    {
+        *gx = sample.gyrox;
+    }
+    if (gy != NULL)
+    {
+        *gy = sample.gyroy;
+    }
+    if (gz != NULL)
+    {
+        *gz = sample.gyroz;
+    }
+    if (ax != NULL)
+    {
+        *ax = sample.accx;
+    }
+    if (ay != NULL)
+    {
+        *ay = sample.accy;
+    }
+    if (az != NULL)
+    {
+        *az = sample.accz;
+    }
 }
 
 uint8 IMU_GetRealtimeSnapshot(imu_realtime_snapshot_t *snapshot)
@@ -224,310 +224,310 @@ uint8 IMU_RuntimeHealthy(void)
 }
 
 /*
- * ä¸Šç”µè‡ªæ£€ï¼šè¯»å–çŸ­çª—å£ï¼ˆ200 å¸§ï¼‰æ•°æ®åšåŸºç¡€å¥åº·æ£€æŸ¥
- * æ£€æŸ¥é¡¹ï¼š
- *   1) ä¼ æ„Ÿå™¨æ•°æ®æ˜¯å¦æœ‰é™ï¼ˆæ—  NaN/å¼‚å¸¸å¤§å€¼ï¼‰
- *   2) é™æ­¢æ—¶é™€èºä»ªå¹³å‡æ¨¡é•¿æ˜¯å¦ < 8 dps
- *   3) åŠ é€Ÿåº¦æ¨¡é•¿å‡å€¼æ˜¯å¦åœ¨ 0.75~1.25g èŒƒå›´å†…
- * è¿”å›å€¼ï¼š1=é€šè¿‡ï¼ˆå¯å®‰å…¨ä½¿ç”¨ï¼‰ï¼Œ0=å¤±è´¥ï¼ˆä¼ æ„Ÿå™¨å¼‚å¸¸ï¼Œæ­»å¾ªç¯ï¼‰
- * è°ƒç”¨è¦æ±‚ï¼šè°ƒç”¨æ—¶éœ€é™æ­¢æ”¾ç½®
+ * ÉÏµç×Ô¼ì£º¶ÁÈ¡¶Ì´°¿Ú£¨200 Ö¡£©Êı¾İ×ö»ù´¡½¡¿µ¼ì²é
+ * ¼ì²éÏî£º
+ *   1) ´«¸ĞÆ÷Êı¾İÊÇ·ñÓĞÏŞ£¨ÎŞ NaN/Òì³£´óÖµ£©
+ *   2) ¾²Ö¹Ê±ÍÓÂİÒÇÆ½¾ùÄ£³¤ÊÇ·ñ < 8 dps
+ *   3) ¼ÓËÙ¶ÈÄ£³¤¾ùÖµÊÇ·ñÔÚ 0.75~1.25g ·¶Î§ÄÚ
+ * ·µ»ØÖµ£º1=Í¨¹ı£¨¿É°²È«Ê¹ÓÃ£©£¬0=Ê§°Ü£¨´«¸ĞÆ÷Òì³££¬ËÀÑ­»·£©
+ * µ÷ÓÃÒªÇó£ºµ÷ÓÃÊ±Ğè¾²Ö¹·ÅÖÃ
  */
 static uint8 IMU_Startup_SelfCheck(void)
 {
-	uint32 i;
-	float gyro_abs_sum = 0.0f;
-	float acc_mag_sum = 0.0f;
+    uint32 i;
+    float gyro_abs_sum = 0.0f;
+    float acc_mag_sum = 0.0f;
 
-	for (i = 0U; i < IMU_SELFTEST_SAMPLE_COUNT; i++)
-	{
-		float gyro_abs;
-		float acc_mag;
+    for (i = 0U; i < IMU_SELFTEST_SAMPLE_COUNT; i++)
+    {
+        float gyro_abs;
+        float acc_mag;
 
-		if (ICM42688_Get_Data() == 0U)
-		{
-			return 0U;
-		}
+        if (ICM42688_Get_Data() == 0U)
+        {
+            return 0U;
+        }
 
-		if ((0U == IMU_IsFiniteFloat(ICM42688.gyro_x)) ||
-			(0U == IMU_IsFiniteFloat(ICM42688.gyro_y)) ||
-			(0U == IMU_IsFiniteFloat(ICM42688.gyro_z)) ||
-			(0U == IMU_IsFiniteFloat(ICM42688.acc_x)) ||
-			(0U == IMU_IsFiniteFloat(ICM42688.acc_y)) ||
-			(0U == IMU_IsFiniteFloat(ICM42688.acc_z)))
-		{
-			return 0U;
-		}
+        if ((0U == IMU_IsFiniteFloat(ICM42688.gyro_x)) ||
+            (0U == IMU_IsFiniteFloat(ICM42688.gyro_y)) ||
+            (0U == IMU_IsFiniteFloat(ICM42688.gyro_z)) ||
+            (0U == IMU_IsFiniteFloat(ICM42688.acc_x)) ||
+            (0U == IMU_IsFiniteFloat(ICM42688.acc_y)) ||
+            (0U == IMU_IsFiniteFloat(ICM42688.acc_z)))
+        {
+            return 0U;
+        }
 
-		gyro_abs = sqrtf(ICM42688.gyro_x * ICM42688.gyro_x +
-						 ICM42688.gyro_y * ICM42688.gyro_y +
-						 ICM42688.gyro_z * ICM42688.gyro_z);
+        gyro_abs = sqrtf(ICM42688.gyro_x * ICM42688.gyro_x +
+                         ICM42688.gyro_y * ICM42688.gyro_y +
+                         ICM42688.gyro_z * ICM42688.gyro_z);
 
-		acc_mag = sqrtf(ICM42688.acc_x * ICM42688.acc_x +
-					   ICM42688.acc_y * ICM42688.acc_y +
-					   ICM42688.acc_z * ICM42688.acc_z);
+        acc_mag = sqrtf(ICM42688.acc_x * ICM42688.acc_x +
+                       ICM42688.acc_y * ICM42688.acc_y +
+                       ICM42688.acc_z * ICM42688.acc_z);
 
-		gyro_abs_sum += gyro_abs;
-		acc_mag_sum += acc_mag;
+        gyro_abs_sum += gyro_abs;
+        acc_mag_sum += acc_mag;
 
-		system_delay_us(ICM42688_SAMPLE_INTERVAL_US);
-	}
+        system_delay_us(ICM42688_SAMPLE_INTERVAL_US);
+    }
 
-	gyro_abs_sum /= (float)IMU_SELFTEST_SAMPLE_COUNT;
-	acc_mag_sum /= (float)IMU_SELFTEST_SAMPLE_COUNT;
+    gyro_abs_sum /= (float)IMU_SELFTEST_SAMPLE_COUNT;
+    acc_mag_sum /= (float)IMU_SELFTEST_SAMPLE_COUNT;
 
-	if (gyro_abs_sum > IMU_SELFTEST_GYRO_MEAN_MAX_DPS)
-	{
-		return 0U;
-	}
+    if (gyro_abs_sum > IMU_SELFTEST_GYRO_MEAN_MAX_DPS)
+    {
+        return 0U;
+    }
 
-	if ((acc_mag_sum < IMU_SELFTEST_ACC_MIN_G) || (acc_mag_sum > IMU_SELFTEST_ACC_MAX_G))
-	{
-		return 0U;
-	}
+    if ((acc_mag_sum < IMU_SELFTEST_ACC_MIN_G) || (acc_mag_sum > IMU_SELFTEST_ACC_MAX_G))
+    {
+        return 0U;
+    }
 
-	return 1U;
+    return 1U;
 }
 
-/* ======================== IMU åˆå§‹åŒ– ======================== */
-/* è°ƒç”¨å IMU è¿›å…¥å°±ç»ªçŠ¶æ€ï¼ˆg_imu_ready=1ï¼‰ï¼Œå¯ä»¥å¼€å§‹ 1kHz æ›´æ–° */
+/* ======================== IMU ³õÊ¼»¯ ======================== */
+/* µ÷ÓÃºó IMU ½øÈë¾ÍĞ÷×´Ì¬£¨g_imu_ready=1£©£¬¿ÉÒÔ¿ªÊ¼ 1kHz ¸üĞÂ */
 void IMU_Init_All(void)
 {
-	uint32 i;
-	uint8 startup_ok;
+    uint32 i;
+    uint8 startup_ok;
 
-	g_imu_ready = 0U;
-	s_imu_initializing = 1U;
-	s_imu_raw_calib_1000hz = (imudata_t){0};
-	g_imu_update_count = 0U;
-	g_imu_read_error_count = 0U;
-	g_imu_processing_error_count = 0U;
-	g_imu_calibration_sample_drop_count = 0U;
-	g_imu_consecutive_read_error_count = 0U;
-	g_imu_max_consecutive_read_error_count = 0U;
-	g_imu_runtime_fault = 0U;
-	g_imu_startup_selftest_fault = 0U;
-	s_imu_raw_sequence = 0U;
-	s_imu_calibration_serviced_sequence = 0U;
-	s_imu_recovery_success_count = 0U;
-	s_imu_snapshot_sequence = 0U;
-	s_imu_realtime_snapshot = (imu_realtime_snapshot_t){0};
+    g_imu_ready = 0U;
+    s_imu_initializing = 1U;
+    s_imu_raw_calib_1000hz = (imudata_t){0};
+    g_imu_update_count = 0U;
+    g_imu_read_error_count = 0U;
+    g_imu_processing_error_count = 0U;
+    g_imu_calibration_sample_drop_count = 0U;
+    g_imu_consecutive_read_error_count = 0U;
+    g_imu_max_consecutive_read_error_count = 0U;
+    g_imu_runtime_fault = 0U;
+    g_imu_startup_selftest_fault = 0U;
+    s_imu_raw_sequence = 0U;
+    s_imu_calibration_serviced_sequence = 0U;
+    s_imu_recovery_success_count = 0U;
+    s_imu_snapshot_sequence = 0U;
+    s_imu_realtime_snapshot = (imu_realtime_snapshot_t){0};
 
-	/* æ­¥éª¤1: åˆå§‹åŒ– ICM42688 é©±åŠ¨ï¼ˆSPI é€šä¿¡ã€é‡ç¨‹é…ç½®ç­‰ï¼‰ */
-	ICM42688_Init(&ICM42688_CONFIG);
+    /* ²½Öè1: ³õÊ¼»¯ ICM42688 Çı¶¯£¨SPI Í¨ĞÅ¡¢Á¿³ÌÅäÖÃµÈ£© */
+    ICM42688_Init(&ICM42688_CONFIG);
 
-	/* æ­¥éª¤2: ä¸Šç”µè‡ªæ£€ï¼ˆå¿…é¡»é™æ­¢æ”¾ç½®ï¼Œå¤±è´¥åˆ™æ­»å¾ªç¯ï¼‰ */
-	startup_ok = IMU_Startup_SelfCheck();
-	g_imu_startup_selftest_fault = (startup_ok == 0U) ? 1U : 0U;
-	if (startup_ok == 0U)
-	{
-		printf("IMU startup self-check failed.\r\n");
-	}
+    /* ²½Öè2: ÉÏµç×Ô¼ì£¨±ØĞë¾²Ö¹·ÅÖÃ£¬Ê§°ÜÔòËÀÑ­»·£© */
+    startup_ok = IMU_Startup_SelfCheck();
+    g_imu_startup_selftest_fault = (startup_ok == 0U) ? 1U : 0U;
+    if (startup_ok == 0U)
+    {
+        printf("IMU startup self-check failed.\r\n");
+    }
 
-	/* æ­¥éª¤3: åˆå§‹åŒ–ä¸Šå±‚æ»¤æ³¢ä¸å§¿æ€è§£ç®—å™¨ */
-	IMUFilter_Init();
-	MahonyAhrs_Init(&g_mahony_ahrs);
-	g_euler.roll = 0.0f;
-	g_euler.pitch = 0.0f;
-	g_euler.yaw = 0.0f;
-	g_euler.sin_roll = 0.0f;
-	g_euler.cos_roll = 1.0f;
-	g_euler.sin_pitch = 0.0f;
-	g_euler.cos_pitch = 1.0f;
+    /* ²½Öè3: ³õÊ¼»¯ÉÏ²ãÂË²¨Óë×ËÌ¬½âËãÆ÷ */
+    IMUFilter_Init();
+    MahonyAhrs_Init(&g_mahony_ahrs);
+    g_euler.roll = 0.0f;
+    g_euler.pitch = 0.0f;
+    g_euler.yaw = 0.0f;
+    g_euler.sin_roll = 0.0f;
+    g_euler.cos_roll = 1.0f;
+    g_euler.sin_pitch = 0.0f;
+    g_euler.cos_pitch = 1.0f;
 
-	/* æ­¥éª¤4: æš–æœºï¼Œä¸¢å¼ƒå‰ 1000 å¸§ï¼ˆçº¦ 1sï¼‰ï¼Œè®©æ»¤æ³¢å™¨å†…éƒ¨çŠ¶æ€æ”¶æ•› */
-	for (i = 0U; i < IMU_WARMUP_DISCARD_SAMPLES; i++)
-	{
-		IMU_Update_1000HZ();
-		system_delay_us(ICM42688_SAMPLE_INTERVAL_US);
-	}
+    /* ²½Öè4: Å¯»ú£¬¶ªÆúÇ° 1000 Ö¡£¨Ô¼ 1s£©£¬ÈÃÂË²¨Æ÷ÄÚ²¿×´Ì¬ÊÕÁ² */
+    for (i = 0U; i < IMU_WARMUP_DISCARD_SAMPLES; i++)
+    {
+        IMU_Update_1000HZ();
+        system_delay_us(ICM42688_SAMPLE_INTERVAL_US);
+    }
 
-	g_imu_ready = 1U;
-	s_imu_initializing = 0U;
-	s_imu_calibration_serviced_sequence = s_imu_raw_sequence;
-	IMU_PublishRealtimeSnapshot();
+    g_imu_ready = 1U;
+    s_imu_initializing = 0U;
+    s_imu_calibration_serviced_sequence = s_imu_raw_sequence;
+    IMU_PublishRealtimeSnapshot();
 }
 
-/* 1kHz ä¸»æ›´æ–°ï¼Œç”±å®šæ—¶å™¨ä¸­æ–­æˆ–ä¸»å¾ªç¯è°ƒç”¨ */
+/* 1kHz Ö÷¸üĞÂ£¬ÓÉ¶¨Ê±Æ÷ÖĞ¶Ï»òÖ÷Ñ­»·µ÷ÓÃ */
 uint8 IMU_Update_1000HZ(void)
 {
-	const float dt_s = IMU_UPDATE_DT_SEC;
-	float ahrs_gx;
-	float ahrs_gy;
-	float ahrs_gz;
-	float ahrs_ax;
-	float ahrs_ay;
-	float ahrs_az;
-	MahonyAhrs_Euler_t new_euler;
-	if ((0U == g_imu_ready) && (0U == s_imu_initializing))
-	{
-		return 0U;
-	}
-	/* 1. åŸå§‹æ•°æ® (gyroå·²å»é›¶å) */
-	if (ICM42688_Get_Data() == 0U)
-	{
-		IMU_RecordReadFailure();
-		return 0U;
-	}
+    const float dt_s = IMU_UPDATE_DT_SEC;
+    float ahrs_gx;
+    float ahrs_gy;
+    float ahrs_gz;
+    float ahrs_ax;
+    float ahrs_ay;
+    float ahrs_az;
+    MahonyAhrs_Euler_t new_euler;
+    if ((0U == g_imu_ready) && (0U == s_imu_initializing))
+    {
+        return 0U;
+    }
+    /* 1. Ô­Ê¼Êı¾İ (gyroÒÑÈ¥ÁãÆ«) */
+    if (ICM42688_Get_Data() == 0U)
+    {
+        IMU_RecordReadFailure();
+        return 0U;
+    }
 
-	/* ç¼“å­˜å½“å‰å¸§åŸå§‹ IMU ç‰©ç†é‡ï¼Œä¾›æ ¡å‡†æµç¨‹ç›´æ¥è¯»å– */
-	IMU_PublishRawSample();
+    /* »º´æµ±Ç°Ö¡Ô­Ê¼ IMU ÎïÀíÁ¿£¬¹©Ğ£×¼Á÷³ÌÖ±½Ó¶ÁÈ¡ */
+    IMU_PublishRawSample();
 
-	/* 2. åŠ é€Ÿåº¦è®¡æ ¡å‡†å‰ç½®ï¼ˆä¼ æ„Ÿå™¨åæ ‡ç³»ï¼‰ */
-	float cal_ax = ICM42688.acc_x;
-	float cal_ay = ICM42688.acc_y;
-	float cal_az = ICM42688.acc_z;
-	AccelCalibration_ApplySensorCorrection(&cal_ax, &cal_ay, &cal_az);
+    /* 2. ¼ÓËÙ¶È¼ÆĞ£×¼Ç°ÖÃ£¨´«¸ĞÆ÷×ø±êÏµ£© */
+    float cal_ax = ICM42688.acc_x;
+    float cal_ay = ICM42688.acc_y;
+    float cal_az = ICM42688.acc_z;
+    AccelCalibration_ApplySensorCorrection(&cal_ax, &cal_ay, &cal_az);
 
-	/* 3. æ ¡å‡†åæ•°æ®é€å…¥æ»¤æ³¢å™¨ */
-	IMUFilter_Update(ICM42688.gyro_x, ICM42688.gyro_y, ICM42688.gyro_z,
-	                 cal_ax, cal_ay, cal_az);
+    /* 3. Ğ£×¼ºóÊı¾İËÍÈëÂË²¨Æ÷ */
+    IMUFilter_Update(ICM42688.gyro_x, ICM42688.gyro_y, ICM42688.gyro_z,
+                     cal_ax, cal_ay, cal_az);
 
-	/* 4. ä»…ä¿ç•™å›ºå®šè€—æ—¶çš„å®æ—¶åŠ é€Ÿåº¦å¤„ç†ï¼›æ ¡å‡†çŠ¶æ€æœºç”±ä¸»å¾ªç¯æœåŠ¡ã€‚ */
-	AccelCalibration_Update_1000HZ();
+    /* 4. ½ö±£Áô¹Ì¶¨ºÄÊ±µÄÊµÊ±¼ÓËÙ¶È´¦Àí£»Ğ£×¼×´Ì¬»úÓÉÖ÷Ñ­»··şÎñ¡£ */
+    AccelCalibration_Update_1000HZ();
 
-	/* 5. å§¿æ€è§£ç®—ç»Ÿä¸€ä½¿ç”¨ 1kHz æ»¤æ³¢ IMU è¾“å‡º */
-	ahrs_gx = g_imufilter_1000hz.gyrox;
-	ahrs_gy = g_imufilter_1000hz.gyroy;
-	ahrs_gz = g_imufilter_1000hz.gyroz;
-	ahrs_ax = g_imufilter_1000hz.accx;
-	ahrs_ay = g_imufilter_1000hz.accy;
-	ahrs_az = g_imufilter_1000hz.accz;
+    /* 5. ×ËÌ¬½âËãÍ³Ò»Ê¹ÓÃ 1kHz ÂË²¨ IMU Êä³ö */
+    ahrs_gx = g_imufilter_1000hz.gyrox;
+    ahrs_gy = g_imufilter_1000hz.gyroy;
+    ahrs_gz = g_imufilter_1000hz.gyroz;
+    ahrs_ax = g_imufilter_1000hz.accx;
+    ahrs_ay = g_imufilter_1000hz.accy;
+    ahrs_az = g_imufilter_1000hz.accz;
 
-	if ((0U == IMU_IsFiniteFloat(ahrs_gx)) ||
-		(0U == IMU_IsFiniteFloat(ahrs_gy)) ||
-		(0U == IMU_IsFiniteFloat(ahrs_gz)) ||
-		(0U == IMU_IsFiniteFloat(ahrs_ax)) ||
-		(0U == IMU_IsFiniteFloat(ahrs_ay)) ||
-		(0U == IMU_IsFiniteFloat(ahrs_az)))
-	{
-		IMU_RecordProcessingFailure();
-		return 0U;
-	}
+    if ((0U == IMU_IsFiniteFloat(ahrs_gx)) ||
+        (0U == IMU_IsFiniteFloat(ahrs_gy)) ||
+        (0U == IMU_IsFiniteFloat(ahrs_gz)) ||
+        (0U == IMU_IsFiniteFloat(ahrs_ax)) ||
+        (0U == IMU_IsFiniteFloat(ahrs_ay)) ||
+        (0U == IMU_IsFiniteFloat(ahrs_az)))
+    {
+        IMU_RecordProcessingFailure();
+        return 0U;
+    }
 
-	MahonyAhrs_Update(
-		&g_mahony_ahrs,
-		ahrs_gx, ahrs_gy, ahrs_gz,
-		ahrs_ax, ahrs_ay, ahrs_az,
-		dt_s);
+    MahonyAhrs_Update(
+        &g_mahony_ahrs,
+        ahrs_gx, ahrs_gy, ahrs_gz,
+        ahrs_ax, ahrs_ay, ahrs_az,
+        dt_s);
 
-	/* æ­¥éª¤5: ä»å››å…ƒæ•°æå–æ¬§æ‹‰è§’ï¼ˆå•ä½: åº¦ï¼‰ï¼Œç¼“å­˜åˆ° g_euler ä¾›å…¨å±€ä½¿ç”¨ */
-	new_euler = MahonyAhrs_GetEulerDegrees(&g_mahony_ahrs);
-	if ((0U == IMU_IsFiniteFloat(new_euler.roll)) ||
-		(0U == IMU_IsFiniteFloat(new_euler.pitch)) ||
-		(0U == IMU_IsFiniteFloat(new_euler.yaw)) ||
-		(0U == IMU_IsFiniteFloat(new_euler.sin_roll)) ||
-		(0U == IMU_IsFiniteFloat(new_euler.cos_roll)) ||
-		(0U == IMU_IsFiniteFloat(new_euler.sin_pitch)) ||
-		(0U == IMU_IsFiniteFloat(new_euler.cos_pitch)))
-	{
-		IMU_RecordProcessingFailure();
-		return 0U;
-	}
-	g_euler = new_euler;
-	g_imu_update_count++;
-	IMU_RecordReadSuccess();
-	IMU_PublishRealtimeSnapshot();
+    /* ²½Öè5: ´ÓËÄÔªÊıÌáÈ¡Å·À­½Ç£¨µ¥Î»: ¶È£©£¬»º´æµ½ g_euler ¹©È«¾ÖÊ¹ÓÃ */
+    new_euler = MahonyAhrs_GetEulerDegrees(&g_mahony_ahrs);
+    if ((0U == IMU_IsFiniteFloat(new_euler.roll)) ||
+        (0U == IMU_IsFiniteFloat(new_euler.pitch)) ||
+        (0U == IMU_IsFiniteFloat(new_euler.yaw)) ||
+        (0U == IMU_IsFiniteFloat(new_euler.sin_roll)) ||
+        (0U == IMU_IsFiniteFloat(new_euler.cos_roll)) ||
+        (0U == IMU_IsFiniteFloat(new_euler.sin_pitch)) ||
+        (0U == IMU_IsFiniteFloat(new_euler.cos_pitch)))
+    {
+        IMU_RecordProcessingFailure();
+        return 0U;
+    }
+    g_euler = new_euler;
+    g_imu_update_count++;
+    IMU_RecordReadSuccess();
+    IMU_PublishRealtimeSnapshot();
 
-	// wifi_justfloat(tick_1000us_cnt,ICM42688.gyro_x, ICM42688.gyro_y, ICM42688.gyro_z,
-	// 				ICM42688.acc_x, ICM42688.acc_y, ICM42688.acc_z,
-	// 				g_imufilter_1000hz.gyrox, g_imufilter_1000hz.gyroy, g_imufilter_1000hz.gyroz,
-	// 				g_imufilter_1000hz.accx, g_imufilter_1000hz.accy, g_imufilter_1000hz.accz,
-	// 				g_euler.roll, g_euler.pitch, g_euler.yaw);
+    // wifi_justfloat(tick_1000us_cnt,ICM42688.gyro_x, ICM42688.gyro_y, ICM42688.gyro_z,
+    // 				ICM42688.acc_x, ICM42688.acc_y, ICM42688.acc_z,
+    // 				g_imufilter_1000hz.gyrox, g_imufilter_1000hz.gyroy, g_imufilter_1000hz.gyroz,
+    // 				g_imufilter_1000hz.accx, g_imufilter_1000hz.accy, g_imufilter_1000hz.accz,
+    // 				g_euler.roll, g_euler.pitch, g_euler.yaw);
 
-	return 1U;
+    return 1U;
 }
 
 static uint8 IMU_CopyRawSample(imudata_t *sample, uint32 *sequence)
 {
-	uint32 sequence_after;
-	uint32 sequence_before;
+    uint32 sequence_after;
+    uint32 sequence_before;
 
-	if ((sample == NULL) || (sequence == NULL))
-	{
-		return 0U;
-	}
+    if ((sample == NULL) || (sequence == NULL))
+    {
+        return 0U;
+    }
 
-	for (;;)
-	{
-		sequence_before = s_imu_raw_sequence;
-		if ((sequence_before & 1U) != 0U)
-		{
-			continue;
-		}
-		__DMB();
-		*sample = s_imu_raw_calib_1000hz;
-		__DMB();
-		sequence_after = s_imu_raw_sequence;
-		if ((sequence_before == sequence_after) &&
-		    ((sequence_after & 1U) == 0U))
-		{
-			*sequence = sequence_after;
-			return 1U;
-		}
-	}
+    for (;;)
+    {
+        sequence_before = s_imu_raw_sequence;
+        if ((sequence_before & 1U) != 0U)
+        {
+            continue;
+        }
+        __DMB();
+        *sample = s_imu_raw_calib_1000hz;
+        __DMB();
+        sequence_after = s_imu_raw_sequence;
+        if ((sequence_before == sequence_after) &&
+            ((sequence_after & 1U) == 0U))
+        {
+            *sequence = sequence_after;
+            return 1U;
+        }
+    }
 }
 
 void IMU_ServicePoll(void)
 {
-	imudata_t sample;
-	uint32 published_sequence;
-	uint32 sequence_delta;
+    imudata_t sample;
+    uint32 published_sequence;
+    uint32 sequence_delta;
 
-	if (g_imu_ready == 0U)
-	{
-		return;
-	}
+    if (g_imu_ready == 0U)
+    {
+        return;
+    }
 
-	if (IMU_CopyRawSample(&sample, &published_sequence) == 0U)
-	{
-		return;
-	}
+    if (IMU_CopyRawSample(&sample, &published_sequence) == 0U)
+    {
+        return;
+    }
 
-	if (published_sequence == s_imu_calibration_serviced_sequence)
-	{
-		return;
-	}
+    if (published_sequence == s_imu_calibration_serviced_sequence)
+    {
+        return;
+    }
 
-	sequence_delta = published_sequence - s_imu_calibration_serviced_sequence;
-	if (sequence_delta > 2U)
-	{
-		g_imu_calibration_sample_drop_count += (sequence_delta / 2U) - 1U;
-	}
+    sequence_delta = published_sequence - s_imu_calibration_serviced_sequence;
+    if (sequence_delta > 2U)
+    {
+        g_imu_calibration_sample_drop_count += (sequence_delta / 2U) - 1U;
+    }
 
-	IMUCalib_Update_1000HZ(&sample);
-	/* åªç¡®è®¤è¿›å…¥æœ¬æ¬¡å¤„ç†å‰æ•è·çš„åºå·ï¼›å¤„ç†ä¸­åˆ°è¾¾çš„æ–°å¸§ç•™ç»™ä¸‹æ¬¡è½®è¯¢ã€‚ */
-	s_imu_calibration_serviced_sequence = published_sequence;
+    IMUCalib_Update_1000HZ(&sample);
+    /* Ö»È·ÈÏ½øÈë±¾´Î´¦ÀíÇ°²¶»ñµÄĞòºÅ£»´¦ÀíÖĞµ½´ïµÄĞÂÖ¡Áô¸øÏÂ´ÎÂÖÑ¯¡£ */
+    s_imu_calibration_serviced_sequence = published_sequence;
 }
 
-/* é‡ç½® yaw ä¸º 0ï¼Œä¿ç•™å½“å‰ roll/pitch ä¸å˜
- * å®‰å…¨å½±å“ï¼šæ”¹å˜èˆªå‘åŸºå‡†ï¼Œé‡Œç¨‹è®¡çš„ yaw æŠ•å½±ä¹Ÿä¼šåŸºäºæ–°é›¶ç‚¹
- * ä½¿ç”¨åœºæ™¯ï¼šå¯åŠ¨æ—¶/æ‰‹åŠ¨æ ¡å‡†èˆªå‘ */
+/* ÖØÖÃ yaw Îª 0£¬±£Áôµ±Ç° roll/pitch ²»±ä
+ * °²È«Ó°Ïì£º¸Ä±äº½Ïò»ù×¼£¬Àï³Ì¼ÆµÄ yaw Í¶Ó°Ò²»á»ùÓÚĞÂÁãµã
+ * Ê¹ÓÃ³¡¾°£ºÆô¶¯Ê±/ÊÖ¶¯Ğ£×¼º½Ïò */
 void IMU_ResetYaw(void)
 {
-	float roll_rad;
-	float pitch_rad;
-	float cr;
-	float sr;
-	float cp;
-	float sp;
+    float roll_rad;
+    float pitch_rad;
+    float cr;
+    float sr;
+    float cp;
+    float sp;
 
-	roll_rad = IMU_IsFiniteFloat(g_euler.roll) ? (g_euler.roll * IMU_DEG_TO_RAD) : 0.0f;
-	pitch_rad = IMU_IsFiniteFloat(g_euler.pitch) ? (g_euler.pitch * IMU_DEG_TO_RAD) : 0.0f;
+    roll_rad = IMU_IsFiniteFloat(g_euler.roll) ? (g_euler.roll * IMU_DEG_TO_RAD) : 0.0f;
+    pitch_rad = IMU_IsFiniteFloat(g_euler.pitch) ? (g_euler.pitch * IMU_DEG_TO_RAD) : 0.0f;
 
-	cr = cosf(roll_rad * 0.5f);
-	sr = sinf(roll_rad * 0.5f);
-	cp = cosf(pitch_rad * 0.5f);
-	sp = sinf(pitch_rad * 0.5f);
+    cr = cosf(roll_rad * 0.5f);
+    sr = sinf(roll_rad * 0.5f);
+    cp = cosf(pitch_rad * 0.5f);
+    sp = sinf(pitch_rad * 0.5f);
 
-	g_mahony_ahrs.q0 = cr * cp;
-	g_mahony_ahrs.q1 = sr * cp;
-	g_mahony_ahrs.q2 = cr * sp;
-	g_mahony_ahrs.q3 = -sr * sp;
-	g_euler = MahonyAhrs_GetEulerDegrees(&g_mahony_ahrs);
-	IMU_PublishRealtimeSnapshot();
+    g_mahony_ahrs.q0 = cr * cp;
+    g_mahony_ahrs.q1 = sr * cp;
+    g_mahony_ahrs.q2 = cr * sp;
+    g_mahony_ahrs.q3 = -sr * sp;
+    g_euler = MahonyAhrs_GetEulerDegrees(&g_mahony_ahrs);
+    IMU_PublishRealtimeSnapshot();
 }
 
 uint8 IMU_Is_Ready(void)
 {
-	return IMU_RuntimeHealthy();
+    return IMU_RuntimeHealthy();
 }
